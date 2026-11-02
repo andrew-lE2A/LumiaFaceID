@@ -1,0 +1,65 @@
+Subject: [PATCH] media: msm: restore the target after slave reads
+Base-commit: cc84cab9900ee4e7a3046b3756858e9832caee72
+
+CFG_SLAVE_READ_I2C temporarily changes the existing sensor client's target
+address. Both native and compat handlers currently leave that address in
+place on success and failure. Restore it immediately after the transfer so
+subsequent sensor operations retain their original target.
+
+Return the read configuration through copy_to_user rather than directly
+storing through a userspace pointer. Report a failed user copy as -EFAULT.
+No sensor node, power sequence, I2C target, or illumination control is added.
+
+diff --git a/drivers/media/platform/msm/camera_v2/sensor/msm_sensor.c b/drivers/media/platform/msm/camera_v2/sensor/msm_sensor.c
+--- a/drivers/media/platform/msm/camera_v2/sensor/msm_sensor.c
++++ b/drivers/media/platform/msm/camera_v2/sensor/msm_sensor.c
+@@ -877,11 +877,23 @@
+ 				s_ctrl->sensor_i2c_client,
+ 				read_config.reg_addr,
+ 				&local_data, read_config.data_type);
++		/* Restore the sensor target even when the temporary read fails. */
++		if (s_ctrl->sensor_i2c_client->cci_client)
++			s_ctrl->sensor_i2c_client->cci_client->sid =
++				orig_slave_addr;
++		else
++			s_ctrl->sensor_i2c_client->client->addr =
++				orig_slave_addr;
+ 		if (rc < 0) {
+ 			pr_err("%s:%d: i2c_read failed\n", __func__, __LINE__);
+ 			break;
+ 		}
+-		read_config_ptr->data = local_data;
++		read_config.data = local_data;
++		if (copy_to_user(read_config_ptr, &read_config,
++			sizeof(read_config))) {
++			pr_err("%s:%d: copy_to_user failed\n", __func__, __LINE__);
++			rc = -EFAULT;
++		}
+ 		break;
+ 	}
+ 	case CFG_WRITE_I2C_SEQ_ARRAY: {
+@@ -1194,11 +1206,23 @@
+ 				s_ctrl->sensor_i2c_client,
+ 				read_config.reg_addr,
+ 				&local_data, read_config.data_type);
++		/* Restore the sensor target even when the temporary read fails. */
++		if (s_ctrl->sensor_i2c_client->cci_client)
++			s_ctrl->sensor_i2c_client->cci_client->sid =
++				orig_slave_addr;
++		else
++			s_ctrl->sensor_i2c_client->client->addr =
++				orig_slave_addr;
+ 		if (rc < 0) {
+ 			pr_err("%s:%d: i2c_read failed\n", __func__, __LINE__);
+ 			break;
+ 		}
+-		read_config_ptr->data = local_data;
++		read_config.data = local_data;
++		if (copy_to_user(read_config_ptr, &read_config,
++			sizeof(read_config))) {
++			pr_err("%s:%d: copy_to_user failed\n", __func__, __LINE__);
++			rc = -EFAULT;
++		}
+ 		break;
+ 	}
+ 	case CFG_SLAVE_WRITE_I2C_ARRAY: {

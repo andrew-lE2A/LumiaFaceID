@@ -81,6 +81,38 @@ formula proves that this phone's iris sensor responds with that model. Apparent
 register records in the calibration need their format and consumer semantics
 validated before any attempt to turn them into sensor writes.
 
+Additional static evidence narrows the role of this candidate: at virtual
+addresses `0x4088dc`–`0x4088f8`, startup explicitly checks for model `0x0861`
+and manufacturer `0x0c` before creating the peripheral-controller/queue objects
+used by the IR/GPIO pulse path. This is stronger evidence than the filename
+alone, but remains a code-path condition rather than a measured chip ID.
+
+## CCI route resolved from firmware and platform code
+
+The platform driver evaluates `CAMP.INFO` (platform virtual address `0x401aa8`)
+and stores its integer result in the device context. The iris driver retrieves
+it through IOCTL `0x23202f` into global `0x460dc8`. The pinned DSDT's method at
+lines 46374–46377 returns `0x00060000`.
+
+Iris session initialization at `0x41fdc4` uses bit 17 for the primary session
+and bit 16 for the secondary/tertiary session. Platform request selector 1
+uses the latter session. Bit 16 is clear in `0x00060000`, selecting session ID 1.
+Its platform descriptor at `0x41b1a4` has controller group 0, mapping to the CCI
+register block at offset `0x100`: **physical CCI master 0**. The primary bit 17
+is set, selecting session ID 3/group 1/offset `0x200`, or master 1. This agrees
+with the independently documented rear-master-1/front-master-0 layout.
+
+Source identity for this trace:
+
+- `Platform/arm/qccamplatform8994.sys` SHA-256:
+  `6ae3eb8078998b3d4e75200c671b90c5e5f385168014c70465941bfad4e90aa2`.
+- Pinned DSDT SHA-256:
+  `014691f16291443cc5997098889d5881ed397501ea54ddcd091f1c81866488db`.
+
+This is source/firmware-derived wiring evidence. It does not prove the physical
+sensor has powered up or responded on the user's phone. In particular, a NACK
+without correct CAMT power/reset does not establish sensor absence.
+
 ## Illumination evidence
 
 The pinned `camcalibration.inf` and Cityman `SOFTWARE.reg` configure
@@ -99,9 +131,11 @@ the image sensor.
 
 ## What is still needed for the first hardware probe
 
-Before adding a Linux probe, establish the actual CCI master/route and safe
-sensor-only power sequence with the illuminator off. Then read manufacturer,
-model and revision and verify them, rather than accepting an ACK alone.
+Before adding a Linux probe, implement and review a sensor-only CAMT power
+sequence with the illuminator off, using the source-derived master-0 route.
+Then verify the responding model rather than accepting an ACK alone. Where
+the original driver hardcodes manufacturer/revision, do not present those as
+values measured from the sensor.
 Only after identity is known can a matching initialization program and capture
 mode be implemented. Optical illumination limits and Android enrollment/matching
 remain separate requirements.

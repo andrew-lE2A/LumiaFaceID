@@ -65,3 +65,11 @@ physical iris hardware, and none of these bindings proves frame delivery.
 The missing full device-tree export remains recorded as a limitation. The
 registered-node baseline is sufficient for the current offline investigation;
 repeating the same collector does not recover the absent sensor program.
+
+## Debugging access confirmed
+
+The user's subsequent command output reported `ro.debuggable=1` and SELinux
+`Permissive`. After enabling the ROM's Rooted debugging setting, `adb root`
+succeeded and `adb shell id` reported `uid=0(root)`. This confirms debugging
+access, not sensor identification or image capture. The old kernel ioctl still
+needs the prerequisite described in [kernel/README.md](../kernel/README.md).

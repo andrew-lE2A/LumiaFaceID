@@ -62,6 +62,11 @@ records the recovered original tertiary-camera probe table and its limits.
 `tools/inspect_iris_driver.py` reproduces the table extraction from the exact
 pinned local ARM driver; it does not access the phone.
 
+The [kernel prerequisite patch](kernel/README.md) corrects the existing camera
+slave-read ioctl and has been compiled for the target ARM64 kernel, including
+its 32-bit compatibility path. It does not add an iris sensor or a flashable
+boot image.
+
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are
 distributed here.
