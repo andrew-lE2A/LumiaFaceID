@@ -46,3 +46,22 @@ incomplete status when full properties are unavailable and adds the useful
 `platform_devices` evidence. Do not change device-tree status to successful
 simply to suppress the collector's incomplete result.
 The source-pinned camera layout remains available for offline investigation.
+
+## Second phone baseline
+
+The user's collector 0.2.0 report returned `platform_devices.status=ok`, with
+exit code 0 and no truncation. It showed bound `qcom,camera` nodes at:
+
+- `/soc/qcom,cci@fda0c000/qcom,camera@0`
+- `/soc/qcom,cci@fda0c000/qcom,camera@1`
+
+It also showed camera CCI bound to `msm_cci`, CSIPHY/CSID, ISPIF/VFE,
+actuator, Hill flash and camera-flash bindings. The generic name filter also
+matched ARM CCI-400 and a devfreq CCI device; those are not camera sensor buses.
+No separate iris sensor node appeared in this metadata, consistent with the
+pinned source. This observation does not establish the absence or identity of
+physical iris hardware, and none of these bindings proves frame delivery.
+
+The missing full device-tree export remains recorded as a limitation. The
+registered-node baseline is sufficient for the current offline investigation;
+repeating the same collector does not recover the absent sensor program.

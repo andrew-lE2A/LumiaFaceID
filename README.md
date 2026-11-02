@@ -57,6 +57,11 @@ Tests use a simulated ADB transport. Hardware validation has not been performed.
 See [the verified sources and missing hardware information](docs/hardware.md)
 and [the implementation milestones](docs/bring-up.md).
 
+For offline driver research, [windows-driver-analysis.md](docs/windows-driver-analysis.md)
+records the recovered original tertiary-camera probe table and its limits.
+`tools/inspect_iris_driver.py` reproduces the table extraction from the exact
+pinned local ARM driver; it does not access the phone.
+
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are
 distributed here.
