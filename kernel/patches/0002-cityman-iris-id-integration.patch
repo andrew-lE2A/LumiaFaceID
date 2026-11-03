@@ -7,7 +7,7 @@ The driver is opt-in at build time and inactive until an explicit root write.
 No boost supply, GPIO106, flash or CSI stream is declared.
 
 diff --git a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
-index 7c18a3af..1bce77f0 100644
+index 7c18a3af..d5e9847c 100644
 --- a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
 +++ b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
 @@ -56,6 +56,24 @@
@@ -40,7 +40,7 @@ index 7c18a3af..1bce77f0 100644
  	qcom,csi-lane-assign = <0x0423>;
  };
 +
-+&msm_gpio {
++&tlmm_pinmux {
 +	cityman_iris_reset_active_grp {
 +		qcom,pins = <&gp 102>;
 +		qcom,num-grp-pins = <1>;

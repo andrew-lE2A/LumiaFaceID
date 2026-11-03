@@ -80,3 +80,19 @@ The owner temporarily booted `prep-01`. `/proc/version` reported
 `3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) ... #1 ... Nov 3 00:05:22 UTC 2026`.
 The owner confirmed the normal home screen and unchanged rear/front camera
 behavior. No iris acquisition or authentication test was performed.
+
+
+## Iris-ID binding failure and correction
+
+The owner booted build #2 (iris-id-01). Its repacked boot SHA-256 matched the
+locally validated image, and /proc/version confirmed the expected build. The
+platform driver directory and microsoft,cityman-iris-id device existed,
+but the device was unbound and no result file appeared. The supplied filtered
+logs did not name a diagnostic probe resource or definitive failure code.
+
+Source/DTB review found the reset pinctrl groups beneath the GPIO child rather
+than directly beneath the TLMM pinctrl controller, outside the vendor parser's
+group scan. iris-id-02 corrects that structure, validates it against the real
+compiled DTB, and exposes the last driver probe stage even without binding.
+This does not establish whether another resource will still defer; the retry
+is a status-only check, with identification not yet invoked.

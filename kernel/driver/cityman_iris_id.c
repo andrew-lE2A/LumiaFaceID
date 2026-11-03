@@ -222,6 +222,40 @@ done:
 }
 
 #ifndef CITYMAN_IRIS_HOST_TEST
+static DEFINE_MUTEX(iris_probe_lock);
+static char iris_probe_text[96] = "not-probed";
+
+static int iris_probe_status_get(char *buf, const struct kernel_param *kp)
+{
+	int size;
+	mutex_lock(&iris_probe_lock);
+	size = scnprintf(buf, PAGE_SIZE, "%s\n", iris_probe_text);
+	mutex_unlock(&iris_probe_lock);
+	return size;
+}
+
+static int iris_probe_status_set(const char *value, const struct kernel_param *kp)
+{
+	/* Also reject boot-command-line assignment: this is diagnostic output. */
+	return -EPERM;
+}
+
+static const struct kernel_param_ops iris_probe_status_ops = {
+	.get = iris_probe_status_get, .set = iris_probe_status_set,
+};
+module_param_cb(probe_status, &iris_probe_status_ops, NULL, 0444);
+MODULE_PARM_DESC(probe_status, "Read-only last platform probe stage and error");
+
+static int iris_probe_report(struct device *dev, const char *stage, int rc)
+{
+	mutex_lock(&iris_probe_lock);
+	scnprintf(iris_probe_text, sizeof(iris_probe_text), "stage=%s errno=%d", stage, rc);
+	mutex_unlock(&iris_probe_lock);
+	if (rc)
+		dev_warn_ratelimited(dev, "probe stage=%s rc=%d\n", stage, rc);
+	return rc;
+}
+
 static ssize_t result_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct cityman_iris *iris = dev_get_drvdata(dev);
@@ -263,50 +297,54 @@ static int cityman_iris_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct cityman_iris *iris;
 	int i, rc;
+	char stage[32];
+	iris_probe_report(dev, "probing", 0);
 	if (!of_machine_is_compatible("mmo,cityman"))
-		return -ENODEV;
+		return iris_probe_report(dev, "board-compatibility", -ENODEV);
 	iris = devm_kzalloc(dev, sizeof(*iris), GFP_KERNEL);
 	if (!iris)
-		return -ENOMEM;
+		return iris_probe_report(dev, "allocation", -ENOMEM);
 	iris->dev = dev;
 	iris->status = "ready";
 	iris->stage = "idle";
 	mutex_init(&iris->lock);
 	iris->client.cci_subdev = msm_cci_get_subdev();
 	if (!iris->client.cci_subdev)
-		return -EPROBE_DEFER;
+		return iris_probe_report(dev, "cci-subdevice", -EPROBE_DEFER);
 	iris->client.cci_i2c_master = MASTER_0;
 	iris->client.sid = 0x6c >> 1;
 	iris->client.i2c_freq_mode = I2C_STANDARD_MODE;
 	iris->client.retries = 0;
 	iris->reset = of_get_named_gpio(dev->of_node, "reset-gpios", 0);
 	if (!gpio_is_valid(iris->reset))
-		return iris->reset < 0 ? iris->reset : -EINVAL;
+		return iris_probe_report(dev, "reset-gpio", iris->reset < 0 ? iris->reset : -EINVAL);
 	for (i = 0; i < IRIS_RAILS; i++) {
 		iris->rails[i] = devm_regulator_get(dev, rail_names[i]);
-		if (IS_ERR(iris->rails[i]))
-			return PTR_ERR(iris->rails[i]);
+		if (IS_ERR(iris->rails[i])) {
+			scnprintf(stage, sizeof(stage), "regulator-%s", rail_names[i]);
+			return iris_probe_report(dev, stage, PTR_ERR(iris->rails[i]));
+		}
 	}
 	iris->source = devm_clk_get(dev, "cam_src_clk");
 	if (IS_ERR(iris->source))
-		return PTR_ERR(iris->source);
+		return iris_probe_report(dev, "mclk-source", PTR_ERR(iris->source));
 	iris->clock = devm_clk_get(dev, "cam_clk");
 	if (IS_ERR(iris->clock))
-		return PTR_ERR(iris->clock);
+		return iris_probe_report(dev, "mclk-gate", PTR_ERR(iris->clock));
 	iris->pins = devm_pinctrl_get(dev);
 	if (IS_ERR(iris->pins))
-		return PTR_ERR(iris->pins);
+		return iris_probe_report(dev, "pinctrl-handle", PTR_ERR(iris->pins));
 	iris->active = pinctrl_lookup_state(iris->pins, "iris_active");
 	if (IS_ERR(iris->active))
-		return PTR_ERR(iris->active);
+		return iris_probe_report(dev, "pinctrl-active", PTR_ERR(iris->active));
 	iris->sleep = pinctrl_lookup_state(iris->pins, "iris_sleep");
 	if (IS_ERR(iris->sleep))
-		return PTR_ERR(iris->sleep);
+		return iris_probe_report(dev, "pinctrl-sleep", PTR_ERR(iris->sleep));
 	platform_set_drvdata(pdev, iris);
 	rc = sysfs_create_group(&dev->kobj, &iris_group);
 	if (!rc)
 		dev_info(dev, "idle; explicit root identification required; no IR or stream control\n");
-	return rc;
+	return iris_probe_report(dev, rc ? "status-sysfs" : "ready", rc);
 }
 
 static int cityman_iris_remove(struct platform_device *pdev)

@@ -68,54 +68,71 @@ def kernel_parts(data, require_dtbs=True):
     return compressed, dtbs
 
 
+def dtb_nodes(blob):
+    """Decode one bounded FDT for structural validation, without executing it."""
+    if len(check_dtbs(blob)) != 1:
+        raise ValueError('Expected one device tree')
+    _, _, start, strings, _, _, _, _, nstrings, nstruct = struct.unpack_from('>10I', blob)
+    cursor, end, finished = start, start + nstruct, False
+    stack, nodes = [], {}
+    while cursor + 4 <= end:
+        token, = struct.unpack_from('>I', blob, cursor); cursor += 4
+        if token == 1:
+            stop = blob.find(b'\0', cursor, end)
+            if stop < 0:
+                raise ValueError('Unterminated device-tree node')
+            name = blob[cursor:stop].decode('ascii', errors='strict')
+            if '/' in name or (not stack and (nodes or name)):
+                raise ValueError('Invalid device-tree node/root')
+            stack.append(name)
+            path = '/' + '/'.join(stack[1:])
+            if path in nodes:
+                raise ValueError('Duplicate device-tree node')
+            nodes[path] = {}
+            cursor = align(stop + 1, 4)
+        elif token == 2:
+            if not stack:
+                raise ValueError('Unbalanced device tree')
+            stack.pop()
+        elif token == 3:
+            if not stack or cursor + 8 > end:
+                raise ValueError('Invalid device-tree property')
+            size, nameoff = struct.unpack_from('>II', blob, cursor); cursor += 8
+            if cursor + size > end or nameoff >= nstrings:
+                raise ValueError('Device-tree property outside bounds')
+            stop = blob.find(b'\0', strings + nameoff, strings + nstrings)
+            if stop < 0:
+                raise ValueError('Unterminated property name')
+            name = blob[strings + nameoff:stop].decode('ascii', errors='strict')
+            properties = nodes['/' + '/'.join(stack[1:])]
+            if name in properties:
+                raise ValueError('Duplicate device-tree property')
+            properties[name] = blob[cursor:cursor + size]
+            cursor = align(cursor + size, 4)
+        elif token == 4:
+            pass
+        elif token == 9:
+            if stack or not nodes:
+                raise ValueError('Unbalanced device tree')
+            finished = True
+            break
+        else:
+            raise ValueError('Invalid device-tree token')
+    if not finished:
+        raise ValueError('Unterminated device tree')
+    return nodes
+
+
 def dtb_identities(data):
     """Read root board-selection properties for an explicit DTB update."""
     identities = []
     offset = 0
     for info in check_dtbs(data):
         blob = data[offset:offset + info['size']]
-        _, _, start, strings, _, _, _, _, nstrings, nstruct = struct.unpack_from('>10I', blob)
-        cursor, end, depth, root_seen, finished = start, start + nstruct, 0, False, False
-        properties = {}
+        root = dtb_nodes(blob)['/']
         keys = {'model', 'compatible', 'qcom,msm-id', 'qcom,board-id', 'qcom,pmic-id'}
-        while cursor + 4 <= end:
-            token, = struct.unpack_from('>I', blob, cursor); cursor += 4
-            if token == 1:  # BEGIN_NODE
-                stop = blob.find(b'\0', cursor, end)
-                if stop < 0 or (depth == 0 and (root_seen or stop != cursor)):
-                    raise ValueError('Invalid device-tree root')
-                root_seen = True
-                depth += 1
-                cursor = align(stop + 1, 4)
-            elif token == 2:  # END_NODE
-                depth -= 1
-                if depth < 0:
-                    raise ValueError('Unbalanced device tree')
-            elif token == 3:  # PROP
-                if not depth or cursor + 8 > end:
-                    raise ValueError('Invalid device-tree property')
-                size, nameoff = struct.unpack_from('>II', blob, cursor); cursor += 8
-                if cursor + size > end or nameoff >= nstrings:
-                    raise ValueError('Device-tree property outside bounds')
-                stop = blob.find(b'\0', strings + nameoff, strings + nstrings)
-                if stop < 0:
-                    raise ValueError('Unterminated property name')
-                name = blob[strings + nameoff:stop].decode('ascii', errors='strict')
-                if depth == 1 and name in keys:
-                    if name in properties:
-                        raise ValueError('Duplicate board identity property')
-                    properties[name] = blob[cursor:cursor + size]
-                cursor = align(cursor + size, 4)
-            elif token == 4:  # NOP
-                pass
-            elif token == 9:  # END
-                if depth or not root_seen:
-                    raise ValueError('Unbalanced device tree')
-                finished = True
-                break
-            else:
-                raise ValueError('Invalid device-tree token')
-        if not finished or not properties.get('compatible'):
+        properties = {key: value for key, value in root.items() if key in keys}
+        if not properties.get('compatible'):
             raise ValueError('Missing device-tree board identity')
         identities.append(properties)
         offset += info['size']

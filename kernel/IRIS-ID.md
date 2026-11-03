@@ -1,7 +1,7 @@
 # Iris-ID diagnostic: idle binding test
 
 The owner confirmed `prep-01` reached the home screen with rear/front camera
-behavior unchanged. `iris-id-01` adds a separate `microsoft,cityman-iris-id`
+behavior unchanged. `iris-id-02` adds a separate `microsoft,cityman-iris-id`
 platform device under CCI. It is not a camera HAL sensor slot or Android
 biometric implementation. The first test boots it and **reads status only**.
 
@@ -11,11 +11,12 @@ From the updated project folder on the Mac, with the original uncompressed
 backup in Documents:
 
 ```sh
-shasum -a256 -c kernel/builds/iris-id-01/SHA256SUMS &&
+shasum -a256 -c kernel/builds/iris-id-02/SHA256SUMS &&
+python3 tools/validate_iris_dtbs.py kernel/builds/iris-id-02/boards.dtb &&
 python3 tools/repack_boot.py "$HOME/Documents/cityman-current-boot.img" \
-  --kernel kernel/builds/iris-id-01/Image.gz \
-  --dtbs kernel/builds/iris-id-01/boards.dtb \
-  --output "$HOME/Documents/cityman-iris-id-01.img"
+  --kernel kernel/builds/iris-id-02/Image.gz \
+  --dtbs kernel/builds/iris-id-02/boards.dtb \
+  --output "$HOME/Documents/cityman-iris-id-02.img"
 ```
 
 The explicit DTB update adds the dormant diagnostic and pinctrl resources.
@@ -25,9 +26,9 @@ do not validate arbitrary wiring changes; use the reviewed, checksummed DTBs.
 
 ```sh
 adb reboot bootloader
-fastboot boot "$HOME/Documents/cityman-iris-id-01.img"
+fastboot boot "$HOME/Documents/cityman-iris-id-02.img"
 adb wait-for-device
-adb shell 'cat /sys/bus/platform/drivers/cityman-iris-id/*/result'
+adb shell 'cat /proc/version; cat /sys/module/cityman_iris_id/parameters/probe_status; cat /sys/bus/platform/drivers/cityman-iris-id/*/result'
 ```
 
 Expected: `status=ready stage=idle`, `attempts=0`, `blocked=0`. This means the
@@ -80,7 +81,7 @@ partial regulator acquisition, retries, cleanup failures, busy CCI, suspend and
 refusal after unsafe cleanup. Simulation is not a physical timing/power test.
 
 The full ARM64 `Image.gz-dtb` build passed. The effective kernel config differs
-from the original only by `CONFIG_CITYMAN_IRIS_ID=y`. All 54 host tests passed,
+from the original only by `CONFIG_CITYMAN_IRIS_ID=y`. All 57 host tests passed,
 including the 28 production-sequence scenarios. The integration patch applies
 cleanly to its pinned base, and the compiled C source matches the canonical
 repository file. The generated DTBs preserve board identities/order and the
@@ -88,4 +89,24 @@ exact original Talkman DTB. The Cityman diagnostic's supply phandles, GPIO102
 and non-default pinctrl states were checked in the resulting DTB. Private
 repacking preserved the owner's ramdisk and boot settings and fit the original
 partition. On-phone diagnostic binding and identification have not been tested.
-See [the build manifest](builds/iris-id-01/manifest.json) for source and hashes.
+See [the build manifest](builds/iris-id-02/manifest.json) for source and hashes.
+
+
+## Binding correction after iris-id-01
+
+The owner booted kernel build #2 and its platform device appeared, but it did
+not bind and no result file was created. The first DTB put reset pinctrl groups
+under the GPIO child instead of directly under the TLMM controller. The vendor
+parser scans direct controller children only. The corrected tree moves them
+to `&tlmm_pinmux`. Host validation rejects the old artifact and checks the actual
+compiled tree hierarchy and resource references. The old artifact remains only
+as a regression input; use 02.
+
+This structural defect is established from source and the old DTB. The phone
+logs did not establish it as the only deferred resource. The corrected build
+also adds stage-specific probe messages and a read-only fallback parameter at
+`/sys/module/cityman_iris_id/parameters/probe_status`. It should say
+`stage=ready errno=0`; otherwise it reports the last resource and error.
+`not-probed` means the driver callback was not entered. This output cannot be
+assigned from the boot command line or written through sysfs. Binding and sensor
+power on the corrected build remain untested.
