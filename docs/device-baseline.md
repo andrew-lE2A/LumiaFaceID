@@ -94,5 +94,14 @@ Source/DTB review found the reset pinctrl groups beneath the GPIO child rather
 than directly beneath the TLMM pinctrl controller, outside the vendor parser's
 group scan. iris-id-02 corrects that structure, validates it against the real
 compiled DTB, and exposes the last driver probe stage even without binding.
-This does not establish whether another resource will still defer; the retry
-is a status-only check, with identification not yet invoked.
+The owner then temporarily booted build #3 and confirmed:
+
+```text
+stage=ready errno=0
+status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0
+```
+
+This establishes successful dormant binding on iris-id-02. It does not establish
+the physical sensor model: no identification or power sequence has run yet.
+The next step is the [one-attempt helper](../kernel/IRIS-ID.md#one-controlled-identification-attempt),
+which stops and restores the camera services around the explicit model read.

@@ -54,7 +54,9 @@ the tests. Use `--adb /workspace/.lumiafaceid/sdk/platform-tools/adb` with the
 collector there. A phone must be connected to the host running the collector;
 this cloud environment does not provide access to your computer's USB devices.
 
-Tests use a simulated ADB transport. Hardware validation has not been performed.
+Tests use simulated ADB, init services and kernel APIs. The owner has confirmed
+temporary kernel boot and idle diagnostic binding; sensor identification,
+acquisition and authentication have not been validated on hardware.
 See [the verified sources and missing hardware information](docs/hardware.md)
 and [the implementation milestones](docs/bring-up.md).
 
@@ -71,8 +73,9 @@ unimplemented. A full prerequisite kernel is available for a
 image locally with your own backup using `tools/repack_boot.py`.
 
 The next [iris-ID diagnostic](kernel/IRIS-ID.md) is a separate, root-triggered
-kernel path. Its initial boot check reads status only; acquisition and
-authentication are still not provided.
+kernel path. Its initial status-only boot check now passes on the phone. A
+one-attempt helper stops and restores camera services around the next explicit
+model read; acquisition and authentication are still not provided.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are
