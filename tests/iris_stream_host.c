@@ -177,7 +177,10 @@ static void check_snapshot_transactions(void)
     assert(state.stream.before[17] == 56 && state.stream.after[17] == 56);
     assert(!state.stream.readback_error);
 }
-int main(void)
+#ifndef IRIS_STREAM_MAIN
+#define IRIS_STREAM_MAIN main
+#endif
+int IRIS_STREAM_MAIN(void)
 {
     int i, baseline_writes, startup_writes, baseline_reads, count = 0;
     unsigned int baseline_bursts;

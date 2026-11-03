@@ -1,6 +1,6 @@
 /*
  * Lumia 950 XL opt-in sensor identification and gated stream diagnostic.
- * No illuminator, CSI receiver or image capture control.
+ * No illuminator or image capture control. CSI listening is separately gated.
  * SPDX-License-Identifier: GPL-2.0-only
  */
 #ifndef CITYMAN_IRIS_HOST_TEST
@@ -23,6 +23,9 @@
 
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 #include "cityman_iris_stream.h"
+#endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+#include "cityman_iris_csi.h"
 #endif
 
 #define IRIS_MODEL 0x0861
@@ -54,6 +57,9 @@ struct cityman_iris {
 	unsigned int attempts;
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 	struct iris_stream stream;
+#endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	struct iris_csi csi;
 #endif
 };
 
@@ -154,6 +160,13 @@ static void iris_cleanup(struct cityman_iris *iris)
 		rc = iris_stream_stop(&iris->stream, &io);
 		if (rc)
 			iris->cleanup_error = rc;
+	}
+#endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	if (iris->csi.requested) {
+		rc = cityman_iris_csi_end(&iris->csi);
+		if (rc || iris->csi.cleanup_error)
+			iris->cleanup_error = rc ? rc : iris->csi.cleanup_error;
 	}
 #endif
 	if (iris->gpio_owned) {
@@ -291,6 +304,15 @@ static int iris_identify(struct cityman_iris *iris)
 	if (!rc && iris->stream.requested) {
 		struct iris_stream_io io = iris_stream_io(iris);
 		iris->stage = "stream-test";
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+		if (iris->csi.requested) {
+			rc = iris_stream_program(&iris->stream, &io);
+			if (!rc)
+				rc = cityman_iris_csi_begin(&iris->csi);
+			if (!rc)
+				rc = iris_stream_start(&iris->stream, &io);
+		} else
+#endif
 		rc = iris_stream_run(&iris->stream, &io);
 	}
 #endif
@@ -369,6 +391,9 @@ static ssize_t identify_store(struct device *dev, struct device_attribute *attr,
 		return -EBUSY;
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 	iris->stream.requested = false;
+#endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	iris->csi.requested = false;
 #endif
 	rc = iris_identify(iris);
 	mutex_unlock(&iris->lock);
@@ -463,7 +488,11 @@ static ssize_t stream_once_store(struct device *dev, struct device_attribute *at
 	int rc;
 	if (!capable(CAP_SYS_RAWIO))
 		return -EPERM;
-	if (!sysfs_streq(buf, "stream-once"))
+	if (!sysfs_streq(buf, "stream-once")
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	    && !sysfs_streq(buf, "csi-once")
+#endif
+	)
 		return -EINVAL;
 	if (!mutex_trylock(&iris->lock))
 		return -EBUSY;
@@ -476,6 +505,9 @@ static ssize_t stream_once_store(struct device *dev, struct device_attribute *at
 		goto out;
 	}
 	iris->stream.requested = true;
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	iris->csi.requested = sysfs_streq(buf, "csi-once");
+#endif
 	rc = iris_identify(iris);
 out:
 	mutex_unlock(&iris->lock);
@@ -487,11 +519,32 @@ static DEVICE_ATTR(stream_readback, 0444, stream_readback_show, NULL);
 static DEVICE_ATTR(stream_profile, 0200, NULL, stream_profile_store);
 static DEVICE_ATTR(stream_once, 0200, NULL, stream_once_store);
 #endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+static ssize_t csi_result_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct iris_csi *s = &iris->csi;
+	ssize_t size;
+	mutex_lock(&iris->lock);
+	size = scnprintf(buf, PAGE_SIZE,
+		"requested=%u stage=%s errno=%d cleanup_errno=%d phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=20 before_valid=%u after_valid=%u packets_before=%u packets_after=%u ecc_before=%u ecc_after=%u crc_before=%u crc_after=%u version=0x%08x\n",
+		s->requested, s->stage ? s->stage : "idle", s->error, s->cleanup_error,
+		s->before_valid, s->after_valid, s->before.packets, s->after.packets,
+		s->before.ecc, s->after.ecc, s->before.crc, s->after.crc, s->version);
+	mutex_unlock(&iris->lock);
+	return size;
+}
+static DEVICE_ATTR(csi_result, 0444, csi_result_show, NULL);
+static DEVICE_ATTR(csi_once, 0200, NULL, stream_once_store);
+#endif
 static struct attribute *iris_attrs[] = {
 	&dev_attr_result.attr, &dev_attr_identify.attr,
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 	&dev_attr_stream_result.attr, &dev_attr_stream_profile.attr, &dev_attr_stream_once.attr,
 	&dev_attr_stream_readback.attr,
+#endif
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	&dev_attr_csi_result.attr, &dev_attr_csi_once.attr,
 #endif
 	NULL,
 };

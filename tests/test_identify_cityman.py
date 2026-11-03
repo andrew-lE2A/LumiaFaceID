@@ -41,6 +41,10 @@ elif name == 'cat':
         path.write_text('profile_loaded=1 stage=idle stop_errno=0\\n')
     triggered = (node / 'identify').read_text() == 'identify\\n'
     streaming = (node / 'stream_once').read_text() == 'stream-once\\n'
+    if (node / 'csi_once').exists():
+        streaming = streaming or (node / 'csi_once').read_text() == 'csi-once\\n'
+        if streaming and path.name == 'csi_result':
+            path.write_text(state.get('csi_after', 'requested=1 stage=listening errno=0 cleanup_errno=0 packets_before=0 packets_after=100\\n'))
     if triggered or (streaming and path.name in ('result', 'stream_result')):
         if state.get('unreadable_after'):
             sys.exit(1)
@@ -228,6 +232,43 @@ class IdentifyHelperTests(unittest.TestCase):
     def test_unknown_operation_is_rejected_before_any_stop(self):
         self.assertEqual(self.run_helper(operation='anything').returncode, 1)
         self.assertEqual(self.state['events'], [])
+
+    def csi_fixture(self):
+        self.stream_fixture()
+        node = self.root / 'driver/device'
+        (node / 'csi_once').write_text('')
+        (node / 'csi_result').write_text('requested=0 stage=idle errno=0 cleanup_errno=0\n')
+
+    def test_csi_mode_uses_separate_control_and_prints_packet_result(self):
+        self.csi_fixture()
+        run = self.run_helper(operation='csi-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual((self.root / 'driver/device/csi_once').read_text(), 'csi-once\n')
+        self.assertEqual((self.root / 'driver/device/stream_once').read_text(), '')
+        self.assertIn('CSI after:', run.stdout)
+        self.assertIn('packets_after=100', run.stdout)
+        self.assertLess(run.stdout.index('CSI after:'), run.stdout.index('Restored:'))
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_csi_cleanup_failure_leaves_services_stopped(self):
+        self.csi_fixture()
+        self.state['csi_after'] = 'requested=1 stage=phy-config errno=-5 cleanup_errno=-5\n'
+        run = self.run_helper(operation='csi-once')
+        self.assertEqual(run.returncode, 3)
+        self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)
+
+    def test_csi_requires_receiver_build_before_stopping_services(self):
+        run = self.run_helper(operation='csi-once')
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(self.state['events'], [])
+
+    def test_csi_preserves_packet_result_after_clean_counter_timeout(self):
+        self.csi_fixture()
+        self.state['after'] = self.state['after'].replace('status=sensor-streamed', 'status=failed').replace('errno=0 model=', 'errno=-110 model=')
+        run = self.run_helper(fail_write=True, operation='csi-once')
+        self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+        self.assertIn('packets_after=100', run.stdout)
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
 
 
 if __name__ == '__main__':

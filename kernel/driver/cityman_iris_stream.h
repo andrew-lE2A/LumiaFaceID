@@ -103,12 +103,11 @@ static int iris_stream_snapshot(struct iris_stream *s, const struct iris_stream_
 	return 0;
 }
 
-static int iris_stream_run(struct iris_stream *s, const struct iris_stream_io *io)
+static int iris_stream_program(struct iris_stream *s, const struct iris_stream_io *io)
 {
 	unsigned int i;
-	u8 value, previous = 0xff;
 	u8 reset_model[2] = { 0, 0 };
-	int rc, snapshot_rc;
+	int rc;
 	if (!s->loaded)
 		return -ENODATA;
 	s->samples = s->changes = s->writes = s->transactions = 0;
@@ -174,9 +173,14 @@ static int iris_stream_run(struct iris_stream *s, const struct iris_stream_io *i
 	if (rc)
 		return rc;
 	s->stage = "config-readback";
-	rc = iris_stream_snapshot(s, io, false);
-	if (rc)
-		return rc;
+	return iris_stream_snapshot(s, io, false);
+}
+
+static int iris_stream_start(struct iris_stream *s, const struct iris_stream_io *io)
+{
+	unsigned int i;
+	u8 value, previous = 0xff;
+	int rc, snapshot_rc;
 	s->stage = "stream-on";
 	rc = iris_stream_byte(io, 0x0100, 1);
 	/* The original unpause path also writes 0138 after mode select. */
@@ -210,6 +214,12 @@ static int iris_stream_run(struct iris_stream *s, const struct iris_stream_io *i
 		return snapshot_rc;
 	s->stage = "mode-readback";
 	return s->after[1] == 1 ? 0 : -EIO;
+}
+
+static int iris_stream_run(struct iris_stream *s, const struct iris_stream_io *io)
+{
+	int rc = iris_stream_program(s, io);
+	return rc ? rc : iris_stream_start(s, io);
 }
 
 static int iris_stream_stop(struct iris_stream *s, const struct iris_stream_io *io)

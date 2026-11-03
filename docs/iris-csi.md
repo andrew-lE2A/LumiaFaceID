@@ -21,11 +21,11 @@ Linux register/node mappings below use kernel commit
 | Item | Evidence | What remains unresolved |
 | --- | --- | --- |
 | Iris receiver | CAMT exposes `0xfda08c00`, corresponding to Linux CSID3 | Packet reception on that receiver has not been tested |
-| Front receiver and PHY | CAMF exposes `0xfda08800` and `0xfda0b400`, corresponding to CSID2 and CSIPHY2 | This alone does not assign iris lanes |
-| Shared dependency | CAMT depends on CAMF in `_DEP`; CAMT has no separate PHY MMIO resource | PHY2 sharing is a candidate, not a complete wiring map |
-| Lane count | The matched mode program sets `0x0114=0`, one data lane | Physical data/clock lane positions and polarity |
+| Iris PHY | Hardware preparation maps `0xfda0b400` and supplies PHY selector 2 / combo flag 1 | Physical reception remains untested |
+| Shared dependency | CAMT depends on CAMF in `_DEP`; the iris one-lane combo request is forwarded through the front interface | Independent ownership and normal-front recovery require a phone check |
+| Lane count and placement | The matched program uses one lane; the original combo path selects data lane 4 and clock lane 3 | Physical reception and polarity have not been measured |
 | Format | The matched mode and phone readback both give `0x0112=0x0a0a` | Actual packet data type, virtual channel and delivered byte layout |
-| PHY combo support | Linux supports combo mode; mask `0x18` selects the upper CSID mux nibble | Whether this is the iris route and its correct lane assignment |
+| PHY combo support | Linux supports mask `0x18` / upper mux nibble, with lane 3 serving as combo clock | Initial settle count has no measured working window |
 
 There is no Linux physical PHY3 in this tree. A CSID number and a physical PHY
 number are different selectors; CAMT's CSID3 must not be translated to PHY3.
@@ -39,16 +39,34 @@ VA `0x461554`. Its property dispatch at `0x402138` includes these handlers:
 | --- | --- | --- |
 | `0x4f` | `0x402972` | CSID selector, four-byte input, range 0–3 |
 | `0x51` | `0x4029b4` | PHY selector and combo flag, eight-byte input; combo range 0–1 |
-| `0x52` | `0x4029e8` | Mux selector, four-byte input, range 0–3 |
+| `0x52` | `0x4029e8` | Four-byte selector stored at context `+0x3c`, range 0–3; caller diagnostics name orientation |
 
-These handlers prove that routing is configured separately from the sensor
-register program. Their existence does not establish the caller's values.
-Initialization at `0x402daa` clears these fields; zero-initialized defaults
-must not be treated as a recovered cityman route. The sensor configuration
-path around `0x403e3e` uses the fields and distinguishes ordinary and combo
-PHY operation. The original iris driver also opens the front-sensor interface
-through `CameraMIPICSI2HAL_FrontSensorInit`, VA `0x41f34c`. Recovering the
-caller/configuration values remains necessary to complete this source trace.
+These handlers show that routing is configured separately from the sensor
+register program. Initialization at `0x402daa` clears the fields; those defaults
+are not the routing evidence. The caller is in the pageable hardware-preparation
+routine, starting at `0x83d220`, rather than in the core camera service:
+
+1. At `0x83d2f8`–`0x83d308`, it maps physical `0xfda0b400`.
+2. At `0x83d33a` it takes the top byte of `CAMP.INFO`. The pinned firmware returns
+   `0x00060000`, so that byte is zero. The default branch at `0x83d34c`–`0x83d356`
+   selects CSID3, consistent with CAMT's MMIO resource.
+3. At `0x83d37a`–`0x83d380`, it constructs the eight-byte pair `{2, 1}`. In the
+   CSID3 branch, `0x83d3ba`–`0x83d3cc` passes this pair as property `0x51`, setting
+   PHY2 and combo mode 1. Property `0x52` is then supplied zero. Earlier notes
+   called that field a mux selector; the original caller calls it orientation,
+   so it is not used as evidence for clock-mux programming.
+4. The configuration path at `0x403f94` selects the one-lane combo case. The
+   CSID lane construction at `0x41dabc`–`0x41dace` places selector 4 in its first
+   data-lane field. The PHY-enable construction at `0x41dd02`–`0x41dd1a`, together
+   with the one-lane handling around `0x41e554`, selects the upper pair of PHY
+   lanes. Linux's matching combo logic makes lane 3 the clock and lane 4 data:
+   lane mask `0x18`, CSID lane assignment `0x0004`.
+
+The original iris driver opens the front-sensor interface through
+`CameraMIPICSI2HAL_FrontSensorInit`, VA `0x41f34c`, and forwards one-lane combo
+configuration through IOCTL `0x232003` at `0x41e55a`. This independently supports
+the sharing arrangement. These are static code/firmware conclusions, not a
+measurement of packets on the owner's phone.
 Driver identity and provenance are in
 [windows-driver-analysis.md](windows-driver-analysis.md).
 
@@ -63,13 +81,13 @@ It must not write MMIO behind those drivers or reuse an active front-camera
 session. Camera services must remain stopped throughout the receiver/sensor
 test, with restoration conditional on complete cleanup.
 
-The bounded receiver test should initialize the selected PHY/CSID, configure
-lane routing and RAW10 reception, then execute the existing one-shot sensor
-start/stop. Save packet/error observations before releasing the receiver and
-unwinding power. The pinned CSID release path already logs packet, ECC and CRC
-diagnostics; those diagnostics are useful for link bring-up but do not prove
-a delivered image. Keep receiver failures distinct from the sensor's
-unchanged-counter criterion so one does not erase evidence from the other.
+The [bounded receiver test](../kernel/IRIS-CSI.md) now initializes this PHY/CSID, configures
+lane routing and RAW10 reception, then executes the existing one-shot sensor
+start/stop. It saves packet/error observations before releasing the receiver
+and unwinding power. Receiver failures remain distinct from the sensor's
+unchanged-counter criterion. The initial settle count 20 is unmeasured; the
+new build still needs its first phone test. Receiver diagnostics are useful
+for link bring-up but do not prove a delivered image.
 
 The first capture milestone then adds an ISPIF/VFE RDI path and returns a
 bounded RAW10 buffer with checked dimensions, stride and byte count. A camera

@@ -1,10 +1,12 @@
 #!/system/bin/sh
 # Run on the phone: adb shell sh < tools/identify_cityman.sh
-# Default: one ID attempt. With stream-once: bounded sensor-counter test.
-# Neither mode configures CSI/image capture or IR controls.
+# Default: one ID attempt. stream-once: sensor counter; csi-once: CSI packets.
+# No mode configures image DMA or IR controls.
 set -u
 
 operation=${1:-identify}
+streaming=0
+case "$operation" in stream-once|csi-once) streaming=1 ;; esac
 driver=/sys/bus/platform/drivers/cityman-iris-id
 profile=/data/local/tmp/cityman-iris-stream-profile.hex
 services='cameraserver vendor.camera-provider-2-4 qcamerasvr'
@@ -40,7 +42,7 @@ finish() {
         after=$(cat "$result") || after=unreadable
         echo "After: $after"
         stream_clean=1
-        if [ "$operation" = stream-once ]; then
+        if [ "$streaming" = 1 ]; then
             stream_after=$(cat "$node/stream_result") || stream_after=unreadable
             echo "Stream after: $stream_after"
             if [ -r "$node/stream_readback" ]; then
@@ -49,6 +51,11 @@ finish() {
             fi
             case " $stream_after " in *' stop_errno=0 '*) ;; *) stream_clean=0 ;; esac
         fi
+        if [ "$operation" = csi-once ]; then
+            csi_after=$(cat "$node/csi_result") || csi_after=unreadable
+            echo "CSI after: $csi_after"
+            case " $csi_after " in *' cleanup_errno=0 '*) ;; *) stream_clean=0 ;; esac
+        fi
         if ! clean_result "$after" || [ "$stream_clean" != 1 ]; then
             echo 'REBOOT_REQUIRED: cleanup is unconfirmed; leaving camera services stopped. Run adb reboot before using cameras or retrying.' >&2
             exit 3
@@ -56,6 +63,7 @@ finish() {
         case "$operation: $after " in
             identify:*' status=identified stage=model-read errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
             stream-once:*' status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
+            csi-once:*' status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
             *) [ "$code" -ne 0 ] || code=1 ;;
         esac
     fi
@@ -72,23 +80,30 @@ finish() {
 }
 
 [ "$(id -u)" = 0 ] || fail 'Root ADB is required: run adb root, then adb wait-for-device.'
-case "$operation" in identify|stream-once) ;; *) fail 'Expected identify or stream-once.' ;; esac
+case "$operation" in identify|stream-once|csi-once) ;; *) fail 'Expected identify, stream-once or csi-once.' ;; esac
 set -- "$driver"/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || fail 'Expected exactly one bound iris-ID device.'
 result=$1
 node=${result%/result}
 control=$node/identify
-if [ "$operation" = stream-once ]; then
+if [ "$streaming" = 1 ]; then
     control=$node/stream_once
     [ -r "$node/stream_result" ] && [ -w "$node/stream_profile" ] && [ -r "$profile" ] ||
         fail 'Stream build and /data/local/tmp/cityman-iris-stream-profile.hex are required.'
+fi
+if [ "$operation" = csi-once ]; then
+    control=$node/csi_once
+    [ -r "$node/csi_result" ] || fail 'The CSI diagnostic build is required.'
+    csi_before=$(cat "$node/csi_result") || fail 'Cannot read CSI status.'
+    echo "CSI before: $csi_before"
+    case "$csi_before" in requested=0\ stage=idle\ *) ;; *) fail 'Expected untouched CSI state.' ;; esac
 fi
 [ -w "$control" ] || fail 'The requested diagnostic control is not writable.'
 initial='status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0'
 before=$(cat "$result") || fail 'Cannot read the diagnostic result.'
 echo "Before: $before"
 [ "$before" = "$initial" ] || fail 'Refusing: expected an untouched, ready diagnostic. Do not retry; share this status first.'
-if [ "$operation" = stream-once ]; then
+if [ "$streaming" = 1 ]; then
     # Upload changes memory only; the kernel verifies the exact program SHA.
     cat "$profile" > "$node/stream_profile" || fail 'The kernel rejected the stream profile; no hardware action performed.'
     stream_before=$(cat "$node/stream_result") || fail 'Cannot read stream status.'

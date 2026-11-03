@@ -90,7 +90,9 @@ Version 02 matches the original transaction shapes and records configuration
 readbacks even when the counter stalls. Its phone test confirmed mode select
 latched and timing/geometry read back, with clean cleanup and unchanged normal
 cameras. The counter still remained zero; no image packets or frames have been
-verified. The next step is resolving and integrating CSI reception.
+verified. The next [CSI packet test](kernel/IRIS-CSI.md) uses the recovered PHY2
+combo/CSID3 route and records receiver counters around one sensor cycle. Its
+phone test is pending; it does not configure image DMA or deliver a frame.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

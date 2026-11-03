@@ -8,6 +8,7 @@
 
 typedef uint16_t u16;
 typedef uint8_t u8;
+typedef uint32_t u32;
 struct device { int unused; };
 struct mutex { int unused; };
 struct regulator { int id; };

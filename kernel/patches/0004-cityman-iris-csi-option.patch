@@ -1,0 +1,374 @@
+Subject: [PATCH] media: gate cityman PHY2 combo/CSID3 packet diagnostic
+Base: patches 0001 through 0003 applied to cc84cab9900ee4e7a3046b3756858e9832caee72
+
+Copy all five canonical driver files as documented in IRIS-CSI.md.
+Normal reset waits and release return values stay unchanged; diagnostic resets
+are bounded and diagnostic releases propagate clock/regulator failures.
+
+diff --git a/drivers/media/platform/msm/camera_v2/Kconfig b/drivers/media/platform/msm/camera_v2/Kconfig
+--- a/drivers/media/platform/msm/camera_v2/Kconfig
++++ b/drivers/media/platform/msm/camera_v2/Kconfig
+@@ -1,3 +1,11 @@
++config CITYMAN_IRIS_CSI
++	bool "Lumia 950 XL bounded CSI packet diagnostic"
++	depends on CITYMAN_IRIS_STREAM && MSMB_CAMERA=y
++	default n
++	help
++	  Separate root-triggered PHY2 combo/CSID3 packet observation. Both
++	  receivers must be idle. No ISPIF, VFE, image DMA or illumination.
++
+ config CITYMAN_IRIS_STREAM
+ 	bool "Lumia 950 XL bounded sensor stream diagnostic"
+ 	depends on CITYMAN_IRIS_ID && CRYPTO_SHA256
+diff --git a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
+@@ -91,6 +91,9 @@
+ 	uint32_t csid_max_clk;
+ 	/* board CSI lane order (qcom,csi-lane-assign), 0 = use the library's */
+ 	uint32_t lane_assign_override;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	bool cityman_iris_exclusive;
++#endif
+ };
+ 
+ #define VIDIOC_MSM_CSID_RELEASE \
+diff --git a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
+@@ -17,6 +17,11 @@
+ #include "msm_csid.h"
+ #include "msm_sd.h"
+ #include "msm_camera_io_util.h"
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++#include "../cityman_iris_csi.h"
++#else
++#define IRIS_CSI_RELEASE_STEP(status, expression) do { (void)(status); (void)(expression); } while (0)
++#endif
+ #include "include/msm_csid_2_0_hwreg.h"
+ #include "include/msm_csid_2_2_hwreg.h"
+ #include "include/msm_csid_3_0_hwreg.h"
+@@ -130,13 +135,18 @@
+ 	struct msm_camera_csid_params *csid_params) {}
+ #endif
+ 
+-static void msm_csid_reset(struct csid_device *csid_dev)
++static int msm_csid_reset(struct csid_device *csid_dev)
+ {
+ 	msm_camera_io_w(csid_dev->ctrl_reg->csid_reg.csid_rst_stb_all,
+ 		csid_dev->base +
+ 		csid_dev->ctrl_reg->csid_reg.csid_rst_cmd_addr);
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (csid_dev->cityman_iris_exclusive)
++		return wait_for_completion_timeout(&csid_dev->reset_complete,
++			msecs_to_jiffies(500)) ? 0 : -ETIMEDOUT;
++#endif
+ 	wait_for_completion(&csid_dev->reset_complete);
+-	return;
++	return 0;
+ }
+ 
+ static int msm_csid_config(struct csid_device *csid_dev,
+@@ -178,7 +188,9 @@
+ 					csid_params->lut_params.vc_cfg[i]->decode_format);
+ 	}
+ 
+-	msm_csid_reset(csid_dev);
++	rc = msm_csid_reset(csid_dev);
++	if (rc)
++		return rc;
+ 
+ 	csid_clk_ptr = csid_dev->csid_clk;
+ 	if (!csid_clk_ptr) {
+@@ -364,9 +376,8 @@
+ 
+ 	enable_irq(csid_dev->irq->start);
+ 
+-	msm_csid_reset(csid_dev);
+ 	csid_dev->csid_state = CSID_POWER_UP;
+-	return rc;
++	return msm_csid_reset(csid_dev);
+ 
+ clk_enable_failed:
+ 	if (csid_dev->ctrl_reg->csid_reg.csid_version < CSID_VERSION_V22) {
+@@ -403,6 +414,7 @@
+ 
+ static int msm_csid_release(struct csid_device *csid_dev)
+ {
++	int cleanup_rc = 0;
+ 	uint32_t irq;
+ 
+ 	if (csid_dev->csid_state != CSID_POWER_UP) {
+@@ -433,56 +445,56 @@
+ 	disable_irq(csid_dev->irq->start);
+ 
+ 	if (csid_dev->hw_version == CSID_VERSION_V20) {
+-		msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
+-			csid_dev->csid_clk, csid_dev->num_clk, 0);
+-
+-		msm_camera_enable_vreg(&csid_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
++			csid_dev->csid_clk, csid_dev->num_clk, 0));
++
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csid_dev->pdev->dev,
+ 			csid_8960_vreg_info, ARRAY_SIZE(csid_8960_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
+-
+-		msm_camera_config_vreg(&csid_dev->pdev->dev,
++			NULL, 0, &csid_dev->csi_vdd, 0));
++
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csid_dev->pdev->dev,
+ 			csid_8960_vreg_info, ARRAY_SIZE(csid_8960_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
++			NULL, 0, &csid_dev->csi_vdd, 0));
+ 	} else if (csid_dev->hw_version == CSID_VERSION_V22) {
+-		msm_cam_clk_enable(&csid_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csid_dev->pdev->dev,
+ 			csid_clk_info,
+ 			csid_dev->csid_clk,
+-			csid_dev->num_clk, 0);
+-
+-		msm_camera_enable_vreg(&csid_dev->pdev->dev,
++			csid_dev->num_clk, 0));
++
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
+-
+-		msm_camera_config_vreg(&csid_dev->pdev->dev,
++			NULL, 0, &csid_dev->csi_vdd, 0));
++
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
++			NULL, 0, &csid_dev->csi_vdd, 0));
+ 	} else if ((csid_dev->hw_version >= CSID_VERSION_V30 &&
+ 		csid_dev->hw_version < CSID_VERSION_V31) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V40) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V31_1) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V31_3)) {
+-		msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
+-			csid_dev->csid_clk, csid_dev->num_clk, 0);
+-		msm_camera_enable_vreg(&csid_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
++			csid_dev->csid_clk, csid_dev->num_clk, 0));
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
+-		msm_camera_config_vreg(&csid_dev->pdev->dev,
++			NULL, 0, &csid_dev->csi_vdd, 0));
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
++			NULL, 0, &csid_dev->csi_vdd, 0));
+ 	} else if ((csid_dev->hw_version == CSID_VERSION_V31) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V32) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V33) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V37) ||
+ 		(csid_dev->hw_version == CSID_VERSION_V34)) {
+-		msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
+-			csid_dev->csid_clk, csid_dev->num_clk, 0);
+-		msm_camera_enable_vreg(&csid_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,
++			csid_dev->csid_clk, csid_dev->num_clk, 0));
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
+-
+-		msm_camera_config_vreg(&csid_dev->pdev->dev,
++			NULL, 0, &csid_dev->csi_vdd, 0));
++
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csid_dev->pdev->dev,
+ 			csid_vreg_info, ARRAY_SIZE(csid_vreg_info),
+-			NULL, 0, &csid_dev->csi_vdd, 0);
++			NULL, 0, &csid_dev->csi_vdd, 0));
+ 	} else {
+ 		pr_err("%s:%d, invalid hw version : 0x%x", __func__, __LINE__,
+ 			csid_dev->hw_version);
+@@ -490,15 +502,23 @@
+ 	}
+ 
+ 	if (!IS_ERR_OR_NULL(csid_dev->reg_ptr)) {
+-		regulator_disable(csid_dev->reg_ptr);
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, regulator_disable(csid_dev->reg_ptr));
+ 		regulator_put(csid_dev->reg_ptr);
+ 	}
+ 
+ 	iounmap(csid_dev->base);
+ 	csid_dev->base = NULL;
+ 	csid_dev->csid_state = CSID_POWER_DOWN;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (csid_dev->cityman_iris_exclusive)
++		return cleanup_rc;
++#endif
+ 	return 0;
+ }
++
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++#include "cityman_iris_csid.h"
++#endif
+ 
+ static int32_t msm_csid_cmd(struct csid_device *csid_dev, void __user *arg)
+ {
+@@ -1055,6 +1075,10 @@
+ 	}
+ 
+ 	new_csid_dev->csid_state = CSID_POWER_DOWN;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (new_csid_dev->pdev->id == 3)
++		cityman_iris_csid_device = new_csid_dev;
++#endif
+ 	return 0;
+ 
+ csid_no_resource:
+diff --git a/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.h b/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.h
+--- a/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.h
++++ b/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.h
+@@ -84,6 +84,9 @@
+ 	uint32_t is_3_1_20nm_hw;
+ 	uint32_t csiphy_clk_index;
+ 	uint32_t csiphy_max_clk;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	bool cityman_iris_exclusive;
++#endif
+ 	struct regulator *csi_vdd;
+ 	struct regulator *reg_ptr;
+ };
+diff --git a/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.c b/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.c
+--- a/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.c
++++ b/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.c
+@@ -19,6 +19,11 @@
+ #include "msm_csiphy.h"
+ #include "msm_sd.h"
+ #include "msm_camera_io_util.h"
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++#include "../cityman_iris_csi.h"
++#else
++#define IRIS_CSI_RELEASE_STEP(status, expression) do { (void)(status); (void)(expression); } while (0)
++#endif
+ #include "include/msm_csiphy_2_0_hwreg.h"
+ #include "include/msm_csiphy_2_2_hwreg.h"
+ #include "include/msm_csiphy_3_0_hwreg.h"
+@@ -556,6 +561,7 @@
+ #if DBG_CSIPHY
+ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
+ {
++	int cleanup_rc = 0;
+ 	int i = 0;
+ 	struct msm_camera_csi_lane_params *csi_lane_params;
+ 	uint16_t csi_lane_mask;
+@@ -628,36 +634,41 @@
+ 	disable_irq(csiphy_dev->irq->start);
+ 
+ 	if (csiphy_dev->hw_dts_version <= CSIPHY_VERSION_V22) {
+-		msm_cam_clk_enable(&csiphy_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csiphy_dev->pdev->dev,
+ 			csiphy_clk_info, csiphy_dev->csiphy_clk,
+-			csiphy_dev->num_clk, 0);
++			csiphy_dev->num_clk, 0));
+ 	} else if (csiphy_dev->hw_dts_version >= CSIPHY_VERSION_V30) {
+-		msm_cam_clk_enable(&csiphy_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csiphy_dev->pdev->dev,
+ 			csiphy_clk_info, csiphy_dev->csiphy_clk,
+-			csiphy_dev->num_clk, 0);
++			csiphy_dev->num_clk, 0));
+ 			iounmap(csiphy_dev->clk_mux_base);
+ 	}
+ 
+-	msm_camera_enable_vreg(&csiphy_dev->pdev->dev,
++	IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csiphy_dev->pdev->dev,
+ 		csiphy_vreg_info, ARRAY_SIZE(csiphy_vreg_info),
+-		NULL, 0, &csiphy_dev->csi_vdd, 0);
+-	msm_camera_config_vreg(&csiphy_dev->pdev->dev,
++		NULL, 0, &csiphy_dev->csi_vdd, 0));
++	IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csiphy_dev->pdev->dev,
+ 		csiphy_vreg_info, ARRAY_SIZE(csiphy_vreg_info),
+-		NULL, 0, &csiphy_dev->csi_vdd, 0);
++		NULL, 0, &csiphy_dev->csi_vdd, 0));
+ 
+ 	if (!IS_ERR_OR_NULL(csiphy_dev->reg_ptr)) {
+-		regulator_disable(csiphy_dev->reg_ptr);
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, regulator_disable(csiphy_dev->reg_ptr));
+ 		regulator_put(csiphy_dev->reg_ptr);
+ 	}
+ 
+ 	iounmap(csiphy_dev->base);
+ 	csiphy_dev->base = NULL;
+ 	csiphy_dev->csiphy_state = CSIPHY_POWER_DOWN;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (csiphy_dev->cityman_iris_exclusive)
++		return cleanup_rc;
++#endif
+ 	return 0;
+ }
+ #else
+ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
+ {
++	int cleanup_rc = 0;
+ 	int i = 0;
+ 	struct msm_camera_csi_lane_params *csi_lane_params;
+ 	uint16_t csi_lane_mask;
+@@ -728,35 +739,43 @@
+ 		csiphy_dev->ctrl_reg->csiphy_reg.mipi_csiphy_glbl_pwr_cfg_addr);
+ 
+ 	if (csiphy_dev->hw_dts_version <= CSIPHY_VERSION_V22) {
+-		msm_cam_clk_enable(&csiphy_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csiphy_dev->pdev->dev,
+ 			csiphy_clk_info, csiphy_dev->csiphy_clk,
+-			csiphy_dev->num_clk, 0);
++			csiphy_dev->num_clk, 0));
+ 	} else if (csiphy_dev->hw_dts_version >= CSIPHY_VERSION_V30) {
+-		msm_cam_clk_enable(&csiphy_dev->pdev->dev,
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csiphy_dev->pdev->dev,
+ 			csiphy_clk_info, csiphy_dev->csiphy_clk,
+-			csiphy_dev->num_clk, 0);
++			csiphy_dev->num_clk, 0));
+ 			iounmap(csiphy_dev->clk_mux_base);
+ 	}
+ 
+-	msm_camera_enable_vreg(&csiphy_dev->pdev->dev,
++	IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_enable_vreg(&csiphy_dev->pdev->dev,
+ 		csiphy_vreg_info, ARRAY_SIZE(csiphy_vreg_info),
+-		NULL, 0, &csiphy_dev->csi_vdd, 0);
+-	msm_camera_config_vreg(&csiphy_dev->pdev->dev,
++		NULL, 0, &csiphy_dev->csi_vdd, 0));
++	IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_camera_config_vreg(&csiphy_dev->pdev->dev,
+ 		csiphy_vreg_info, ARRAY_SIZE(csiphy_vreg_info),
+-		NULL, 0, &csiphy_dev->csi_vdd, 0);
++		NULL, 0, &csiphy_dev->csi_vdd, 0));
+ 
+ 	if (!IS_ERR_OR_NULL(csiphy_dev->reg_ptr)) {
+-		regulator_disable(csiphy_dev->reg_ptr);
++		IRIS_CSI_RELEASE_STEP(cleanup_rc, regulator_disable(csiphy_dev->reg_ptr));
+ 		regulator_put(csiphy_dev->reg_ptr);
+ 	}
+ 
+ 	iounmap(csiphy_dev->base);
+ 	csiphy_dev->base = NULL;
+ 	csiphy_dev->csiphy_state = CSIPHY_POWER_DOWN;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (csiphy_dev->cityman_iris_exclusive)
++		return cleanup_rc;
++#endif
+ 	return 0;
+ }
+ 
+ #endif
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++#include "cityman_iris_csiphy.h"
++#endif
++
+ static int32_t msm_csiphy_cmd(struct csiphy_device *csiphy_dev, void *arg)
+ {
+ 	int rc = 0;
+@@ -1080,6 +1099,10 @@
+ 	new_csiphy_dev->msm_sd.sd.devnode->fops =
+ 		&msm_csiphy_v4l2_subdev_fops;
+ 	new_csiphy_dev->csiphy_state = CSIPHY_POWER_DOWN;
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (new_csiphy_dev->pdev->id == 2)
++		cityman_iris_phy_device = new_csiphy_dev;
++#endif
+ 	return 0;
+ 
+ csiphy_no_resource:
