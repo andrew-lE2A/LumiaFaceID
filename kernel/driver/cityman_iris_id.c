@@ -1,5 +1,6 @@
 /*
- * Lumia 950 XL opt-in sensor identification. No stream or illuminator control.
+ * Lumia 950 XL opt-in sensor identification and gated stream diagnostic.
+ * No illuminator, CSI receiver or image capture control.
  * SPDX-License-Identifier: GPL-2.0-only
  */
 #ifndef CITYMAN_IRIS_HOST_TEST
@@ -15,6 +16,13 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include "cci/msm_cci.h"
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+#include <crypto/hash.h>
+#endif
+#endif
+
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+#include "cityman_iris_stream.h"
 #endif
 
 #define IRIS_MODEL 0x0861
@@ -44,6 +52,9 @@ struct cityman_iris {
 	int measured_uv;
 	u16 model;
 	unsigned int attempts;
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	struct iris_stream stream;
+#endif
 };
 
 #ifndef CITYMAN_IRIS_HOST_TEST
@@ -75,11 +86,63 @@ static int iris_read_model(struct cityman_iris *iris, u16 *model)
 	*model = (data[0] << 8) | data[1];
 	return 0;
 }
+
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+static int iris_stream_write8(void *context, u16 address, u8 value)
+{
+	struct cityman_iris *iris = context;
+	struct msm_camera_i2c_reg_array reg = { .reg_addr = address, .reg_data = value };
+	struct msm_camera_cci_ctrl ctrl = {
+		.cmd = MSM_CCI_I2C_WRITE, .cci_info = &iris->client,
+	};
+	int rc;
+	ctrl.cfg.cci_i2c_write_cfg.reg_setting = &reg;
+	ctrl.cfg.cci_i2c_write_cfg.size = 1;
+	ctrl.cfg.cci_i2c_write_cfg.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ctrl.cfg.cci_i2c_write_cfg.data_type = MSM_CAMERA_I2C_BYTE_DATA;
+	rc = v4l2_subdev_call(iris->client.cci_subdev, core, ioctl,
+		VIDIOC_MSM_CCI_CFG, &ctrl);
+	return rc < 0 ? rc : ctrl.status;
+}
+
+static int iris_stream_read8(void *context, u16 address, u8 *value)
+{
+	struct cityman_iris *iris = context;
+	struct msm_camera_cci_ctrl ctrl = {
+		.cmd = MSM_CCI_I2C_READ, .cci_info = &iris->client,
+	};
+	int rc;
+	ctrl.cfg.cci_i2c_read_cfg.addr = address;
+	ctrl.cfg.cci_i2c_read_cfg.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+	ctrl.cfg.cci_i2c_read_cfg.data = value;
+	ctrl.cfg.cci_i2c_read_cfg.num_byte = 1;
+	rc = v4l2_subdev_call(iris->client.cci_subdev, core, ioctl,
+		VIDIOC_MSM_CCI_CFG, &ctrl);
+	return rc < 0 ? rc : ctrl.status;
+}
+
+static void iris_stream_delay(unsigned int value) { msleep(value); }
+
+static struct iris_stream_io iris_stream_io(struct cityman_iris *iris)
+{
+	struct iris_stream_io io = { .context = iris, .write8 = iris_stream_write8,
+		.read8 = iris_stream_read8, .delay_ms = iris_stream_delay };
+	return io;
+}
+#endif
 #endif
 
 static void iris_cleanup(struct cityman_iris *iris)
 {
 	int i, rc;
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	if (iris->stream.entered && iris->cci_on) {
+		struct iris_stream_io io = iris_stream_io(iris);
+		rc = iris_stream_stop(&iris->stream, &io);
+		if (rc)
+			iris->cleanup_error = rc;
+	}
+#endif
 	if (iris->gpio_owned) {
 		gpio_set_value_cansleep(iris->reset, 0);
 		usleep_range(1000, 1500);
@@ -211,11 +274,22 @@ static int iris_identify(struct cityman_iris *iris)
 	}
 	if (!rc && iris->model != IRIS_MODEL)
 		rc = -ENODEV;
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	if (!rc && iris->stream.requested) {
+		struct iris_stream_io io = iris_stream_io(iris);
+		iris->stage = "stream-test";
+		rc = iris_stream_run(&iris->stream, &io);
+	}
+#endif
 done:
 	iris->error = rc;
 	iris_cleanup(iris);
 	iris->status = iris->cleanup_error ? "cleanup-error" :
 		(rc ? "failed" : "identified");
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	if (!rc && !iris->cleanup_error && iris->stream.requested)
+		iris->status = "sensor-streamed";
+#endif
 	dev_info(iris->dev, "%s stage=%s rc=%d model=0x%04x cleanup=%d\n",
 		iris->status, iris->stage, rc, iris->model, iris->cleanup_error);
 	return iris->cleanup_error ? iris->cleanup_error : rc;
@@ -280,6 +354,9 @@ static ssize_t identify_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	if (!mutex_trylock(&iris->lock))
 		return -EBUSY;
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	iris->stream.requested = false;
+#endif
 	rc = iris_identify(iris);
 	mutex_unlock(&iris->lock);
 	return rc < 0 ? rc : count;
@@ -287,8 +364,102 @@ static ssize_t identify_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(result, 0444, result_show, NULL);
 static DEVICE_ATTR(identify, 0200, NULL, identify_store);
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+static ssize_t stream_result_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct iris_stream *s = &iris->stream;
+	ssize_t size;
+	mutex_lock(&iris->lock);
+	size = scnprintf(buf, PAGE_SIZE,
+		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d\n",
+		s->loaded, s->stage, s->first, s->last, s->changes,
+		s->samples, s->writes, s->stop_error);
+	mutex_unlock(&iris->lock);
+	return size;
+}
+
+static ssize_t stream_profile_store(struct device *dev, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct crypto_shash *tfm;
+	struct shash_desc *desc;
+	u8 program[IRIS_PROGRAM_BYTES], digest[32];
+	size_t length = count;
+	int rc = -EINVAL;
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
+	if (!mutex_trylock(&iris->lock))
+		return -EBUSY;
+	if (iris->attempts || iris->blocked || iris->suspended) {
+		rc = -EBUSY;
+		goto out;
+	}
+	iris->stream.loaded = false;
+	if (length && buf[length - 1] == '\n')
+		length--;
+	if (length != IRIS_PROGRAM_BYTES * 2 || hex2bin(program, buf, IRIS_PROGRAM_BYTES))
+		goto out;
+	tfm = crypto_alloc_shash("sha256", 0, 0);
+	if (IS_ERR(tfm)) {
+		rc = PTR_ERR(tfm);
+		goto out;
+	}
+	desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
+	if (!desc) {
+		rc = -ENOMEM;
+		goto free_hash;
+	}
+	desc->tfm = tfm;
+	desc->flags = 0;
+	rc = crypto_shash_digest(desc, program, sizeof(program), digest);
+	if (!rc)
+		rc = iris_stream_accept(&iris->stream, program, sizeof(program), digest);
+	kfree(desc);
+free_hash:
+	crypto_free_shash(tfm);
+out:
+	mutex_unlock(&iris->lock);
+	return rc ? rc : count;
+}
+
+static ssize_t stream_once_store(struct device *dev, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	int rc;
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
+	if (!sysfs_streq(buf, "stream-once"))
+		return -EINVAL;
+	if (!mutex_trylock(&iris->lock))
+		return -EBUSY;
+	if (!iris->stream.loaded) {
+		rc = -ENODATA;
+		goto out;
+	}
+	if (iris->attempts || strcmp(iris->status, "ready")) {
+		rc = -EBUSY;
+		goto out;
+	}
+	iris->stream.requested = true;
+	rc = iris_identify(iris);
+out:
+	mutex_unlock(&iris->lock);
+	return rc < 0 ? rc : count;
+}
+
+static DEVICE_ATTR(stream_result, 0444, stream_result_show, NULL);
+static DEVICE_ATTR(stream_profile, 0200, NULL, stream_profile_store);
+static DEVICE_ATTR(stream_once, 0200, NULL, stream_once_store);
+#endif
 static struct attribute *iris_attrs[] = {
-	&dev_attr_result.attr, &dev_attr_identify.attr, NULL,
+	&dev_attr_result.attr, &dev_attr_identify.attr,
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	&dev_attr_stream_result.attr, &dev_attr_stream_profile.attr, &dev_attr_stream_once.attr,
+#endif
+	NULL,
 };
 static const struct attribute_group iris_group = { .attrs = iris_attrs };
 
@@ -307,6 +478,10 @@ static int cityman_iris_probe(struct platform_device *pdev)
 	iris->dev = dev;
 	iris->status = "ready";
 	iris->stage = "idle";
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+	iris->stream.stage = "idle";
+	iris->stream.first = iris->stream.last = 0xff;
+#endif
 	mutex_init(&iris->lock);
 	iris->client.cci_subdev = msm_cci_get_subdev();
 	if (!iris->client.cci_subdev)
@@ -342,8 +517,13 @@ static int cityman_iris_probe(struct platform_device *pdev)
 		return iris_probe_report(dev, "pinctrl-sleep", PTR_ERR(iris->sleep));
 	platform_set_drvdata(pdev, iris);
 	rc = sysfs_create_group(&dev->kobj, &iris_group);
-	if (!rc)
+	if (!rc) {
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+		dev_info(dev, "idle; explicit root sensor-stream test available; no IR or CSI control\n");
+#else
 		dev_info(dev, "idle; explicit root identification required; no IR or stream control\n");
+#endif
+	}
 	return iris_probe_report(dev, rc ? "status-sysfs" : "ready", rc);
 }
 
@@ -396,5 +576,5 @@ static struct platform_driver cityman_iris_driver = {
 };
 module_platform_driver(cityman_iris_driver);
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("Opt-in Lumia 950 XL sensor ID diagnostic, without IR or streaming");
+MODULE_DESCRIPTION("Opt-in Lumia 950 XL sensor diagnostics, without IR or image capture");
 #endif

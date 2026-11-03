@@ -34,10 +34,15 @@ elif name in ('stop', 'start'):
     (root / 'state.json').write_text(json.dumps(state))
 elif name == 'cat':
     path = Path(sys.argv[1])
-    if (root / 'driver/device/identify').read_text() == 'identify\\n':
+    node = root / 'driver/device'
+    if path.name == 'stream_result' and (node / 'stream_profile').read_text() == 'profile\\n':
+        path.write_text('profile_loaded=1 stage=idle stop_errno=0\\n')
+    triggered = (node / 'identify').read_text() == 'identify\\n'
+    streaming = (node / 'stream_once').read_text() == 'stream-once\\n'
+    if triggered or (streaming and path.name in ('result', 'stream_result')):
         if state.get('unreadable_after'):
             sys.exit(1)
-        path.write_text(state['after'])
+        path.write_text(state.get('stream_after', '') if path.name == 'stream_result' else state['after'])
     print(path.read_text(), end='')
 elif name == 'sleep':
     pass
@@ -55,6 +60,10 @@ class IdentifyHelperTests(unittest.TestCase):
         node.mkdir(parents=True)
         (node / 'result').write_text(INITIAL + '\n')
         (node / 'identify').write_text('')
+        (node / 'stream_once').write_text('')
+        (node / 'stream_profile').write_text('')
+        (node / 'stream_result').write_text('profile_loaded=0 stage=idle stop_errno=0\n')
+        (self.root / 'profile.hex').write_text('profile\n')
         self.state = {'services': dict.fromkeys(SERVICES, 'running'),
                       'events': [], 'after': SUCCESS + '\n'}
         binary = self.root / 'bin'
@@ -67,16 +76,19 @@ class IdentifyHelperTests(unittest.TestCase):
         self.helper = self.root / 'helper.sh'
         self.helper.write_text(source.read_text().replace(
             'driver=/sys/bus/platform/drivers/cityman-iris-id',
-            f'driver={self.root}/driver'))
+            f'driver={self.root}/driver').replace(
+            '/data/local/tmp/cityman-iris-stream-profile.hex', str(self.root / 'profile.hex')))
 
-    def run_helper(self, fail_write=False):
+    def run_helper(self, fail_write=False, operation=None):
         (self.root / 'state.json').write_text(json.dumps(self.state))
         command = ['sh', str(self.helper)]
         if fail_write:
             # A sysfs write can return an error after the driver has unwound.
             command = ['sh', '-c',
-                       'printf() { command printf "$@"; return 1; }; . "$1"',
+                       'printf() { command printf "$@"; return 1; }; helper_path=$1; shift; . "$helper_path"',
                        'test-helper', str(self.helper)]
+        if operation:
+            command.append(operation)
         run = subprocess.run(command, capture_output=True,
                              text=True, timeout=10, env={**os.environ,
                              'FIXTURE': str(self.root),
@@ -163,6 +175,39 @@ class IdentifyHelperTests(unittest.TestCase):
         run = self.run_helper()
         self.assertEqual(run.returncode, 4)
         self.assertIn('SERVICE_RESTORE_FAILED', run.stderr)
+
+    def stream_fixture(self):
+        self.state['after'] = SUCCESS.replace('status=identified stage=model-read',
+                                             'status=sensor-streamed stage=stream-test')
+        self.state['stream_after'] = ('profile_loaded=1 stage=mode-readback first=0x00 last=0x09 '
+                                      'changes=9 samples=16 program_writes=117 stop_errno=0\n')
+
+    def test_stream_mode_loads_profile_and_restores_services(self):
+        self.stream_fixture()
+        run = self.run_helper(operation='stream-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('changes=9', run.stdout)
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+        self.assertEqual((self.root / 'driver/device/stream_once').read_text(), 'stream-once\n')
+        self.assert_not_attempted()  # The identify control was not written.
+
+    def test_stream_stop_failure_leaves_services_stopped(self):
+        self.stream_fixture()
+        self.state['stream_after'] = self.state['stream_after'].replace('stop_errno=0', 'stop_errno=-5')
+        run = self.run_helper(operation='stream-once')
+        self.assertEqual(run.returncode, 3)
+        self.assertIn('REBOOT_REQUIRED', run.stderr)
+        self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)
+
+    def test_stream_requires_new_controls_before_stopping_services(self):
+        (self.root / 'driver/device/stream_once').unlink()
+        run = self.run_helper(operation='stream-once')
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(self.state['events'], [])
+
+    def test_unknown_operation_is_rejected_before_any_stop(self):
+        self.assertEqual(self.run_helper(operation='anything').returncode, 1)
+        self.assertEqual(self.state['events'], [])
 
 
 if __name__ == '__main__':

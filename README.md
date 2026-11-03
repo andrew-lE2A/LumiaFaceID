@@ -81,6 +81,11 @@ model read. The owner completed that read successfully. The
 recover the matching calibration's static mode; acquisition and authentication
 are still not provided.
 
+The next [sensor-stream test](kernel/IRIS-STREAM.md) has a separately gated kernel
+build and a locally prepared, hash-pinned register program. It briefly starts
+the sensor and checks its internal frame counter, then stops and unwinds power.
+It does not yet configure CSI reception or return an image. IR remains off.
+
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are
 distributed here.

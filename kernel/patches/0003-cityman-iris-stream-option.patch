@@ -1,0 +1,22 @@
+Subject: [PATCH] media: gate bounded cityman sensor-stream diagnostic
+Base: patches 0001 and 0002 applied to cc84cab9900ee4e7a3046b3756858e9832caee72
+
+Copy both canonical driver files into the kernel sensor directory before build.
+This adds no CSI route or camera HAL slot and is disabled by default.
+
+diff --git a/drivers/media/platform/msm/camera_v2/Kconfig b/drivers/media/platform/msm/camera_v2/Kconfig
+--- a/drivers/media/platform/msm/camera_v2/Kconfig
++++ b/drivers/media/platform/msm/camera_v2/Kconfig
+@@ -1,3 +1,12 @@
++config CITYMAN_IRIS_STREAM
++	bool "Lumia 950 XL bounded sensor stream diagnostic"
++	depends on CITYMAN_IRIS_ID && CRYPTO_SHA256
++	default n
++	help
++	  Root-triggered, one-cycle sensor program and frame-counter diagnostic.
++	  Requires the exact locally supplied program hash. No CSI, DMA or IR
++	  control. Remains idle at boot. This does not implement frame capture.
++
+ config MSM_CAMERA_SENSOR
+ 	    bool "Qualcomm MSM camera sensor support"
+ 	    depends on MSMB_CAMERA

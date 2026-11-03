@@ -7,6 +7,7 @@
 #include <errno.h>
 
 typedef uint16_t u16;
+typedef uint8_t u8;
 struct device { int unused; };
 struct mutex { int unused; };
 struct regulator { int id; };
@@ -17,6 +18,10 @@ struct cci_device { int ref_count; };
 struct msm_camera_cci_client { void *cci_subdev; };
 enum msm_cci_cmd_type { MSM_CCI_INIT, MSM_CCI_RELEASE };
 struct cityman_iris;
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+struct iris_stream_io;
+static struct iris_stream_io iris_stream_io(struct cityman_iris *);
+#endif
 static int iris_cci_command(struct cityman_iris *, enum msm_cci_cmd_type);
 static int iris_read_model(struct cityman_iris *, u16 *);
 static const char *failure;

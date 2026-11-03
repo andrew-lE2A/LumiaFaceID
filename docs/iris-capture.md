@@ -118,5 +118,8 @@ The current kernel remains the tested ID diagnostic. The extractor was run on
 the exact original calibration and produced the nine blocks and mode summary
 above. Twelve tests use synthetic data to cover malformed directories, bounds,
 record terminators, ambiguous mode registers, input identity and output-file
-preservation. All 79 host tests pass. Streaming and HAL integration remain the
-next implementation work.
+preservation. All 79 host tests passed at that extraction milestone.
+The subsequent [sensor-stream diagnostic](../kernel/IRIS-STREAM.md)
+now implements a bounded sensor program/start/counter/stop cycle. Its recovered
+Siiri clock calculation, fixed test timing and shutdown path can be tested
+before adding CSI/ISP reception. It does not yet return image frames.

@@ -1,0 +1,80 @@
+{
+  "build_id": "iris-stream-01",
+  "purpose": "bounded sensor-only program/start/frame-counter/stop diagnostic; no CSI, DMA, IR or image capture",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "patches": [
+    {
+      "path": "kernel/patches/0001-camera-restore-slave-read-state.patch",
+      "sha256": "8bed81c157e6f634e151848b47f155c37faa262acab3a2517a7a8aa105e18dec"
+    },
+    {
+      "path": "kernel/patches/0002-cityman-iris-id-integration.patch",
+      "sha256": "1bf1d38909c1a1ce27fb6df329efd85700c3089331d2bfc2a8d7f86a0f796582"
+    },
+    {
+      "path": "kernel/patches/0003-cityman-iris-stream-option.patch",
+      "sha256": "eb038047db2af17ec1f5e0a3b87ee0301bad80c21d62dde13bfd0a6300dbd5b7"
+    }
+  ],
+  "driver_sources": [
+    {
+      "path": "kernel/driver/cityman_iris_id.c",
+      "sha256": "3e62d079133c5e1ffee01265a4ceacaba6007f6513faa77fa9a3c4b8d8abcd6f"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_stream.h",
+      "sha256": "47873aa1d9ca4ccaa7b1d82c492c34eb58359e0702e2acbfebedc6a70fdf54aa"
+    }
+  ],
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "configuration_changes_from_original": {
+    "CONFIG_CITYMAN_IRIS_ID": {
+      "before": "n",
+      "after": "y"
+    },
+    "CONFIG_CITYMAN_IRIS_STREAM": {
+      "before": "n",
+      "after": "y"
+    }
+  },
+  "generated_config_sha256": "56978d4b16190d2983a467a88f475f7d67df15f048810f1a99849ba8abbb0b24",
+  "version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #4 SMP PREEMPT Tue Nov 3 01:53:59 UTC 2026",
+  "files": {
+    "Image.gz": {
+      "sha256": "d8dc196b45c5491fe44b58d867ea7d878283cf727a1e42b7cfac724a2cb6cb94",
+      "bytes": 9701788
+    },
+    "boards.dtb": {
+      "sha256": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24",
+      "bytes": 534371
+    }
+  },
+  "device_trees": [
+    {
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "size": 275999,
+      "sha256": "15dc3cb07b6d4d69f246452dc237fa605007a18b4eae758926cf877ffafe636e"
+    }
+  ],
+  "dtbs_byte_identical_to": "iris-id-02",
+  "profile_bytes": 351,
+  "profile_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+  "profile_data_embedded_in_kernel": false,
+  "full_kernel_build": "passed; linked vmlinux and generated validated Image.gz-dtb",
+  "host_tests_passed": 90,
+  "integrated_stream_simulation_scenarios": 160,
+  "existing_power_simulation_scenarios": 28,
+  "phone_boot_test": "not run",
+  "phone_stream_test": "not run",
+  "capture_status": "no delivered frames; CSI/ISP/HAL integration remains",
+  "patch_application": "all three patches apply sequentially to pinned base",
+  "private_repack_validation": {
+    "ramdisk_unchanged": true,
+    "boot_settings_unchanged": true,
+    "fits_original_partition": true
+  }
+}

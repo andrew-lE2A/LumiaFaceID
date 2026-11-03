@@ -3,3 +3,4 @@ __pycache__/
 /cityman-report*.json
 /reports/
 /artifacts/
+/cityman-iris-stream*.hex
