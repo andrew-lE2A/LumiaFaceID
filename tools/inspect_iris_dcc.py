@@ -83,6 +83,9 @@ def mode_summary(records):
             'line_length_register': value(0x0342, 2),
             'frame_length_register': value(0x0340, 2),
             'extclk_register_0136': value(0x0136, 2),
+            'programmed_clock_words': {f'0x{address:04x}': value(address, 2)
+                                       for address in (0x0130, 0x0300, 0x0302, 0x0304,
+                                                       0x0306, 0x0308, 0x030A)},
             'mode_select_present': 0x0100 in registers,
             'special_command_addresses': [f'0x{a:04x}' for a in registers if a >= 0xFFF9]}
 
@@ -111,6 +114,7 @@ def inspect_dcc(data):
                 'Static calibration metadata, not a measurement of delivered frames.',
                 'Read overrides must not be replayed as sensor writes.',
                 'Mode records alone do not establish initialization, CSI routing, or frame timing.',
+                'Programmed clock words do not establish PLL lock, physical clocks or register readback semantics.',
                 'Special commands, dynamic register updates and illumination remain unimplemented.',
                 'The trailer algorithm is unknown; input identity is checked by the full-file SHA-256.',
             ]}

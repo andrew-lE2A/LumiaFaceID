@@ -110,7 +110,9 @@ about 9.6 MHz. The completed [receiver clock check](kernel/IRIS-RXCLK.md)
 measured CSID3 near 240 MHz and the PHY2 timer near 200 MHz, with zero packets
 and clean camera recovery. The [startup/link audit](docs/iris-startup-audit.md)
 records rechecked original-driver branches and remaining evidence needed before
-new writes.
+new writes. For read-only recovery from a connected phone, use
+`tools/collect_iris_evidence.py`; the audit documents its local report format
+and `tools/inspect_iris_startup.py` for offline startup-link extraction.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

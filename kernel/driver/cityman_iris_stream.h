@@ -28,6 +28,11 @@ static const struct iris_stream_register iris_stream_registers[] = {
 	{ "width", 0x034c, 2 }, { "height", 0x034e, 2 },
 	{ "coarse", 0x0202, 2 }, { "gain", 0x0204, 2 },
 	{ "a06", 0x0a06, 1 }, { "a0a", 0x0a0a, 1 },
+	/* Already written by the exact mode program. Keep earlier indices stable.
+	 * Raw latch evidence only: these reads do not measure PLL lock/MIPI rate. */
+	{ "clk0130", 0x0130, 2 },
+	{ "vt_pix", 0x0300, 2 }, { "vt_sys", 0x0302, 2 },
+	{ "op_pix", 0x0308, 2 }, { "op_sys", 0x030a, 2 },
 };
 #define IRIS_READBACK_COUNT (sizeof(iris_stream_registers) / sizeof(iris_stream_registers[0]))
 

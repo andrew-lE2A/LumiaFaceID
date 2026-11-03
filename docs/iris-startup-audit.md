@@ -1,7 +1,8 @@
 # Startup and MIPI audit after the receiver-clock measurement
 
 The [kernel #8 receiver-clock result](../kernel/builds/iris-csi-03/rxclk-result.json)
-is an owner-reported summary, not a recovered raw log. Internal MCLK1 is near
+now includes the raw clock log and saved snapshots recovered directly over ADB
+without retriggering the completed one-shot. Internal MCLK1 is near
 9.6 MHz, CSID3 core near 240 MHz, and PHY2 timer near 200 MHz. All three clocks
 can be present while the sensor engine or physical MIPI link is inactive.
 The unchanged sensor counter is the origin of `-110`; receiver initialization
@@ -30,6 +31,7 @@ jump tables must be read as data, even when `llvm-objdump -d` prints instruction
 ```sh
 python3 tools/inspect_iris_driver.py /tmp/lumia-iris-original.sys
 python3 tools/inspect_iris_dcc.py /tmp/lumia-iris-original.dcc
+python3 tools/inspect_iris_startup.py /tmp/lumia-iris-original.sys
 llvm-objdump -d --triple=thumbv7-windows \
   --start-address=0x411d60 --stop-address=0x411f44 \
   /tmp/lumia-iris-original.sys
@@ -43,8 +45,8 @@ llvm-objdump -d --triple=thumbv7-windows \
 | Post-reset identity | Siiri branch calls read16 for model at `0x40bff6`–`0x40bffa` | Diagnostic rechecks `0x0861` before applying profile |
 | Ordinary unpause | `0x411e64`–`0x411e78` writes `0x0100=1`, then `0x0138=1` | Same order already implemented; zero `0x0138` readback does not by itself identify a missing write |
 | Pre-unpause hook | `0x411dc4`–`0x411dd4` conditionally applies stored settings with internal index 15 | Internal index 15 maps to DCC ID `0x0013`, absent from the pinned file (trace below) |
-| Post-unpause hook | `0x411e82`–`0x411e88` conditionally calls a function pointer | Callback target and runtime applicability remain unresolved; do not invoke the original IR/pulse machinery |
-| Delayed auxiliary path | `0x411e8a` tests a software state field; only its nonzero branch delays, makes an auxiliary peripheral request, waits again, and writes `0x0c01=1` at `0x411ebe` | This is conditional, not a universal Siiri startup write. Establish the field's producer and model applicability before considering any comparison |
+| Post-unpause hook | `0x411e82`–`0x411e88` conditionally calls a function pointer | Resolved to `0x405c50`, a conditional streaming-start logging callback (trace below) |
+| Delayed auxiliary path | `0x411e8a` tests a software state field; only its nonzero branch delays, makes an auxiliary peripheral request, waits again, and writes `0x0c01=1` at `0x411ebe` | Delay producer resolved to mechanical-shutter handling; applicability to iris is not established (trace below) |
 
 The unpause routine also has explicit other-model branches: manufacturer 9 or
 15 with model `0x5e80` takes the extra `0x3c0d/0x3c22` sequence. That is not
@@ -57,7 +59,7 @@ Internal apply indices are **not DCC directory IDs**. The apply routine at
 argument of 15 does not establish that DCC block `0x000f` exists or that opaque
 block `0x000e` should be replayed. The matching DCC still has the same nine
 blocks; read overrides and software configuration remain separate from the
-117-byte idle/mode register program. The pre-unpause hook can now be narrowed further: the byte jump-table entry
+117-register idle/mode program (351 bytes including addresses). The pre-unpause hook can now be narrowed further: the byte jump-table entry
 for directory ID `0x13` at `0x414bf0 + 0x13` targets `0x414caa`, which stores
 its payload pointer at output `+0x3c`. Configuration passes output at stack
 `+0x28`; `0x40c83e` loads stack `+0x64` (that same field) and `0x40c850`–
@@ -65,9 +67,76 @@ its payload pointer at output `+0x3c`. Configuration passes output at stack
 `0x40c698`–`0x40c6c2` clears all 68 stored slots before loading this file.
 Since this exact DCC has no `0x0013`, its direct configuration path supplies no
 pre-unpause hook. That hook is therefore not evidence of a missing program in
-our extracted idle/mode profile. Other runtime population paths, callbacks and
-the delayed auxiliary software state still need tracing; an external-trigger
+our extracted idle/mode profile. Other runtime population paths still need consideration; an external-trigger
 requirement remains unestablished.
+
+The added `inspect_iris_startup.py` reproduces the callback literal/Thumb target,
+pre-unpause directory jump-table target and matching absolute delay-field
+addresses. It accepts only the original SHA-256. Its bounded Thumb decoders do
+not execute driver code or infer the meaning of the callbacks; the intervening
+stores and function semantics below remain separately reviewed disassembly.
+
+## Callback and auxiliary-path follow-up
+
+Direct ADB inspection found the phone still on kernel #8 with attempts=1,
+`cleanup_errno=0`, receiver stage `released` and all three camera services
+running. The saved clock log contains one stable enabled CSID3 sample and two
+stable enabled PHY2 timer samples. All 20 sensor and 22 receiver pairs match
+`iris-csi-03/phone-result.json`. No diagnostic or clock measurement was rerun.
+The report's UTC timestamp comes from the Mac; the phone's saved file timestamp
+is not used to date the experiment.
+
+The post-unpause callback is now resolved through its actual registration:
+
+1. At `0x40a698`, a literal load from `0x40a844` fetches Thumb pointer
+   `0x405c51`; `0x40a69a` stores it in the callback argument structure at `+0x28`.
+2. `0x40a6be`–`0x40a6c0` passes this structure to initialization `0x4171e4`.
+3. `0x417248` and `0x41724e` copy argument `+0x28` into the callback table at
+   `0x83b340 + 0x28`, the slot called at `0x411e82`–`0x411e88`.
+4. The target routine at `0x405c50`–`0x405cc0` checks logging state and builds a
+   logging event. Its UTF-16 message at `0x4250d0` is
+   `Streaming started in still mode`. The reviewed callback contains no CCI,
+   sensor-register, receiver or pulse-control call. It supplies no missing
+   hardware-start operation for our diagnostic.
+
+The delayed auxiliary branch's delay field is at absolute `0x831f08`:
+`0x411e8a` accesses `0x831ecc + 0x3c`, while producer `0x4162ca` accesses
+`0x831ec8 + 0x40`. Treating those two structure bases as identical would miss
+this connection. The producer is within `cam_drv_SMIApp_ms_handle` at
+`0x415ee8`; its entry/exit log names are referenced at `0x41633c` and
+`0x4162e4`, and its diagnostics identify mechanical-shutter timing. At
+`0x4162a0`–`0x4162ca`, the delay is saved conditionally on software state
+`0x460d98 == 1`. The later unpause path consumes then clears it.
+
+The direct call at `0x40d04a` is itself gated: configuration pointer at `+0x18`
+must be present, capability/context `+0x14c` bit 0 must be set, and the request
+bit 0 must be set. Request bit 1 determines whether an additional argument is
+supplied. These are separate conditions from reading model `0x0861`. The
+original context initialization at `0x411a06` clears the delay field. This trace
+does not establish that the iris session requests mechanical-shutter handling,
+and does not justify adding `0x0c00/0x0c01` or auxiliary peripheral writes.
+The name/consumer trace is stronger than treating a nearby conditional branch
+as a required Siiri initialization step; exact runtime applicability remains
+unmeasured.
+
+## Read-only local collection
+
+From the project directory, with an authorized ADB connection:
+
+```sh
+mkdir -p reports
+python3 tools/collect_iris_evidence.py --serial DEVICE_SERIAL \
+  --output reports/iris-evidence-new.json
+```
+
+The collector only reads saved iris sysfs results, existing receiver-clock logs,
+`/proc/version` and the three camera-service states. It never reads the private
+profile, live sensor registers or debug-clock `measure` controls. It refuses an
+existing output file, malformed/incomplete clock logs, unexpected log paths,
+failed reads, or a changed diagnostic result during collection. Reports omit
+the ADB serial and stay in the ignored local `reports/` directory. A missing
+saved clock log is represented by an empty list, not fabricated measurements.
+The currently recovered report is `reports/iris-csi-03-adb-evidence.json`.
 
 ## Receiver: what the source actually establishes
 
@@ -101,9 +170,10 @@ PHY and cannot establish an incoming signal.
 
 ## Next discriminating work
 
-1. Continue with the post-unpause callback and delayed auxiliary field above
-   against this exact calibration and Siiri path. Record each required operation,
-   condition and order before proposing a new startup comparison.
+1. Check the remaining mode/PLL programming and original Siiri dynamic settings
+   against the exact calibration. The resolved logging hook and conditional
+   mechanical-shutter path supply no evidence-backed new startup write. Record
+   each operation, condition and order before proposing a comparison.
 2. Recover matching PHY status definitions and timer/settle encoding. If adding
    instrumentation, collect events through the owning driver's existing IRQ
    handler and preserve cleanup; avoid competing MMIO reads/clears or enabling
@@ -119,3 +189,26 @@ comparison remains one-shot on a fresh `fastboot boot`, with camera services
 stopped, explicit sensor/receiver cleanup and both normal cameras checked after
 restoration. Preserve the original boot backup and private profile. IR remains
 disabled; authentication and ISPIF/VFE image delivery remain future work.
+
+## Local validation
+
+The read-only collector was run against the connected Lumia on the existing
+kernel #8 boot. Its recovered samples/readbacks are in `rxclk-result.json`;
+the full local capture stays under `reports/`. The startup-link extractor was
+run on the hash-pinned original driver and reproduced the addresses above.
+Host tests cover interrupted/invalid collection, changed results, hostile log
+paths, existing evidence preservation, and bounded Thumb literal/jump-table
+mapping. These checks do not establish sensor transmission or replace a kernel
+build/phone test for any future runtime change. No runtime driver source changed
+in this follow-up.
+
+## Subsequent local hardware checks
+
+Kernel #9 adds only five programmed-clock word readbacks; its one-shot still
+returns zero sensor-counter changes and zero CSID3 packets, with clean cleanup.
+See [complete clock results](../kernel/IRIS-PLL.md). A separate DTB-only
+[front-camera CSID3 control](../kernel/IRIS-CSID3-CONTROL.md) also returns zero
+packets from the otherwise working front sensor. Receiver routing/configuration
+therefore remains unresolved independently of iris startup. No new startup
+write follows from either observation. Both comparisons used temporary boots;
+IR stayed disabled and development remains local.

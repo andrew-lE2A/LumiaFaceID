@@ -1,0 +1,32 @@
+{
+  "kernel": "#10",
+  "model": "0x0861",
+  "attempts": 1,
+  "sensor_counter_samples": 16,
+  "sensor_counter_changes": 0,
+  "error": -110,
+  "stage": "stream-test",
+  "sensor_stop_errno": 0,
+  "receiver_release_errno": 0,
+  "cleanup_errno": 0,
+  "receiver": 3,
+  "phy": 2,
+  "lane_mask": "0x18",
+  "combo": 1,
+  "lane_irq_events": "0x00",
+  "lane_irq_samples": 0,
+  "packets": 0,
+  "recovery": {
+    "front_frames_at_snapshot": 47,
+    "rear_frames_at_snapshot": 32,
+    "services": "all running"
+  },
+  "installed_boot_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "raw_local_evidence": [
+    "reports/iris-irq-01-iris-helper.log",
+    "reports/iris-irq-01-iris-dmesg.txt",
+    "reports/iris-irq-01-recovery-first.txt",
+    "reports/iris-irq-01-recovery-second.txt"
+  ],
+  "ir_illumination": "disabled"
+}

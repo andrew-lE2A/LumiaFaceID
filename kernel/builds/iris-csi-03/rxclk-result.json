@@ -2,7 +2,7 @@
   "schema_version": 1,
   "build_id": "iris-csi-03",
   "helper_commit_expected": "25fdf7a0db2c7ba1c58b758b75996c3982d926a5",
-  "provenance": "Owner-reported summary supplied at local-workspace handoff. Full terminal log and individual sample rows were not supplied in this session; do not reconstruct them.",
+  "provenance": "Owner-reported test summary, supplemented by direct read-only ADB recovery of the saved receiver-clock log and kernel snapshots on 2026-11-03. No diagnostic was retriggered.",
   "operation": "csi2-once --observe-receiver-clocks",
   "kernel_build_number_reported": 8,
   "boot_method": "fastboot boot (temporary)",
@@ -11,16 +11,25 @@
       "clock": "camss_csi3_clk",
       "stable_enabled_reported": true,
       "measured_hz_min": 239999157,
-      "measured_hz_max": 239999157
+      "measured_hz_max": 239999157,
+      "stable_enabled_samples": [
+        2
+      ],
+      "stable_enabled_sample_count": 1
     },
     {
       "clock": "camss_phy2_csi2phytimer_clk",
       "stable_enabled_reported": true,
       "measured_hz_min": 199999414,
-      "measured_hz_max": 200000878
+      "measured_hz_max": 200000878,
+      "stable_enabled_samples": [
+        1,
+        2
+      ],
+      "stable_enabled_sample_count": 2
     }
   ],
-  "raw_samples_available": false,
+  "raw_samples_available": true,
   "sensor": {
     "model": "0x0861",
     "interface_0111": 2,
@@ -50,5 +59,491 @@
     "physical_transmission_established": false,
     "image_frames_delivered": false,
     "root_cause": "unresolved"
-  }
+  },
+  "raw_receiver_clock_log": "RXCLK sample=1 clock=camss_csi3_clk rate_before_hz=0 enable_before=0 measured_hz=0 rate_after_hz=0 enable_after=1\nRXCLK sample=1 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=1 measured_hz=199999414 rate_after_hz=200000000 enable_after=1\nRXCLK sample=2 clock=camss_csi3_clk rate_before_hz=240000000 enable_before=1 measured_hz=239999157 rate_after_hz=240000000 enable_after=1\nRXCLK sample=2 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=1 measured_hz=200000878 rate_after_hz=200000000 enable_after=1\nRXCLK sample=3 clock=camss_csi3_clk rate_before_hz=240000000 enable_before=0 measured_hz=0 rate_after_hz=240000000 enable_after=0\nRXCLK sample=3 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=0 measured_hz=0 rate_after_hz=200000000 enable_after=0\nRXCLK sample=4 clock=camss_csi3_clk rate_before_hz=240000000 enable_before=0 measured_hz=0 rate_after_hz=240000000 enable_after=0\nRXCLK sample=4 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=0 measured_hz=0 rate_after_hz=200000000 enable_after=0\nRXCLK sample=5 clock=camss_csi3_clk rate_before_hz=240000000 enable_before=0 measured_hz=0 rate_after_hz=240000000 enable_after=0\nRXCLK sample=5 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=0 measured_hz=0 rate_after_hz=200000000 enable_after=0\nRXCLK sample=6 clock=camss_csi3_clk rate_before_hz=240000000 enable_before=0 measured_hz=0 rate_after_hz=240000000 enable_after=0\nRXCLK sample=6 clock=camss_phy2_csi2phytimer_clk rate_before_hz=200000000 enable_before=0 measured_hz=0 rate_after_hz=200000000 enable_after=0\n",
+  "samples": [
+    {
+      "sample": 1,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 0,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 0,
+      "enable_after": 1,
+      "stable_enabled": false
+    },
+    {
+      "sample": 1,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 1,
+      "measured_hz": 199999414,
+      "rate_after_hz": 200000000,
+      "enable_after": 1,
+      "stable_enabled": true
+    },
+    {
+      "sample": 2,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 240000000,
+      "enable_before": 1,
+      "measured_hz": 239999157,
+      "rate_after_hz": 240000000,
+      "enable_after": 1,
+      "stable_enabled": true
+    },
+    {
+      "sample": 2,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 1,
+      "measured_hz": 200000878,
+      "rate_after_hz": 200000000,
+      "enable_after": 1,
+      "stable_enabled": true
+    },
+    {
+      "sample": 3,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 240000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 240000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 3,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 200000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 4,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 240000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 240000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 4,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 200000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 5,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 240000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 240000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 5,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 200000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 6,
+      "clock": "camss_csi3_clk",
+      "rate_before_hz": 240000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 240000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    },
+    {
+      "sample": 6,
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "rate_before_hz": 200000000,
+      "enable_before": 0,
+      "measured_hz": 0,
+      "rate_after_hz": 200000000,
+      "enable_after": 0,
+      "stable_enabled": false
+    }
+  ],
+  "kernel_version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #8 SMP PREEMPT Tue Nov 3 10:46:11 UTC 2026",
+  "adb_collection_time_utc": "2026-11-03T12:17:53.950709+00:00",
+  "raw_clock_log_device_path": "/data/local/tmp/cityman-iris-rxclk.GTmANJ",
+  "sensor_register_readback": [
+    {
+      "name": "model",
+      "address": "0x0000",
+      "width_bytes": 2,
+      "before": "0x0861",
+      "after": "0x0861",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "mode",
+      "address": "0x0100",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0001",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "reset",
+      "address": "0x0103",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "hold",
+      "address": "0x0104",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "fast",
+      "address": "0x0106",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "ctrl",
+      "address": "0x0138",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "ext",
+      "address": "0x0136",
+      "width_bytes": 2,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "signal",
+      "address": "0x0111",
+      "width_bytes": 1,
+      "before": "0x0002",
+      "after": "0x0002",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "format",
+      "address": "0x0112",
+      "width_bytes": 2,
+      "before": "0x0a0a",
+      "after": "0x0a0a",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "lanes",
+      "address": "0x0114",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "pre",
+      "address": "0x0304",
+      "width_bytes": 2,
+      "before": "0x0001",
+      "after": "0x0001",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "mult",
+      "address": "0x0306",
+      "width_bytes": 2,
+      "before": "0x0092",
+      "after": "0x0092",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "frame",
+      "address": "0x0340",
+      "width_bytes": 2,
+      "before": "0x045c",
+      "after": "0x045c",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "line",
+      "address": "0x0342",
+      "width_bytes": 2,
+      "before": "0x0834",
+      "after": "0x0834",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "width",
+      "address": "0x034c",
+      "width_bytes": 2,
+      "before": "0x0780",
+      "after": "0x0780",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "height",
+      "address": "0x034e",
+      "width_bytes": 2,
+      "before": "0x0440",
+      "after": "0x0440",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "coarse",
+      "address": "0x0202",
+      "width_bytes": 2,
+      "before": "0x000c",
+      "after": "0x000c",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "gain",
+      "address": "0x0204",
+      "width_bytes": 2,
+      "before": "0x0038",
+      "after": "0x0038",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "a06",
+      "address": "0x0a06",
+      "width_bytes": 1,
+      "before": "0x0001",
+      "after": "0x0001",
+      "before_valid": true,
+      "after_valid": true
+    },
+    {
+      "name": "a0a",
+      "address": "0x0a0a",
+      "width_bytes": 1,
+      "before": "0x0000",
+      "after": "0x0000",
+      "before_valid": true,
+      "after_valid": true
+    }
+  ],
+  "receiver_register_readback": [
+    {
+      "name": "csid_control0",
+      "before": "0x00000040",
+      "before_valid": true,
+      "after": "0x00000040",
+      "after_valid": true
+    },
+    {
+      "name": "csid_control1",
+      "before": "0x0005000f",
+      "before_valid": true,
+      "after": "0x0005000f",
+      "after_valid": true
+    },
+    {
+      "name": "csid_vc0_lut",
+      "before": "0x0000002b",
+      "before_valid": true,
+      "after": "0x0000002b",
+      "after_valid": true
+    },
+    {
+      "name": "csid_cid0_config",
+      "before": "0x00000023",
+      "before_valid": true,
+      "after": "0x00000023",
+      "after_valid": true
+    },
+    {
+      "name": "csid_irq_status",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_mux",
+      "before": "0x00000030",
+      "before_valid": true,
+      "after": "0x00000030",
+      "after_valid": true
+    },
+    {
+      "name": "phy_power",
+      "before": "0x00000031",
+      "before_valid": true,
+      "after": "0x00000031",
+      "after_valid": true
+    },
+    {
+      "name": "phy_mode",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_cfg2",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_settle",
+      "before": "0x00000014",
+      "before_valid": true,
+      "after": "0x00000014",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_misc",
+      "before": "0x00000004",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_cfg2",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_settle",
+      "before": "0x00000014",
+      "before_valid": true,
+      "after": "0x00000014",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_misc",
+      "before": "0x00000008",
+      "before_valid": true,
+      "after": "0x00000008",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status0",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status1",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status2",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status3",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status4",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status5",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status6",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status7",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    }
+  ],
+  "register_comparison": {
+    "reference_path": "kernel/builds/iris-csi-03/phone-result.json",
+    "sensor_pairs": 20,
+    "receiver_pairs": 22,
+    "all_pairs_valid": true,
+    "all_pairs_identical_to_reference": true
+  },
+  "adb_saved_diagnostic_files": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\n",
+    "stream_result": "profile_loaded=1 stage=frame-counter first=0x00 last=0x00 changes=0 samples=16 program_writes=117 stop_errno=0 program_transactions=50 readback_errno=0 interface_csi2_requested=1\n",
+    "stream_readback": "model addr=0x0000 width=2 before=0x0861 before_valid=1 after=0x0861 after_valid=1\nmode addr=0x0100 width=1 before=0x0000 before_valid=1 after=0x0001 after_valid=1\nreset addr=0x0103 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\nhold addr=0x0104 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\nfast addr=0x0106 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\nctrl addr=0x0138 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\next addr=0x0136 width=2 before=0x0000 before_valid=1 after=0x0000 after_valid=1\nsignal addr=0x0111 width=1 before=0x0002 before_valid=1 after=0x0002 after_valid=1\nformat addr=0x0112 width=2 before=0x0a0a before_valid=1 after=0x0a0a after_valid=1\nlanes addr=0x0114 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\npre addr=0x0304 width=2 before=0x0001 before_valid=1 after=0x0001 after_valid=1\nmult addr=0x0306 width=2 before=0x0092 before_valid=1 after=0x0092 after_valid=1\nframe addr=0x0340 width=2 before=0x045c before_valid=1 after=0x045c after_valid=1\nline addr=0x0342 width=2 before=0x0834 before_valid=1 after=0x0834 after_valid=1\nwidth addr=0x034c width=2 before=0x0780 before_valid=1 after=0x0780 after_valid=1\nheight addr=0x034e width=2 before=0x0440 before_valid=1 after=0x0440 after_valid=1\ncoarse addr=0x0202 width=2 before=0x000c before_valid=1 after=0x000c after_valid=1\ngain addr=0x0204 width=2 before=0x0038 before_valid=1 after=0x0038 after_valid=1\na06 addr=0x0a06 width=1 before=0x0001 before_valid=1 after=0x0001 after_valid=1\na0a addr=0x0a0a width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1\n",
+    "csi_result": "requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=20 before_valid=1 after_valid=1 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003\n",
+    "csi_readback": "csid_control0 before=0x00000040 before_valid=1 after=0x00000040 after_valid=1\ncsid_control1 before=0x0005000f before_valid=1 after=0x0005000f after_valid=1\ncsid_vc0_lut before=0x0000002b before_valid=1 after=0x0000002b after_valid=1\ncsid_cid0_config before=0x00000023 before_valid=1 after=0x00000023 after_valid=1\ncsid_irq_status before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\nphy_clock_mux before=0x00000030 before_valid=1 after=0x00000030 after_valid=1\nphy_power before=0x00000031 before_valid=1 after=0x00000031 after_valid=1\nphy_mode before=0x00000010 before_valid=1 after=0x00000010 after_valid=1\nphy_clock_cfg2 before=0x00000010 before_valid=1 after=0x00000010 after_valid=1\nphy_clock_settle before=0x00000014 before_valid=1 after=0x00000014 after_valid=1\nphy_clock_misc before=0x00000004 before_valid=1 after=0x00000004 after_valid=1\nphy_data_cfg2 before=0x00000010 before_valid=1 after=0x00000010 after_valid=1\nphy_data_settle before=0x00000014 before_valid=1 after=0x00000014 after_valid=1\nphy_data_misc before=0x00000008 before_valid=1 after=0x00000008 after_valid=1\nphy_irq_status0 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\nphy_irq_status1 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\nphy_irq_status2 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\nphy_irq_status3 before=0x00000000 before_valid=1 after=0x00000004 after_valid=1\nphy_irq_status4 before=0x00000000 before_valid=1 after=0x00000004 after_valid=1\nphy_irq_status5 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\nphy_irq_status6 before=0x00000000 before_valid=1 after=0x00000010 after_valid=1\nphy_irq_status7 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1\n"
+  },
+  "camera_service_states_at_collection": "cameraserver=running\nvendor.camera-provider-2-4=running\nqcamerasvr=running\n",
+  "collection_limits": [
+    "No hardware diagnostic was triggered.",
+    "Saved register snapshots precede cleanup; these are not live sensor reads.",
+    "Service states were observed now; restoration and camera behavior remain owner evidence.",
+    "Matching result reads detect a changed diagnostic result, not concurrent identical clock-log rewrites.",
+    "Internal clock samples do not measure sensor pins or recovered MIPI clocks."
+  ]
 }

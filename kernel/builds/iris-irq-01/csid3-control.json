@@ -1,0 +1,20 @@
+{
+  "boot_sha256": "64bfca66936ceeac5a7b71d2dfa4945e1e34da7faa99e6dfb0f696f171527ad5",
+  "camera_id": 1,
+  "frames_produced_at_snapshot": 0,
+  "receiver": 3,
+  "phy": 2,
+  "lane_mask": "0x7",
+  "combo": 0,
+  "lane_irq_events": "0x00",
+  "lane_irq_samples": 0,
+  "packets_at_release": 0,
+  "automatic_hal_reopen": true,
+  "iris_attempts": 0,
+  "camera_services": "running",
+  "installed_boot_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "evidence": [
+    "reports/iris-irq-01-csid3-camera.txt",
+    "reports/iris-irq-01-csid3-dmesg.txt"
+  ]
+}

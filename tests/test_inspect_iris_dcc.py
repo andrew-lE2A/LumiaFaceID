@@ -95,6 +95,16 @@ class DccRecordTests(unittest.TestCase):
         self.assertEqual(summary['special_command_addresses'], ['0xfff9'])
         self.assertIsNone(inspector.mode_summary([(0x034C, 5)])['output_width'])
 
+    def test_clock_summary_keeps_partial_words_unknown_and_decodes_msb_first(self):
+        words = inspector.mode_summary([(0x0130, 0x12), (0x0131, 0x34),
+                                        (0x0300, 0x56), (0x0301, 0x78),
+                                        (0x0302, 0x9a)])['programmed_clock_words']
+        self.assertEqual(words['0x0130'], 0x1234)
+        self.assertEqual(words['0x0300'], 0x5678)
+        self.assertIsNone(words['0x0302'])
+        self.assertIsNone(words['0x0308'])
+        self.assertEqual(len(words), 7)
+
     def test_duplicate_mode_register_is_not_summarized_as_last_write_wins(self):
         with self.assertRaisesRegex(ValueError, 'Duplicate register'):
             inspector.mode_summary([(0x034C, 5), (0x034C, 7)])

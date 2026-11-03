@@ -1,0 +1,14 @@
+{
+  "build_id": "iris-irq-01",
+  "kernel_build_number": 10,
+  "purpose": "one bounded first lane-event IRQ per CSID2/CSID3 configuration",
+  "boot_sha256": "d104dddfb5fbbde32a822d836a74e1e4a7224ba8ed630c6089d0184c1be6316e",
+  "kernel_sha256": "a3a312dac0b83c9477ae2274f5202e6e7854a9a9a515fbae54f49678e0a2afbc",
+  "dtb_sha256": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24",
+  "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+  "patch_sha256": "2aef91013bd4affd4e514771d7e05928bc3a4c5d730c3de358e3ae631cfb6e21",
+  "build_stamp": "/* This file is auto generated, version 10 */\n/* SMP PREEMPT */\n#define UTS_MACHINE \"arm64\"\n#define UTS_VERSION \"#10 SMP PREEMPT Tue Nov 3 16:30:18 UTC 2026\"\n#define LINUX_COMPILE_BY \"lumiafaceid\"\n#define LINUX_COMPILE_HOST \"local-mac\"\n#define LINUX_COMPILER \"gcc version 4.9.x 20150123 (prerelease) (GCC) \"\n",
+  "boot_test": "temporary boot successful; ordinary front CSID2 delivered 137 frames at snapshot, 242296 packets, IRQ events 0x55, samples 1, ECC/CRC zero",
+  "publication": "local only",
+  "host_tests": "122 passed"
+}

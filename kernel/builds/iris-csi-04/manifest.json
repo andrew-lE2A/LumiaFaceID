@@ -1,0 +1,119 @@
+{
+  "build_id": "iris-csi-04",
+  "kernel_build_number": 9,
+  "purpose": "five additional word readbacks of programmed clock fields; no changed sensor/receiver writes",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "patches": [
+    {
+      "path": "kernel/patches/0001-camera-restore-slave-read-state.patch",
+      "sha256": "8bed81c157e6f634e151848b47f155c37faa262acab3a2517a7a8aa105e18dec"
+    },
+    {
+      "path": "kernel/patches/0002-cityman-iris-id-integration.patch",
+      "sha256": "1bf1d38909c1a1ce27fb6df329efd85700c3089331d2bfc2a8d7f86a0f796582"
+    },
+    {
+      "path": "kernel/patches/0003-cityman-iris-stream-option.patch",
+      "sha256": "eb038047db2af17ec1f5e0a3b87ee0301bad80c21d62dde13bfd0a6300dbd5b7"
+    },
+    {
+      "path": "kernel/patches/0004-cityman-iris-csi-option.patch",
+      "sha256": "5ff51bc21242f498d933e4f90fc24f5ebfdcf4fb44e0a36c26ce4b3decbbf6f8"
+    }
+  ],
+  "driver_sources": [
+    {
+      "path": "kernel/driver/cityman_iris_csi.h",
+      "sha256": "deab094794ba9097e30ca0f21e1a1cb59c8ec69ae4b057434a5b1abb629967ec"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_csid.h",
+      "sha256": "6a7b51fdc3556c42fb9cb8850baed15866294eb643367ca1ec225e1ac89a335f"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_csiphy.h",
+      "sha256": "620603c5b84a0b89adb742d522c1bc5f91cda36ee2bb21ef5ed47ef393def81b"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_id.c",
+      "sha256": "f5d3decac1c276295da43fc428f642a685aa2c835386ce117f552619dd8f3f15"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_stream.h",
+      "sha256": "320241309d909813790ae08f272595c4f355e1a9f9bac63db16370a795e98657"
+    }
+  ],
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "configuration_byte_identical_to": "iris-csi-03",
+  "dtbs_byte_identical_to": "iris-csi-03",
+  "device_trees": [
+    {
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "size": 275999,
+      "sha256": "15dc3cb07b6d4d69f246452dc237fa605007a18b4eae758926cf877ffafe636e"
+    }
+  ],
+  "files": {
+    "Image.gz": {
+      "sha256": "8020ce2868b8d830d94710fa9543dc8e68b762c438cbe40786b000371881b048",
+      "bytes": 9704156
+    },
+    "boards.dtb": {
+      "sha256": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24",
+      "bytes": 534371
+    }
+  },
+  "build_stamp": "/* This file is auto generated, version 9 */\n/* SMP PREEMPT */\n#define UTS_MACHINE \"arm64\"\n#define UTS_VERSION \"#9 SMP PREEMPT Tue Nov 3 15:15:41 UTC 2026\"\n#define LINUX_COMPILE_BY \"lumiafaceid\"\n#define LINUX_COMPILE_HOST \"local-mac\"\n#define LINUX_COMPILER \"gcc version 4.9.x 20150123 (prerelease) (GCC) \"\n",
+  "build_environment": "local Docker linux/amd64 on Mac; case-sensitive named Linux volume; build network disabled",
+  "build_inputs_local_report": "reports/local-build-09-inputs.json",
+  "full_kernel_build": "passed",
+  "sensor_snapshot_fields": 25,
+  "receiver_snapshot_fields": 22,
+  "added_readback_words": {
+    "0x0130": "0x099a",
+    "0x0300": "0x0002",
+    "0x0302": "0x000a",
+    "0x0308": "0x0008",
+    "0x030a": "0x0001"
+  },
+  "profile_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+  "profile_payload_unchanged": true,
+  "receiver_route": {
+    "phy": 2,
+    "csid": 3,
+    "combo_mode": 1,
+    "lane_mask": "0x18",
+    "lane_assign": "0x0004",
+    "clock_lane": 3,
+    "data_lane": 4,
+    "virtual_channel": 0,
+    "csi_data_type": "0x2b",
+    "decode_format": "CSI_DECODE_10BIT (2)",
+    "requested_csi_clock_hz": 200000000,
+    "requested_phy_timer_hz": 200000000,
+    "settle_count": 20,
+    "settle_window_measured": false
+  },
+  "private_repack_validation": {
+    "ramdisk_unchanged": true,
+    "boot_settings_unchanged": true,
+    "partition_size_unchanged": true,
+    "boot_id_verified": true
+  },
+  "phone_boot_test": "passed; kernel #9 reached Android 16 with untouched ready diagnostic",
+  "phone_diagnostic": "completed; counter timeout and zero packets; clean cleanup; both normal-camera controls returned frames/positive packets",
+  "capture_status": "no delivered iris image; no Android authentication; IR disabled",
+  "publication": "local only; no GitHub push or PR",
+  "host_tests_passed": 122,
+  "compiled_driver_source_hashes_verified": true,
+  "case_distinct_source_files_verified": true,
+  "initial_mac_bind_mount_build": "discarded; case-insensitive extraction collapsed xt_HL.c and xt_hl.c; rebuilt from original archives in a fresh Linux volume",
+  "temporary_boot_command": "fastboot -s DEVICE_SERIAL boot reports/cityman-iris-csi-04.img",
+  "temporary_boot_fastboot_result": "Sending boot.img OKAY; Booting OKAY",
+  "phone_result_path": "kernel/builds/iris-csi-04/phone-result.json"
+}

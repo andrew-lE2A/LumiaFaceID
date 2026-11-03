@@ -1,0 +1,42 @@
+{
+  "boot_sha256": "23fd17c3b29aa8ae0d6c48821ade4e19eba39d9e8aceea688169ab73f75ab6d2",
+  "kernel_sha256": "e6b34b0023e2f840747471132c7858f793407780032800d95ceefcacbc36a0a1",
+  "dtb_sha256": "5d8d2ebfc2f5b37d4557c81c73142dcc7bd91982062ba9fc0cfe36764eebfbaf",
+  "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+  "build_stamp": "/* This file is auto generated, version 11 */\n/* SMP PREEMPT */\n#define UTS_MACHINE \"arm64\"\n#define UTS_VERSION \"#11 SMP PREEMPT Tue Nov 3 16:49:26 UTC 2026\"\n#define LINUX_COMPILE_BY \"lumiafaceid\"\n#define LINUX_COMPILE_HOST \"local-mac\"\n#define LINUX_COMPILER \"gcc version 4.9.x 20150123 (prerelease) (GCC) \"\n",
+  "patch_sha256": "047ebbbf2df81423fdf3655c4b49445a4309fe604c8fd185b1dd1bd7ce8aabd6",
+  "purpose": "CSID3 front-camera control with original Lumia CORE_CTRL_1 bit16",
+  "publication": "local only",
+  "test": "temporary boot passed",
+  "front_camera": {
+    "camera_id": 1,
+    "frames_produced_at_snapshot": 0,
+    "csid3_ctrl1_readback": "0x0005000f",
+    "lane_irq_events": "0x00",
+    "lane_irq_samples": 0,
+    "packets": 0,
+    "ecc": 0,
+    "crc": 0,
+    "automatic_hal_retry": true
+  },
+  "rear_camera": {
+    "camera_id": 0,
+    "frames_produced_at_snapshot": 36
+  },
+  "iris_diagnostic": "not run; idle attempts=0",
+  "installed_boot_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "camera_services": "running",
+  "raw_local_evidence": [
+    "reports/front-csid3-flag-camera.txt",
+    "reports/front-csid3-flag-front.txt",
+    "reports/front-csid3-flag-dmesg.txt"
+  ],
+  "interpretation": "Bit16 present in CSID3 ctrl1 does not by itself restore front-camera CSID3 input; iris path was not tested by this comparison.",
+  "installed_kernel_recovery": {
+    "kernel": "#29",
+    "front_camera_frames": 205,
+    "rear_camera_frames": 93,
+    "camera_services": "running",
+    "camera_app": "closed"
+  }
+}

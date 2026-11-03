@@ -1,0 +1,66 @@
+Subject: [PATCH] capture first CSID lane IRQ for receiver bring-up
+
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
+@@ -93,6 +93,9 @@
+ 	uint32_t lane_assign_override;
+ #ifdef CONFIG_CITYMAN_IRIS_CSI
+ 	bool cityman_iris_exclusive;
++	u32 cityman_lane_events;
++	u32 cityman_lane_samples;
++	bool cityman_lane_armed;
+ #endif
+ };
+ 
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
+@@ -235,6 +235,18 @@
+ 		return rc;
+ 
+ 	msm_csid_set_debug_reg(csid_dev, csid_params);
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	/* Diagnostic build only. Limit to one lane-event IRQ per configuration. */
++	if (csid_dev->pdev->id == 2 || csid_dev->pdev->id == 3) {
++		u32 mask;
++		csid_dev->cityman_lane_events = 0;
++		csid_dev->cityman_lane_samples = 0;
++		msm_camera_io_w(0xff, csidbase + csid_dev->ctrl_reg->csid_reg.csid_irq_clear_cmd_addr);
++		csid_dev->cityman_lane_armed = true;
++		mask = msm_camera_io_r(csidbase + csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
++		msm_camera_io_w(mask | 0xff, csidbase + csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
++	}
++#endif
+ 	return rc;
+ }
+ 
+@@ -249,6 +261,16 @@
+ 	}
+ 	irq = msm_camera_io_r(csid_dev->base +
+ 		csid_dev->ctrl_reg->csid_reg.csid_irq_status_addr);
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	if (csid_dev->cityman_lane_armed && (irq & 0xff)) {
++		u32 mask;
++		csid_dev->cityman_lane_events |= irq & 0xff;
++		csid_dev->cityman_lane_samples = 1;
++		csid_dev->cityman_lane_armed = false;
++		mask = msm_camera_io_r(csid_dev->base + csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
++		msm_camera_io_w(mask & ~0xffU, csid_dev->base + csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
++	}
++#endif
+ 	CDBG("%s CSID%d_IRQ_STATUS_ADDR = 0x%x\n",
+ 		 __func__, csid_dev->pdev->id, irq);
+ 	if (irq & (0x1 <<
+@@ -443,6 +465,13 @@
+ 		csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
+ 
+ 	disable_irq(csid_dev->irq->start);
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	csid_dev->cityman_lane_armed = false;
++	if (csid_dev->pdev->id == 2 || csid_dev->pdev->id == 3)
++		pr_info("cityman lane IRQ csid %d events 0x%02x samples %u\n",
++			csid_dev->pdev->id, csid_dev->cityman_lane_events,
++			csid_dev->cityman_lane_samples);
++#endif
+ 
+ 	if (csid_dev->hw_version == CSID_VERSION_V20) {
+ 		IRIS_CSI_RELEASE_STEP(cleanup_rc, msm_cam_clk_enable(&csid_dev->pdev->dev, csid_clk_info,

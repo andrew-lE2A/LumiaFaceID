@@ -1,0 +1,15 @@
+{
+  "front_camera_frames_at_snapshot": 137,
+  "receiver": 2,
+  "lane_irq_events": "0x55",
+  "lane_irq_samples": 1,
+  "packets_at_release": 242296,
+  "ecc": 0,
+  "crc": 0,
+  "iris_attempts": 0,
+  "cleanup": "camera services running; installed boot SHA matches backup",
+  "evidence": [
+    "reports/iris-irq-01-camera.txt",
+    "reports/iris-irq-01-dmesg-final.txt"
+  ]
+}

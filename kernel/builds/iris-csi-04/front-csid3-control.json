@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-11-03T15:37:15.188400+00:00",
+  "base_build": "iris-csi-04",
+  "purpose": "Temporary positive-input control for CSID3; no iris one-shot on this boot",
+  "boot_image_sha256": "172b5cfc9c8a0a655616a94fd6f4b2b1da212154a5eab6196571f6e4a17870c8",
+  "dtb_sha256": "5d8d2ebfc2f5b37d4557c81c73142dcc7bd91982062ba9fc0cfe36764eebfbaf",
+  "changes": [
+    {
+      "node": "/soc/qcom,cci@fda0c000/qcom,camera@1",
+      "property": "qcom,csid-sd-index",
+      "before": 2,
+      "after": 3
+    }
+  ],
+  "dtb_changed_bytes": 1,
+  "kernel_unchanged": true,
+  "ramdisk_unchanged": true,
+  "all_other_dtb_properties_unchanged": true,
+  "ordinary_front_camera": {
+    "camera_id": 1,
+    "active_client": "org.lineageos.aperture",
+    "frames_produced": 0,
+    "latest_frame_metadata_received": false,
+    "phy": 2,
+    "csid": 3,
+    "lane_mask": "0x7",
+    "lane_count": 2,
+    "combo_mode": 0,
+    "settle": "0x0e",
+    "lane_assign": "0x4320",
+    "phy_sel": 2,
+    "packets": 0,
+    "ecc": 0,
+    "crc": 0,
+    "automatic_hal_recovery_reopened_stream": true
+  },
+  "ordinary_rear_camera": {
+    "camera_id": 0,
+    "frames_produced_at_snapshot": 51,
+    "csid": 0,
+    "packets_at_release": 626417,
+    "ecc": 0,
+    "crc": 0
+  },
+  "relevant_kernel_lines": [
+    "[   34.462055] msm_csiphy_lane_config: csiphy 0 lane_mask 0x1f lane_cnt 4 settle 0x16 csid 0 combo 0 clk 0",
+    "[   34.462098] msm_csid_config: lane_cnt 4 lane_assign 0x423 phy_sel 0 csi_clk 0 num_cid 1",
+    "[   34.462104] msm_csid_config: cid 0 dt 0x2b df 2",
+    "[   49.594337] msm_csid_release: csid 0 irq 0x80002dd pkts 626417 ecc 0 crc 0",
+    "[   50.269337] msm_csiphy_lane_config: csiphy 2 lane_mask 0x7 lane_cnt 2 settle 0xe csid 3 combo 0 clk 0",
+    "[   50.269375] msm_csid_config: lane_cnt 2 lane_assign 0x4320 phy_sel 2 csi_clk 0 num_cid 2",
+    "[   50.269381] msm_csid_config: cid 0 dt 0x2b df 2",
+    "[   50.269385] msm_csid_config: cid 1 dt 0x12 df 1",
+    "[   55.655318] msm_csid_release: csid 3 irq 0x0 pkts 0 ecc 0 crc 0",
+    "[   56.933271] msm_csiphy_lane_config: csiphy 2 lane_mask 0x7 lane_cnt 2 settle 0xe csid 3 combo 0 clk 0",
+    "[   56.933311] msm_csid_config: lane_cnt 2 lane_assign 0x4320 phy_sel 2 csi_clk 0 num_cid 2",
+    "[   56.933317] msm_csid_config: cid 0 dt 0x2b df 2",
+    "[   56.933322] msm_csid_config: cid 1 dt 0x12 df 1",
+    "[   60.902480] msm_csid_release: csid 3 irq 0x0 pkts 0 ecc 0 crc 0"
+  ],
+  "iris_one_shot_executed": false,
+  "iris_final_status": "ready idle attempts=0 blocked=0 cleanup_errno=0",
+  "camera_services_after": {
+    "cameraserver": "running",
+    "vendor.camera-provider-2-4": "running",
+    "qcamerasvr": "running"
+  },
+  "installed_boot_partition_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "interpretation": "Failed positive-input control: CSID3 routing/configuration is not validated even for the working front sensor. This does not prove CSID3 hardware failure, iris transmission or absence of iris transmission. Lower normal PHY2 lanes differ from the iris combo path.",
+  "local_raw_reports": [
+    "reports/front-csid3-control-camera-initial.txt",
+    "reports/front-csid3-control-camera-front.txt",
+    "reports/front-csid3-control-dmesg.txt",
+    "reports/front-csid3-control-package.json"
+  ],
+  "illumination": "IR disabled",
+  "publication": "local only",
+  "return_to_installed_kernel": {
+    "verified": true,
+    "kernel_build": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "front_camera_frames_produced": 28708,
+    "rear_camera_frames_produced": 64,
+    "camera_app_closed": true,
+    "camera_services": "all three running"
+  },
+  "owner_preview_observation": {
+    "description": "pink/purple front-camera preview",
+    "boot_and_time": "not established",
+    "captured_image": false,
+    "interpretation": "Colour and cause cannot be established from saved receiver and frame counts."
+  }
+}

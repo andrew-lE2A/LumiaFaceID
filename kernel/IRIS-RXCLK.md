@@ -24,10 +24,20 @@ returned `-110` at stream-test. Sensor stop, receiver release and overall cleanu
 returned zero; all three camera services restored. The owner confirmed both
 ordinary cameras still work after every test.
 
-[rxclk-result.json](builds/iris-csi-03/rxclk-result.json) records the handoff
-summary. Individual sample rows and the full terminal log were not supplied in
-this local session; sample indices, transitions and register-pair equivalence
-are therefore not asserted. These internal measurements support the expected
+[rxclk-result.json](builds/iris-csi-03/rxclk-result.json) now includes all 12
+raw samples, recovered directly over ADB from the still-running kernel #8 boot.
+CSID3 sample 1 crosses enable/rate initialization and is inconclusive; sample 2
+is the sole stable enabled core measurement. PHY2 timer samples 1–2 are stable
+enabled measurements. Both clocks are disabled in rounds 3–6 and measure zero.
+
+The same read-only collection recovered all 20 sensor and 22 receiver snapshot
+pairs: all are valid and identical to the preceding interface-selection test.
+The saved result still shows attempts=1 and clean cleanup; all three services
+are currently running. This collection did not start the sensor, reboot, read
+the private profile, or repeat the clock measurements. Camera behavior and
+service restoration during the test remain owner-reported evidence.
+
+These internal measurements support the expected
 240/200 MHz receiver clocks. They do not establish a recovered MIPI clock,
 physical lane activity, valid packets or a delivered image. Another identical
 clock test is not the next step. See the [startup/link audit](../docs/iris-startup-audit.md).
@@ -114,4 +124,4 @@ All 107 host tests pass. The added cases exercise both clocks in one saved
 sequence, missing second-clock refusal before service changes, rejection of
 sensor-only modes, and leaving cameras stopped when cleanup fails despite
 successful sampling. Existing MCLK and service-recovery cases still pass.
-Kernel binary, source hashes and DTBs are unchanged. Receiver measurements are now recorded above; raw sample rows remain unavailable.
+Kernel binary, source hashes and DTBs are unchanged. Receiver measurements are now recorded above; all 12 raw sample rows have been recovered over ADB.

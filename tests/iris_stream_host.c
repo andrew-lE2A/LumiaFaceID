@@ -28,6 +28,7 @@ static const struct {
     {0x0112, 2}, {0x0114, 1}, {0x0304, 2}, {0x0306, 2},
     {0x0340, 2}, {0x0342, 2}, {0x034c, 2}, {0x034e, 2},
     {0x0202, 2}, {0x0204, 2}, {0x0a06, 1}, {0x0a0a, 1},
+    {0x0130, 2}, {0x0300, 2}, {0x0302, 2}, {0x0308, 2}, {0x030a, 2},
 };
 
 static int stream_write(void *context, u16 address, const u8 *data,
@@ -94,6 +95,13 @@ static void reset_stream(void)
     memset(sensor_registers, 0, sizeof(sensor_registers));
     memset(write_log, 0, sizeof(write_log)); memset(read_log, 0, sizeof(read_log));
     sensor_registers[0] = IRIS_MODEL >> 8; sensor_registers[1] = IRIS_MODEL & 0xff;
+    /* Distinct fixture values exercise big-endian clock snapshots even after
+     * a stalled counter. These are not a real sensor program or clock model. */
+    sensor_registers[0x0130] = 0x12; sensor_registers[0x0131] = 0x34;
+    sensor_registers[0x0300] = 0x23; sensor_registers[0x0301] = 0x45;
+    sensor_registers[0x0302] = 0x34; sensor_registers[0x0303] = 0x56;
+    sensor_registers[0x0308] = 0x45; sensor_registers[0x0309] = 0x67;
+    sensor_registers[0x030a] = 0x56; sensor_registers[0x030b] = 0x78;
     state.stream.loaded = state.stream.requested = true;
     /* Adjacent addresses across the block boundary must stay separate bursts. */
     for (i = 0; i < IRIS_PROGRAM_BYTES; i += 3) {
@@ -176,6 +184,11 @@ static void check_snapshot_transactions(void)
     assert(state.stream.before[12] == 1116 && state.stream.after[12] == 1116);
     assert(state.stream.before[16] == 12 && state.stream.after[16] == 12);
     assert(state.stream.before[17] == 56 && state.stream.after[17] == 56);
+    assert(state.stream.before[20] == 0x1234 && state.stream.after[20] == 0x1234);
+    assert(state.stream.before[21] == 0x2345 && state.stream.after[21] == 0x2345);
+    assert(state.stream.before[22] == 0x3456 && state.stream.after[22] == 0x3456);
+    assert(state.stream.before[23] == 0x4567 && state.stream.after[23] == 0x4567);
+    assert(state.stream.before[24] == 0x5678 && state.stream.after[24] == 0x5678);
     assert(!state.stream.readback_error);
 }
 #ifndef IRIS_STREAM_MAIN

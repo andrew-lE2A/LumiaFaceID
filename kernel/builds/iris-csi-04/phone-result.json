@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-04",
+  "provenance": "Direct local ADB test and saved driver snapshots on a temporary fastboot boot; camera controls verified with Aperture latest-frame metadata and receiver packet logs. No image was saved.",
+  "collection_time_utc": "2026-11-03T15:25:56.779879+00:00",
+  "kernel_version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@local-mac) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #9 SMP PREEMPT Tue Nov 3 15:15:41 UTC 2026",
+  "operation": "csi2-once",
+  "after": {
+    "status": "failed",
+    "stage": "stream-test",
+    "errno": -110,
+    "model": "0x0861",
+    "cleanup_errno": 0,
+    "attempts": 1,
+    "blocked": 0,
+    "rail_uv": 1200000
+  },
+  "stream_after": {
+    "profile_loaded": 1,
+    "stage": "frame-counter",
+    "first": "0x00",
+    "last": "0x00",
+    "changes": 0,
+    "samples": 16,
+    "program_writes": 117,
+    "stop_errno": 0,
+    "program_transactions": 50,
+    "readback_errno": 0,
+    "interface_csi2_requested": 1
+  },
+  "csi_after": {
+    "requested": 1,
+    "stage": "released",
+    "errno": 0,
+    "cleanup_errno": 0,
+    "phy": 2,
+    "csid": 3,
+    "combo": 1,
+    "lane_mask": "0x18",
+    "lane_assign": "0x0004",
+    "settle": 20,
+    "before_valid": 1,
+    "after_valid": 1,
+    "packets_before": 0,
+    "packets_after": 0,
+    "ecc_before": 0,
+    "ecc_after": 0,
+    "crc_before": 0,
+    "crc_after": 0,
+    "version": "0x30010003"
+  },
+  "sensor_register_readback": [
+    {
+      "name": "model",
+      "before": "0x0861",
+      "before_valid": true,
+      "after": "0x0861",
+      "after_valid": true,
+      "address": "0x0000",
+      "width_bytes": 2
+    },
+    {
+      "name": "mode",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0001",
+      "after_valid": true,
+      "address": "0x0100",
+      "width_bytes": 1
+    },
+    {
+      "name": "reset",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0103",
+      "width_bytes": 1
+    },
+    {
+      "name": "hold",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0104",
+      "width_bytes": 1
+    },
+    {
+      "name": "fast",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0106",
+      "width_bytes": 1
+    },
+    {
+      "name": "ctrl",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0138",
+      "width_bytes": 1
+    },
+    {
+      "name": "ext",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0136",
+      "width_bytes": 2
+    },
+    {
+      "name": "signal",
+      "before": "0x0002",
+      "before_valid": true,
+      "after": "0x0002",
+      "after_valid": true,
+      "address": "0x0111",
+      "width_bytes": 1
+    },
+    {
+      "name": "format",
+      "before": "0x0a0a",
+      "before_valid": true,
+      "after": "0x0a0a",
+      "after_valid": true,
+      "address": "0x0112",
+      "width_bytes": 2
+    },
+    {
+      "name": "lanes",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0114",
+      "width_bytes": 1
+    },
+    {
+      "name": "pre",
+      "before": "0x0001",
+      "before_valid": true,
+      "after": "0x0001",
+      "after_valid": true,
+      "address": "0x0304",
+      "width_bytes": 2
+    },
+    {
+      "name": "mult",
+      "before": "0x0092",
+      "before_valid": true,
+      "after": "0x0092",
+      "after_valid": true,
+      "address": "0x0306",
+      "width_bytes": 2
+    },
+    {
+      "name": "frame",
+      "before": "0x045c",
+      "before_valid": true,
+      "after": "0x045c",
+      "after_valid": true,
+      "address": "0x0340",
+      "width_bytes": 2
+    },
+    {
+      "name": "line",
+      "before": "0x0834",
+      "before_valid": true,
+      "after": "0x0834",
+      "after_valid": true,
+      "address": "0x0342",
+      "width_bytes": 2
+    },
+    {
+      "name": "width",
+      "before": "0x0780",
+      "before_valid": true,
+      "after": "0x0780",
+      "after_valid": true,
+      "address": "0x034c",
+      "width_bytes": 2
+    },
+    {
+      "name": "height",
+      "before": "0x0440",
+      "before_valid": true,
+      "after": "0x0440",
+      "after_valid": true,
+      "address": "0x034e",
+      "width_bytes": 2
+    },
+    {
+      "name": "coarse",
+      "before": "0x000c",
+      "before_valid": true,
+      "after": "0x000c",
+      "after_valid": true,
+      "address": "0x0202",
+      "width_bytes": 2
+    },
+    {
+      "name": "gain",
+      "before": "0x0038",
+      "before_valid": true,
+      "after": "0x0038",
+      "after_valid": true,
+      "address": "0x0204",
+      "width_bytes": 2
+    },
+    {
+      "name": "a06",
+      "before": "0x0001",
+      "before_valid": true,
+      "after": "0x0001",
+      "after_valid": true,
+      "address": "0x0a06",
+      "width_bytes": 1
+    },
+    {
+      "name": "a0a",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0a0a",
+      "width_bytes": 1
+    },
+    {
+      "name": "clk0130",
+      "before": "0x099a",
+      "before_valid": true,
+      "after": "0x099a",
+      "after_valid": true,
+      "address": "0x0130",
+      "width_bytes": 2
+    },
+    {
+      "name": "vt_pix",
+      "before": "0x0002",
+      "before_valid": true,
+      "after": "0x0002",
+      "after_valid": true,
+      "address": "0x0300",
+      "width_bytes": 2
+    },
+    {
+      "name": "vt_sys",
+      "before": "0x000a",
+      "before_valid": true,
+      "after": "0x000a",
+      "after_valid": true,
+      "address": "0x0302",
+      "width_bytes": 2
+    },
+    {
+      "name": "op_pix",
+      "before": "0x0000",
+      "before_valid": true,
+      "after": "0x0000",
+      "after_valid": true,
+      "address": "0x0308",
+      "width_bytes": 2
+    },
+    {
+      "name": "op_sys",
+      "before": "0x0001",
+      "before_valid": true,
+      "after": "0x0001",
+      "after_valid": true,
+      "address": "0x030a",
+      "width_bytes": 2
+    }
+  ],
+  "receiver_register_readback": [
+    {
+      "name": "csid_control0",
+      "before": "0x00000040",
+      "before_valid": true,
+      "after": "0x00000040",
+      "after_valid": true
+    },
+    {
+      "name": "csid_control1",
+      "before": "0x0005000f",
+      "before_valid": true,
+      "after": "0x0005000f",
+      "after_valid": true
+    },
+    {
+      "name": "csid_vc0_lut",
+      "before": "0x0000002b",
+      "before_valid": true,
+      "after": "0x0000002b",
+      "after_valid": true
+    },
+    {
+      "name": "csid_cid0_config",
+      "before": "0x00000023",
+      "before_valid": true,
+      "after": "0x00000023",
+      "after_valid": true
+    },
+    {
+      "name": "csid_irq_status",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_mux",
+      "before": "0x00000030",
+      "before_valid": true,
+      "after": "0x00000030",
+      "after_valid": true
+    },
+    {
+      "name": "phy_power",
+      "before": "0x00000031",
+      "before_valid": true,
+      "after": "0x00000031",
+      "after_valid": true
+    },
+    {
+      "name": "phy_mode",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_cfg2",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_settle",
+      "before": "0x00000014",
+      "before_valid": true,
+      "after": "0x00000014",
+      "after_valid": true
+    },
+    {
+      "name": "phy_clock_misc",
+      "before": "0x00000004",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_cfg2",
+      "before": "0x00000010",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_settle",
+      "before": "0x00000014",
+      "before_valid": true,
+      "after": "0x00000014",
+      "after_valid": true
+    },
+    {
+      "name": "phy_data_misc",
+      "before": "0x00000008",
+      "before_valid": true,
+      "after": "0x00000008",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status0",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status1",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status2",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status3",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status4",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000004",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status5",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status6",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000010",
+      "after_valid": true
+    },
+    {
+      "name": "phy_irq_status7",
+      "before": "0x00000000",
+      "before_valid": true,
+      "after": "0x00000000",
+      "after_valid": true
+    }
+  ],
+  "camera_services_restored": [
+    "qcamerasvr",
+    "vendor.camera-provider-2-4",
+    "cameraserver"
+  ],
+  "camera_services_observed_running_after_controls": true,
+  "normal_camera_controls": [
+    {
+      "android_camera_id": "1",
+      "receiver": "CSID2",
+      "latest_frame_metadata_observed": true,
+      "packets": 377122,
+      "ecc": 0,
+      "crc": 0
+    },
+    {
+      "android_camera_id": "0",
+      "receiver": "CSID0",
+      "latest_frame_metadata_observed": true,
+      "packets": 201243,
+      "ecc": 0,
+      "crc": 0
+    }
+  ],
+  "comparison_to_kernel_8": {
+    "all_original_20_sensor_pairs_identical": true,
+    "all_22_receiver_pairs_identical": true,
+    "added_word_readbacks": 5,
+    "clk0130": "0x099a",
+    "vt_pix": "0x0002",
+    "vt_sys": "0x000a",
+    "op_pix": "0x0000 (mode program contains 0x0008)",
+    "op_sys": "0x0001"
+  },
+  "interpretation": {
+    "physical_iris_transmission_established": false,
+    "iris_image_frames_delivered": false,
+    "op_pix_readback_semantics_resolved": false,
+    "op_pix_zero_establishes_root_cause": false,
+    "timeout_origin": "16 completed, unchanged sensor-counter reads",
+    "root_cause": "unresolved"
+  },
+  "installed_boot_partition_sha256_before_and_after": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "local_raw_evidence": [
+    "reports/iris-csi-04-adb-evidence.json",
+    "reports/iris-csi-04-helper.log"
+  ]
+}
