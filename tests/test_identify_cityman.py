@@ -36,6 +36,8 @@ elif name == 'cat':
     path = Path(sys.argv[1])
     if path.name == 'stream_readback' and state.get('readback_fails'):
         sys.exit(1)
+    if path.name == 'measure' and state.get('measure_fails'):
+        sys.exit(1)
     node = root / 'driver/device'
     if path.name == 'stream_result' and (node / 'stream_profile').read_text() == 'profile\\n':
         path.write_text('profile_loaded=1 stage=idle stop_errno=0\\n')
@@ -85,9 +87,11 @@ class IdentifyHelperTests(unittest.TestCase):
         self.helper.write_text(source.read_text().replace(
             'driver=/sys/bus/platform/drivers/cityman-iris-id',
             f'driver={self.root}/driver').replace(
-            '/data/local/tmp/cityman-iris-stream-profile.hex', str(self.root / 'profile.hex')))
+            '/data/local/tmp/cityman-iris-stream-profile.hex', str(self.root / 'profile.hex')).replace(
+            '/sys/kernel/debug/clk/camss_mclk1_clk', str(self.root / 'clock')).replace(
+            '/data/local/tmp/cityman-iris-mclk.XXXXXX', str(self.root / 'mclk-log.XXXXXX')))
 
-    def run_helper(self, fail_write=False, operation=None):
+    def run_helper(self, fail_write=False, operation=None, option=None):
         (self.root / 'state.json').write_text(json.dumps(self.state))
         command = ['sh', str(self.helper)]
         if fail_write:
@@ -97,6 +101,8 @@ class IdentifyHelperTests(unittest.TestCase):
                        'test-helper', str(self.helper)]
         if operation:
             command.append(operation)
+        if option:
+            command.append(option)
         run = subprocess.run(command, capture_output=True,
                              text=True, timeout=10, env={**os.environ,
                              'FIXTURE': str(self.root),
@@ -286,6 +292,50 @@ class IdentifyHelperTests(unittest.TestCase):
         self.assertEqual((self.root / 'driver/device/csi2_once').read_text(), 'csi2-once\n')
         self.assertEqual((self.root / 'driver/device/csi_once').read_text(), '')
         self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def clock_fixture(self):
+        self.csi_fixture()
+        clock = self.root / 'clock'
+        clock.mkdir()
+        for name, value in [('rate', '9600000'), ('enable', '1'), ('measure', '9599999')]:
+            (clock / name).write_text(value + '\n')
+
+    def test_clock_observation_is_bounded_saved_and_joined_before_restoration(self):
+        self.clock_fixture()
+        run = self.run_helper(operation='csi-once', option='--observe-mclk')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual(run.stdout.count('MCLK sample='), 12)
+        self.assertIn('measured_hz=9599999', run.stdout)
+        self.assertIn('rate_before_hz=9600000 enable_before=1', run.stdout)
+        self.assertLess(run.stdout.index('MCLK sample=12 '), run.stdout.index('Restored:'))
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+        logs = list(self.root.glob('mclk-log.*'))
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].read_text().count('MCLK sample='), 12)
+        self.assertEqual((self.root / 'clock/rate').read_text(), '9600000\n')
+        self.assertEqual((self.root / 'clock/enable').read_text(), '1\n')
+
+    def test_missing_clock_measurement_refuses_before_services_or_sensor(self):
+        self.csi_fixture()
+        run = self.run_helper(operation='csi-once', option='--observe-mclk')
+        self.assertEqual(run.returncode, 1)
+        self.assertIn('MCLK observation unavailable', run.stderr)
+        self.assertEqual(self.state['events'], [])
+
+    def test_clock_read_failure_reports_incomplete_but_restores_clean_camera_services(self):
+        self.clock_fixture()
+        self.state['measure_fails'] = True
+        run = self.run_helper(operation='csi-once', option='--observe-mclk')
+        self.assertEqual(run.returncode, 5, run.stdout + run.stderr)
+        self.assertIn('MCLK_OBSERVATION_INCOMPLETE', run.stderr)
+        self.assertIn('measurement read failed', run.stdout)
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_unknown_clock_option_and_identify_clock_mode_refuse_without_stopping_services(self):
+        for operation, option in [('csi-once', '--unknown'), ('identify', '--observe-mclk')]:
+            run = self.run_helper(operation=operation, option=option)
+            self.assertEqual(run.returncode, 1)
+            self.assertEqual(self.state['events'], [])
 
 
 if __name__ == '__main__':

@@ -108,9 +108,9 @@
   "sensor_receiver_integration_scenarios": 9,
   "existing_stream_simulation_scenarios": 116,
   "existing_power_simulation_scenarios": 28,
-  "phone_boot_test": "not run",
-  "phone_receiver_test": "not run",
-  "capture_status": "no delivered iris frames; interface selection comparison untested on phone",
+  "phone_boot_test": "passed; owner temporarily booted kernel #8, ADB ready and both normal cameras unchanged after the test",
+  "phone_receiver_test": "setup and release passed; interface 0x0111=2 latched, zero packet/ECC/CRC counts, sensor counter timeout -110, cleanup zero",
+  "capture_status": "no delivered iris frames; interface selection alone did not resolve reception",
   "private_repack_validation": {
     "ramdisk_unchanged": true,
     "boot_settings_unchanged": true,
@@ -153,5 +153,6 @@
   "previous_phone_evidence": [
     "kernel/builds/iris-csi-02/phone-result.json",
     "kernel/builds/iris-csi-02/camera-control-result.json"
-  ]
+  ],
+  "phone_result_path": "kernel/builds/iris-csi-03/phone-result.json"
 }

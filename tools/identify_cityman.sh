@@ -6,6 +6,7 @@
 set -u
 
 operation=${1:-identify}
+clock_option=${2:-}
 streaming=0
 receiver_test=0
 case "$operation" in stream-once|csi-once|csi2-once) streaming=1 ;; esac
@@ -15,6 +16,9 @@ profile=/data/local/tmp/cityman-iris-stream-profile.hex
 services='cameraserver vendor.camera-provider-2-4 qcamerasvr'
 restore_services=
 attempted=0
+clock_root=/sys/kernel/debug/clk/camss_mclk1_clk
+clock_pid=
+clock_log=
 
 fail() {
     echo "$*" >&2
@@ -38,9 +42,37 @@ clean_result() {
     esac
 }
 
+observe_mclk() {
+    # The existing clock driver performs each hardware measurement (~15 ms).
+    # Read software state on both sides to identify power/clock transitions.
+    # Never write the debugfs rate/enable/parent controls.
+    for sample in 1 2 3 4 5 6 7 8 9 10 11 12; do
+        rate_before=$(cat "$clock_root/rate") || return 1
+        enable_before=$(cat "$clock_root/enable") || return 1
+        measured=$(cat "$clock_root/measure") || {
+            echo 'MCLK hardware measurement read failed.' >&2
+            return 1
+        }
+        rate_after=$(cat "$clock_root/rate") || return 1
+        enable_after=$(cat "$clock_root/enable") || return 1
+        echo "MCLK sample=$sample rate_before_hz=$rate_before enable_before=$enable_before measured_hz=$measured rate_after_hz=$rate_after enable_after=$enable_after"
+    done
+}
+
 finish() {
     code=$?
     trap - 0 HUP INT TERM
+    if [ -n "$clock_pid" ]; then
+        if ! wait "$clock_pid"; then
+            echo 'MCLK_OBSERVATION_INCOMPLETE: the clock sampler failed.' >&2
+            [ "$code" -ne 0 ] || code=5
+        fi
+        echo "Saved MCLK observations: $clock_log"
+        cat "$clock_log" || {
+            echo 'MCLK observations could not be read.' >&2
+            [ "$code" -ne 0 ] || code=5
+        }
+    fi
     if [ "$attempted" = 1 ]; then
         after=$(cat "$result") || after=unreadable
         echo "After: $after"
@@ -89,6 +121,17 @@ finish() {
 
 [ "$(id -u)" = 0 ] || fail 'Root ADB is required: run adb root, then adb wait-for-device.'
 case "$operation" in identify|stream-once|csi-once|csi2-once) ;; *) fail 'Expected identify, stream-once, csi-once or csi2-once.' ;; esac
+[ "$#" -le 2 ] || fail 'Unexpected extra arguments.'
+case "$clock_option" in
+    '') ;;
+    --observe-mclk)
+        [ "$streaming" = 1 ] || fail 'MCLK observation requires a stream diagnostic.'
+        for clock_file in measure rate enable; do
+            [ -r "$clock_root/$clock_file" ] || fail "MCLK observation unavailable: $clock_root/$clock_file; no hardware action performed."
+        done
+        ;;
+    *) fail 'Unknown option; expected --observe-mclk.' ;;
+esac
 set -- "$driver"/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || fail 'Expected exactly one bound iris-ID device.'
 result=$1
@@ -153,6 +196,11 @@ for service in $services; do
     [ "$(getprop "init.svc.$service")" = stopped ] || fail "$service restarted; no identification performed."
 done
 [ "$(cat "$result")" = "$initial" ] || fail 'Diagnostic state changed; no identification performed.'
+if [ "$clock_option" = --observe-mclk ]; then
+    clock_log=$(mktemp /data/local/tmp/cityman-iris-mclk.XXXXXX) || fail 'Cannot create MCLK observation log; no sensor test performed.'
+    observe_mclk > "$clock_log" 2>&1 &
+    clock_pid=$!
+fi
 echo "Performing one $operation attempt."
 attempted=1
 printf '%s\n' "$operation" > "$control"

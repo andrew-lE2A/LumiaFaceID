@@ -212,3 +212,18 @@ Sanitized [phone evidence](../kernel/builds/iris-csi-02/phone-result.json) and
 [working-camera controls](../kernel/builds/iris-csi-02/camera-control-result.json)
 preserve the selected values. Source tracing of startup/transmit behavior and
 interpretation of the PHY status bits remain before another justified variant.
+
+## Explicit CSI-2 selection: latched, no reception improvement
+
+Kernel #8 applied `0x0111=2` after the matched mode program. The value read
+back 2 before and after start; the other 19 sensor pairs and all 22 receiver
+pairs matched #7. CSID3 packet/ECC/CRC counts remained zero, and the unchanged
+sensor counter again produced `-110`. Sensor stop and overall cleanup returned
+zero, services restarted, and the owner confirmed both normal cameras still
+work as before. The [recorded comparison](../kernel/builds/iris-csi-03/phone-result.json)
+does not establish a physical signal or its absence.
+
+The owner also confirmed that `camss_mclk1_clk` exposes debugfs `measure`,
+`rate` and `enable` files. This establishes measurement availability, not a
+frequency result. The [next helper-only test](../kernel/IRIS-MCLK.md) observes
+that internal branch during one powered cycle on the existing kernel #8.

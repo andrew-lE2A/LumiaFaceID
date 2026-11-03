@@ -30,9 +30,12 @@ these receivers. This comparison validates observation on receivers 0/2; it
 does not supply a positive input control for CSID3. See
 [camera-control-result.json](../kernel/builds/iris-csi-02/camera-control-result.json).
 
-The next test needs receiver configuration readbacks and better observation
-of its active state. Another identical counter-only run will not answer
-whether the sensor is transmitting packets.
+Kernel #8's explicit CSI-2 selection then latched `0x0111=2`, but all other
+sensor pairs and all receiver pairs matched #7. Packet counts remained zero;
+cleanup and normal camera recovery passed. See the
+[comparison evidence](../kernel/builds/iris-csi-03/phone-result.json).
+The next [MCLK observation](../kernel/IRIS-MCLK.md) adds an internal clock
+frequency measurement while preserving the existing sensor/receiver settings.
 
 ## Routing evidence
 
@@ -165,5 +168,6 @@ the final write order for the original iris session.
 The optional `csi2-once` comparison applies only that fixed interface selection
 after the matched program, verifies its readback, then uses the same bounded
 receiver/sensor cycle. It does not silently replace `csi-once` or change lane
-routing, clock requests or settle count. A comparison outcome is required
-before concluding whether this register explains the missing packets.
+routing, clock requests or settle count. On kernel #8 the selection latched,
+but did not resolve the missing packets. This rules out that one write as a
+sufficient fix in this setup; the overall cause remains unresolved.

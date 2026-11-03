@@ -25,6 +25,25 @@ write. Receiver routing, clock requests, exposure, gain and settle count remain
 the same. No IR, test generator or image DMA is added. This test does not return
 an image or implement authentication.
 
+## Phone result
+
+The owner completed this comparison on kernel #8. `0x0111` read back 2 both
+before and after stream-on. All other sensor readback pairs and all 22 receiver
+pairs matched kernel #7. CSID3 again recorded zero packets/ECC/CRC; the sensor
+counter remained zero, giving the diagnostic's `-110`. PHY status words 3/4
+changed to `0x4` and word 6 to `0x10`, just as before. Their meanings remain
+unresolved. Selecting CSI-2 alone did not resolve reception in this setup.
+
+Sensor stop, receiver release and overall cleanup returned zero. All three
+camera services restarted, and the owner confirmed both normal cameras still
+work as before. The selected values are saved in
+[phone-result.json](builds/iris-csi-03/phone-result.json).
+
+The next [MCLK observation](IRIS-MCLK.md) reuses this kernel and profile with
+an updated helper. The reproduction instructions below document the completed
+interface comparison; another identical run without added observation would
+not answer the unresolved clock question.
+
 ## Prepare on the Mac
 
 Use the latest project files from GitHub and open Terminal in that directory.
@@ -100,7 +119,8 @@ interface write, with every other sensor write unchanged. They also cover
 write failure, an unlatched selection, the sensor-counter timeout, receiver
 sampling before stop, and service restoration. The previous stream and power
 regressions remain in the suite. These simulations and compilation do not
-establish on-phone reception; the comparison result is pending.
+establish on-phone reception. The phone comparison above did not establish
+reception either.
 
 All 99 host tests pass, including 21 receiver lifecycle scenarios and nine
 sensor/receiver integration scenarios. The complete ARM64 kernel #8 build
