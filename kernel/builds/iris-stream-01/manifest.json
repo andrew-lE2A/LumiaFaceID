@@ -68,13 +68,18 @@
   "host_tests_passed": 90,
   "integrated_stream_simulation_scenarios": 160,
   "existing_power_simulation_scenarios": 28,
-  "phone_boot_test": "not run",
-  "phone_stream_test": "not run",
+  "phone_boot_test": "owner confirmed build #4 and expected private repack hash",
+  "phone_stream_test": "117 writes completed without I2C error; all 16 counter reads returned zero; diagnostic returned ETIMEDOUT; clean stop/unwind",
   "capture_status": "no delivered frames; CSI/ISP/HAL integration remains",
   "patch_application": "all three patches apply sequentially to pinned base",
   "private_repack_validation": {
     "ramdisk_unchanged": true,
     "boot_settings_unchanged": true,
     "fits_original_partition": true
-  }
+  },
+  "phone_identification_result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+  "phone_stream_result": "profile_loaded=1 stage=frame-counter first=0x00 last=0x00 changes=0 samples=16 program_writes=117 stop_errno=0",
+  "phone_services_restored": true,
+  "phone_post_stream_cameras": "not reported",
+  "limitation": "mode/configuration readback was skipped on unchanged counter; no image or packet evidence"
 }

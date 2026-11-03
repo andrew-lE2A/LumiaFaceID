@@ -34,6 +34,8 @@ elif name in ('stop', 'start'):
     (root / 'state.json').write_text(json.dumps(state))
 elif name == 'cat':
     path = Path(sys.argv[1])
+    if path.name == 'stream_readback' and state.get('readback_fails'):
+        sys.exit(1)
     node = root / 'driver/device'
     if path.name == 'stream_result' and (node / 'stream_profile').read_text() == 'profile\\n':
         path.write_text('profile_loaded=1 stage=idle stop_errno=0\\n')
@@ -198,6 +200,24 @@ class IdentifyHelperTests(unittest.TestCase):
         self.assertEqual(run.returncode, 3)
         self.assertIn('REBOOT_REQUIRED', run.stderr)
         self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)
+
+    def test_stream_prints_saved_readback_before_restoring_services(self):
+        self.stream_fixture()
+        (self.root / 'driver/device/stream_readback').write_text('mode before=0 after=1\n')
+        run = self.run_helper(operation='stream-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('mode before=0 after=1', run.stdout)
+        self.assertLess(run.stdout.index('mode before'), run.stdout.index('Restored:'))
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_unavailable_saved_readback_preserves_confirmed_clean_restoration(self):
+        self.stream_fixture()
+        self.state['readback_fails'] = True
+        (self.root / 'driver/device/stream_readback').write_text('fixture\n')
+        run = self.run_helper(operation='stream-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('Saved register readback unavailable.', run.stderr)
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
 
     def test_stream_requires_new_controls_before_stopping_services(self):
         (self.root / 'driver/device/stream_once').unlink()

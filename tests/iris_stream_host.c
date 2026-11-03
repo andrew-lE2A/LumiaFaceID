@@ -6,36 +6,72 @@
 #include "iris_sequence_host.c"
 #undef main
 
-static int write_calls, fail_write, read_calls, fail_read, counter_kind;
-static unsigned int delay_total;
-static u8 sensor_registers[65536];
-static unsigned int last_addresses[4];
+#define ARRAY_COUNT(a) (sizeof(a) / sizeof((a)[0]))
+#define SNAPSHOT_ALL ((1U << IRIS_READBACK_COUNT) - 1)
 
-static int stream_write(void *context, u16 address, u8 value)
+struct transaction {
+    u16 address;
+    unsigned int length;
+    u8 data[8];
+};
+static int write_calls, fail_write, read_calls, fail_read, counter_kind;
+static unsigned int counter_reads, delay_total;
+static bool held_release;
+static u8 sensor_registers[65536];
+static struct transaction write_log[256], read_log[128];
+static const struct {
+    u16 address;
+    unsigned int length;
+} expected_readback[] = {
+    {0x0000, 2}, {0x0100, 1}, {0x0103, 1}, {0x0104, 1},
+    {0x0106, 1}, {0x0138, 1}, {0x0136, 2}, {0x0111, 1},
+    {0x0112, 2}, {0x0114, 1}, {0x0304, 2}, {0x0306, 2},
+    {0x0340, 2}, {0x0342, 2}, {0x034c, 2}, {0x034e, 2},
+    {0x0202, 2}, {0x0204, 2}, {0x0a06, 1}, {0x0a0a, 1},
+};
+
+static int stream_write(void *context, u16 address, const u8 *data,
+                        unsigned int length)
 {
     struct cityman_iris *iris = context;
+    struct transaction *log;
     assert(iris->cci_on && iris->clock_on && iris->gpio_owned);
-    last_addresses[write_calls % 4] = address;
-    write_calls++;
+    assert(length && length <= 8 && (unsigned int)address + length <= 65536);
+    assert((unsigned int)write_calls < ARRAY_COUNT(write_log));
+    log = &write_log[write_calls++];
+    log->address = address; log->length = length;
+    memcpy(log->data, data, length);
+    /* Model a lost hold release to ensure readbacks survive power cleanup. */
+    if (counter_kind == 5 && address == 0x0104 && !data[0] && !held_release)
+        held_release = true;
+    else
+        memcpy(sensor_registers + address, data, length);
     /* A negative result need not mean that the sensor ignored the write. */
-    sensor_registers[address] = value;
     return write_calls == fail_write ? -EIO : 0;
 }
-static int stream_read(void *context, u16 address, u8 *value)
+static int stream_read(void *context, u16 address, u8 *data,
+                       unsigned int length)
 {
     struct cityman_iris *iris = context;
+    struct transaction *log;
     assert(iris->cci_on && iris->clock_on && iris->gpio_owned);
-    read_calls++;
+    assert(length && length <= 2 && (unsigned int)address + length <= 65536);
+    assert((unsigned int)read_calls < ARRAY_COUNT(read_log));
+    log = &read_log[read_calls++];
+    log->address = address; log->length = length;
     if (read_calls == fail_read) return -EIO;
     if (address == 5) {
-        if (counter_kind == 1) *value = 7;
-        else if (counter_kind == 2) *value = 0xff;
-        else if (counter_kind == 3) *value = read_calls % 2 ? 7 : 0xff;
-        else *value = (250 + read_calls) % 255;
+        assert(length == 1);
+        counter_reads++;
+        if (counter_kind == 1) *data = 7;
+        else if (counter_kind == 2) *data = 0xff;
+        else if (counter_kind == 3) *data = counter_reads % 2 ? 7 : 0xff;
+        else *data = (250 + counter_reads) % 255;
     } else {
-        assert(address == 0x0100);
-        *value = counter_kind == 4 ? 0 : sensor_registers[address];
+        memcpy(data, sensor_registers + address, length);
+        if (address == 0x0100 && counter_kind == 4) *data = 0;
     }
+    memcpy(log->data, data, length);
     return 0;
 }
 static void stream_delay(unsigned int value)
@@ -53,9 +89,12 @@ static void reset_stream(void)
     unsigned int i;
     reset(NULL, 0);
     write_calls = fail_write = read_calls = fail_read = counter_kind = 0;
-    delay_total = 0;
+    counter_reads = delay_total = 0; held_release = false;
     memset(sensor_registers, 0, sizeof(sensor_registers));
+    memset(write_log, 0, sizeof(write_log)); memset(read_log, 0, sizeof(read_log));
+    sensor_registers[0] = IRIS_MODEL >> 8; sensor_registers[1] = IRIS_MODEL & 0xff;
     state.stream.loaded = state.stream.requested = true;
+    /* Adjacent addresses across the block boundary must stay separate bursts. */
     for (i = 0; i < IRIS_PROGRAM_BYTES; i += 3) {
         unsigned int address = 0x3000 + i / 3;
         state.stream.program[i] = address >> 8;
@@ -65,57 +104,173 @@ static void reset_stream(void)
 }
 static void stopped(void)
 {
+    static const u16 addresses[] = {0x0104, 0x0138, 0x0106, 0x0100};
+    unsigned int i;
+    assert(write_calls >= 4);
+    for (i = 0; i < ARRAY_COUNT(addresses); i++) {
+        const struct transaction *log = &write_log[write_calls - 4 + i];
+        assert(log->address == addresses[i] && log->length == 1 && !log->data[0]);
+    }
     assert(!sensor_registers[0x0100] && !sensor_registers[0x0104]);
     assert(!sensor_registers[0x0138] && !sensor_registers[0x0106]);
     assert(!state.stream.entered && !state.stream.stop_error);
-    assert(!state.stream.stop_error && delay_total <= 380);
+    assert(delay_total <= 20 + IRIS_STREAM_SAMPLES * IRIS_STREAM_POLL_MS + 40);
     balanced();
+}
+static unsigned int check_program_transactions(void)
+{
+    unsigned int i, next = 0, bursts = 0;
+    for (i = 0; i < (unsigned int)write_calls; i++) {
+        const struct transaction *log = &write_log[i];
+        unsigned int j, expected_length, block_end;
+        if (log->address < 0x3000 || log->address >= 0x3000 + IRIS_PROGRAM_BYTES / 3)
+            continue;
+        block_end = next < IRIS_IDLE_RECORDS ? IRIS_IDLE_RECORDS : IRIS_PROGRAM_BYTES / 3;
+        expected_length = block_end - next;
+        if (expected_length > 8) expected_length = 8;
+        assert(log->address == 0x3000 + next && log->length == expected_length);
+        for (j = 0; j < log->length; j++)
+            assert(log->data[j] == state.stream.program[(next + j) * 3 + 2]);
+        next += log->length; bursts++;
+    }
+    assert(next == IRIS_PROGRAM_BYTES / 3);
+    assert(state.stream.transactions == bursts);
+    return bursts;
+}
+static void check_word_transaction(u16 address, u16 value)
+{
+    unsigned int i, found = 0;
+    for (i = 0; i < (unsigned int)write_calls; i++) {
+        const struct transaction *log = &write_log[i];
+        if (log->address == address) {
+            assert(log->length == 2);
+            assert(log->data[0] == value >> 8 && log->data[1] == (value & 0xff));
+            found++;
+        }
+        assert(log->address != address + 1);
+    }
+    assert(found == 1);
+}
+static void check_snapshot_transactions(void)
+{
+    unsigned int i;
+    assert(IRIS_READBACK_COUNT == ARRAY_COUNT(expected_readback));
+    assert(read_calls == 1 + 2 * IRIS_READBACK_COUNT + IRIS_STREAM_SAMPLES);
+    assert(read_log[0].address == 0 && read_log[0].length == 2);
+    for (i = 0; i < IRIS_READBACK_COUNT; i++) {
+        const struct transaction *before = &read_log[1 + i];
+        const struct transaction *after = &read_log[1 + IRIS_READBACK_COUNT + IRIS_STREAM_SAMPLES + i];
+        assert(before->address == expected_readback[i].address);
+        assert(after->address == expected_readback[i].address);
+        assert(before->length == expected_readback[i].length);
+        assert(after->length == expected_readback[i].length);
+    }
+    for (i = 1 + IRIS_READBACK_COUNT; i < 1 + IRIS_READBACK_COUNT + IRIS_STREAM_SAMPLES; i++)
+        assert(read_log[i].address == 5 && read_log[i].length == 1);
+    assert(state.stream.before_valid == SNAPSHOT_ALL && state.stream.after_valid == SNAPSHOT_ALL);
+    assert(state.stream.before[0] == IRIS_MODEL && state.stream.after[0] == IRIS_MODEL);
+    assert(state.stream.before[1] == 0 && state.stream.after[1] == (counter_kind == 4 ? 0 : 1));
+    assert(state.stream.before[5] == 0 && state.stream.after[5] == 1);
+    assert(state.stream.before[6] == 0x099a && state.stream.after[6] == 0x099a);
+    assert(state.stream.before[12] == 1116 && state.stream.after[12] == 1116);
+    assert(state.stream.before[16] == 12 && state.stream.after[16] == 12);
+    assert(state.stream.before[17] == 56 && state.stream.after[17] == 56);
+    assert(!state.stream.readback_error);
 }
 int main(void)
 {
-    int i, count = 0;
+    int i, baseline_writes, startup_writes, baseline_reads, count = 0;
+    unsigned int baseline_bursts;
     u8 invalid_hash[32] = {0};
     legacy_sequence_main();
     reset_stream(); assert(!iris_identify(&state));
     assert(!strcmp(state.status, "sensor-streamed"));
-    assert(state.stream.changes == 15 && state.stream.samples == 16);
+    assert(state.stream.changes == 15 && state.stream.samples == IRIS_STREAM_SAMPLES);
     assert(state.stream.first == 251 && state.stream.last == 11);
-    assert(state.stream.writes == 117 && write_calls == 134);
-    assert(sensor_registers[0x0340] == 4 && sensor_registers[0x0341] == 0x5c);
-    assert(sensor_registers[0x0202] == 0 && sensor_registers[0x0203] == 12);
-    assert(sensor_registers[0x0204] == 0 && sensor_registers[0x0205] == 56);
-    stopped(); count++;
-    /* Every startup/program/on write may fail after being applied. */
-    for (i = 1; i <= 130; i++) {
+    assert(state.stream.writes == IRIS_PROGRAM_BYTES / 3);
+    assert(!strcmp(state.stream.stage, "mode-readback"));
+    baseline_writes = write_calls; startup_writes = baseline_writes - 4;
+    baseline_reads = read_calls; baseline_bursts = check_program_transactions();
+    check_word_transaction(0x0136, 0x099a); check_word_transaction(0x0340, 1116);
+    check_word_transaction(0x0202, 12); check_word_transaction(0x0204, 56);
+    check_snapshot_transactions(); stopped(); count++;
+    /* Every startup/program/on transaction may fail after being applied. */
+    for (i = 1; i <= startup_writes; i++) {
         reset_stream(); fail_write = i;
         assert(iris_identify(&state) == -EIO);
+        assert(write_calls == i + 4);
         stopped(); count++;
     }
-    for (i = 1; i <= 17; i++) {
+    /* Cover the post-reset identity, both snapshots, and every counter read. */
+    for (i = 1; i <= baseline_reads; i++) {
         reset_stream(); fail_read = i;
-        assert(iris_identify(&state) == -EIO);
+        assert(iris_identify(&state) == -EIO && read_calls == i);
+        if (i == 1) {
+            assert(!state.stream.before_valid && !state.stream.after_valid);
+            assert(!counter_reads && !state.stream.samples && !state.stream.writes);
+            assert(!state.stream.readback_error);
+            assert(!strcmp(state.stream.stage, "reset-model"));
+        } else if ((unsigned int)i <= 1 + IRIS_READBACK_COUNT) {
+            assert(state.stream.before_valid == (1U << (i - 2)) - 1);
+            assert(!state.stream.after_valid && !counter_reads && !state.stream.samples);
+            assert(state.stream.readback_error == -EIO);
+        } else if ((unsigned int)i <= 1 + IRIS_READBACK_COUNT + IRIS_STREAM_SAMPLES) {
+            assert(state.stream.before_valid == SNAPSHOT_ALL && !state.stream.after_valid);
+            assert(state.stream.samples == (unsigned int)i - IRIS_READBACK_COUNT - 2);
+            assert(!state.stream.readback_error);
+        } else {
+            unsigned int position = i - IRIS_READBACK_COUNT - IRIS_STREAM_SAMPLES - 2;
+            assert(state.stream.before_valid == SNAPSHOT_ALL);
+            assert(state.stream.after_valid == (1U << position) - 1);
+            assert(state.stream.readback_error == -EIO);
+        }
         stopped(); count++;
     }
     for (i = 1; i <= 3; i++) {
         reset_stream(); counter_kind = i;
         assert(iris_identify(&state) == -ETIMEDOUT);
-        assert(!state.stream.changes && state.stream.samples == 16);
+        assert(!state.stream.changes && state.stream.samples == IRIS_STREAM_SAMPLES);
+        assert(!strcmp(state.stream.stage, "frame-counter"));
+        check_snapshot_transactions(); stopped(); count++;
+    }
+    /* A failed post snapshot never erases the primary stalled-counter error. */
+    for (i = 0; (unsigned int)i < IRIS_READBACK_COUNT; i++) {
+        reset_stream(); counter_kind = 1;
+        fail_read = 1 + IRIS_READBACK_COUNT + IRIS_STREAM_SAMPLES + i + 1;
+        assert(iris_identify(&state) == -ETIMEDOUT);
+        assert(!state.stream.changes && state.stream.samples == IRIS_STREAM_SAMPLES);
+        assert(!strcmp(state.stream.stage, "frame-counter"));
+        assert(state.stream.before_valid == SNAPSHOT_ALL && state.stream.after_valid == (1U << i) - 1);
+        assert(state.stream.readback_error == -EIO && read_calls == fail_read);
         stopped(); count++;
     }
     reset_stream(); counter_kind = 4;
-    assert(iris_identify(&state) == -EIO); stopped(); count++;
-    for (i = 131; i <= 134; i++) {
+    assert(iris_identify(&state) == -EIO);
+    check_snapshot_transactions(); stopped(); count++;
+    reset_stream(); counter_kind = 5;
+    assert(!iris_identify(&state));
+    assert(state.stream.before[3] == 1 && state.stream.after[3] == 1);
+    check_snapshot_transactions(); stopped(); count++;
+    for (i = startup_writes + 1; i <= baseline_writes; i++) {
         int before;
         reset_stream(); fail_write = i;
         assert(iris_identify(&state) == -EIO);
         assert(state.blocked && state.cleanup_error == -EIO);
-        assert(state.stream.stop_error == -EIO && write_calls == 134);
+        assert(state.stream.stop_error == -EIO && write_calls == baseline_writes);
         assert(!gpio_owned && !cci.ref_count && !clock_refs[0] && !clock_refs[1]);
         assert(!enables[0] && !enables[1] && !enables[2] && !enables[3]);
         before = write_calls;
         assert(iris_identify(&state) == -EBUSY && write_calls == before);
         count++;
     }
+    reset_stream(); sensor_registers[0] = 0x12; sensor_registers[1] = 0x34;
+    assert(iris_identify(&state) == -ENODEV);
+    assert(write_calls == 6 && read_calls == 1);
+    assert(write_log[0].address == 0x0103 && write_log[1].address == 0x0136);
+    assert(!state.stream.writes && !state.stream.transactions);
+    assert(!state.stream.before_valid && !state.stream.after_valid);
+    assert(!strcmp(state.stream.stage, "reset-model"));
+    stopped(); count++;
     reset_stream(); returned_model = 0x1234;
     assert(iris_identify(&state) == -ENODEV && !write_calls);
     balanced(); count++;
@@ -131,6 +286,8 @@ int main(void)
     assert(iris_stream_accept(&state.stream, state.stream.program,
            IRIS_PROGRAM_BYTES - 1, iris_program_sha256) == -EINVAL);
     count++;
+    printf("Baseline: %d startup transactions, %u profile bursts, %d read transactions\n",
+           startup_writes, baseline_bursts, baseline_reads);
     printf("%d actual integrated stream scenarios passed\n", count);
     return 0;
 }

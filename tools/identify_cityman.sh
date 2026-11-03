@@ -43,6 +43,10 @@ finish() {
         if [ "$operation" = stream-once ]; then
             stream_after=$(cat "$node/stream_result") || stream_after=unreadable
             echo "Stream after: $stream_after"
+            if [ -r "$node/stream_readback" ]; then
+                echo 'Saved register readback (before and after stream-on):'
+                cat "$node/stream_readback" || echo 'Saved register readback unavailable.' >&2
+            fi
             case " $stream_after " in *' stop_errno=0 '*) ;; *) stream_clean=0 ;; esac
         fi
         if ! clean_result "$after" || [ "$stream_clean" != 1 ]; then

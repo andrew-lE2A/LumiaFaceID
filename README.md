@@ -85,6 +85,9 @@ The next [sensor-stream test](kernel/IRIS-STREAM.md) has a separately gated kern
 build and a locally prepared, hash-pinned register program. It briefly starts
 the sensor and checks its internal frame counter, then stops and unwinds power.
 It does not yet configure CSI reception or return an image. IR remains off.
+The first test completed programming and cleanup but its counter remained zero.
+Version 02 matches the original transaction shapes and records configuration
+readbacks even when the counter stalls; its phone test is pending.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

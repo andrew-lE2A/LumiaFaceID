@@ -88,16 +88,26 @@ static int iris_read_model(struct cityman_iris *iris, u16 *model)
 }
 
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
-static int iris_stream_write8(void *context, u16 address, u8 value)
+static int iris_stream_write_bytes(void *context, u16 address, const u8 *data,
+	unsigned int length)
 {
 	struct cityman_iris *iris = context;
-	struct msm_camera_i2c_reg_array reg = { .reg_addr = address, .reg_data = value };
+	struct msm_camera_i2c_reg_array regs[IRIS_STREAM_MAX_BURST] = { { 0 } };
 	struct msm_camera_cci_ctrl ctrl = {
 		.cmd = MSM_CCI_I2C_WRITE, .cci_info = &iris->client,
 	};
+	unsigned int i;
 	int rc;
-	ctrl.cfg.cci_i2c_write_cfg.reg_setting = &reg;
-	ctrl.cfg.cci_i2c_write_cfg.size = 1;
+	if (!length || length > IRIS_STREAM_MAX_BURST)
+		return -EINVAL;
+	for (i = 0; i < length; i++) {
+		regs[i].reg_addr = address + i;
+		regs[i].reg_data = data[i];
+	}
+	if (length > 1)
+		ctrl.cmd = MSM_CCI_I2C_WRITE_SEQ;
+	ctrl.cfg.cci_i2c_write_cfg.reg_setting = regs;
+	ctrl.cfg.cci_i2c_write_cfg.size = length;
 	ctrl.cfg.cci_i2c_write_cfg.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
 	ctrl.cfg.cci_i2c_write_cfg.data_type = MSM_CAMERA_I2C_BYTE_DATA;
 	rc = v4l2_subdev_call(iris->client.cci_subdev, core, ioctl,
@@ -105,17 +115,20 @@ static int iris_stream_write8(void *context, u16 address, u8 value)
 	return rc < 0 ? rc : ctrl.status;
 }
 
-static int iris_stream_read8(void *context, u16 address, u8 *value)
+static int iris_stream_read_bytes(void *context, u16 address, u8 *data,
+	unsigned int length)
 {
 	struct cityman_iris *iris = context;
 	struct msm_camera_cci_ctrl ctrl = {
 		.cmd = MSM_CCI_I2C_READ, .cci_info = &iris->client,
 	};
 	int rc;
+	if (!length || length > 2)
+		return -EINVAL;
 	ctrl.cfg.cci_i2c_read_cfg.addr = address;
 	ctrl.cfg.cci_i2c_read_cfg.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-	ctrl.cfg.cci_i2c_read_cfg.data = value;
-	ctrl.cfg.cci_i2c_read_cfg.num_byte = 1;
+	ctrl.cfg.cci_i2c_read_cfg.data = data;
+	ctrl.cfg.cci_i2c_read_cfg.num_byte = length;
 	rc = v4l2_subdev_call(iris->client.cci_subdev, core, ioctl,
 		VIDIOC_MSM_CCI_CFG, &ctrl);
 	return rc < 0 ? rc : ctrl.status;
@@ -125,8 +138,8 @@ static void iris_stream_delay(unsigned int value) { msleep(value); }
 
 static struct iris_stream_io iris_stream_io(struct cityman_iris *iris)
 {
-	struct iris_stream_io io = { .context = iris, .write8 = iris_stream_write8,
-		.read8 = iris_stream_read8, .delay_ms = iris_stream_delay };
+	struct iris_stream_io io = { .context = iris, .write_bytes = iris_stream_write_bytes,
+		.read_bytes = iris_stream_read_bytes, .delay_ms = iris_stream_delay };
 	return io;
 }
 #endif
@@ -372,9 +385,28 @@ static ssize_t stream_result_show(struct device *dev, struct device_attribute *a
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d\n",
+		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d\n",
 		s->loaded, s->stage, s->first, s->last, s->changes,
-		s->samples, s->writes, s->stop_error);
+		s->samples, s->writes, s->stop_error, s->transactions, s->readback_error);
+	mutex_unlock(&iris->lock);
+	return size;
+}
+
+static ssize_t stream_readback_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct iris_stream *s = &iris->stream;
+	ssize_t size = 0;
+	unsigned int i;
+	mutex_lock(&iris->lock);
+	for (i = 0; i < IRIS_READBACK_COUNT; i++) {
+		const struct iris_stream_register *reg = &iris_stream_registers[i];
+		size += scnprintf(buf + size, PAGE_SIZE - size,
+			"%s addr=0x%04x width=%u before=0x%04x before_valid=%u after=0x%04x after_valid=%u\n",
+			reg->name, reg->address, reg->width, s->before[i],
+			!!(s->before_valid & (1U << i)), s->after[i],
+			!!(s->after_valid & (1U << i)));
+	}
 	mutex_unlock(&iris->lock);
 	return size;
 }
@@ -451,6 +483,7 @@ out:
 }
 
 static DEVICE_ATTR(stream_result, 0444, stream_result_show, NULL);
+static DEVICE_ATTR(stream_readback, 0444, stream_readback_show, NULL);
 static DEVICE_ATTR(stream_profile, 0200, NULL, stream_profile_store);
 static DEVICE_ATTR(stream_once, 0200, NULL, stream_once_store);
 #endif
@@ -458,6 +491,7 @@ static struct attribute *iris_attrs[] = {
 	&dev_attr_result.attr, &dev_attr_identify.attr,
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 	&dev_attr_stream_result.attr, &dev_attr_stream_profile.attr, &dev_attr_stream_once.attr,
+	&dev_attr_stream_readback.attr,
 #endif
 	NULL,
 };

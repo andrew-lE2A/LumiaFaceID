@@ -1,0 +1,87 @@
+{
+  "build_id": "iris-stream-02",
+  "purpose": "source-matched atomic/burst sensor transactions and saved pre/post-start register diagnostics; no CSI, DMA, IR or images",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "patches": [
+    {
+      "path": "kernel/patches/0001-camera-restore-slave-read-state.patch",
+      "sha256": "8bed81c157e6f634e151848b47f155c37faa262acab3a2517a7a8aa105e18dec"
+    },
+    {
+      "path": "kernel/patches/0002-cityman-iris-id-integration.patch",
+      "sha256": "1bf1d38909c1a1ce27fb6df329efd85700c3089331d2bfc2a8d7f86a0f796582"
+    },
+    {
+      "path": "kernel/patches/0003-cityman-iris-stream-option.patch",
+      "sha256": "eb038047db2af17ec1f5e0a3b87ee0301bad80c21d62dde13bfd0a6300dbd5b7"
+    }
+  ],
+  "driver_sources": [
+    {
+      "path": "kernel/driver/cityman_iris_id.c",
+      "sha256": "22ed1a4d2a8a92fa6bf54bdcd7ea688b0e83a92b3e050251135047313f2056d5"
+    },
+    {
+      "path": "kernel/driver/cityman_iris_stream.h",
+      "sha256": "3c5ea539f132a559586c779551e98230a0b4058f6939120778457f8a643743a1"
+    }
+  ],
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "configuration_changes_from_original": {
+    "CONFIG_CITYMAN_IRIS_ID": {
+      "before": "n",
+      "after": "y"
+    },
+    "CONFIG_CITYMAN_IRIS_STREAM": {
+      "before": "n",
+      "after": "y"
+    }
+  },
+  "generated_config_sha256": "56978d4b16190d2983a467a88f475f7d67df15f048810f1a99849ba8abbb0b24",
+  "version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #5 SMP PREEMPT Tue Nov 3 08:46:57 UTC 2026",
+  "files": {
+    "Image.gz": {
+      "sha256": "778ae525f50647fbdb7d7658d98bcf3fc750822ce23dc7bed03a3a7ac52e34c8",
+      "bytes": 9702825
+    },
+    "boards.dtb": {
+      "sha256": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24",
+      "bytes": 534371
+    }
+  },
+  "device_trees": [
+    {
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "size": 275999,
+      "sha256": "15dc3cb07b6d4d69f246452dc237fa605007a18b4eae758926cf877ffafe636e"
+    }
+  ],
+  "dtbs_byte_identical_to": "iris-stream-01",
+  "profile_bytes": 351,
+  "profile_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+  "profile_data_embedded_in_kernel": false,
+  "full_kernel_build": "passed; exit status 0",
+  "host_tests_passed": 92,
+  "integrated_stream_simulation_scenarios": 116,
+  "existing_power_simulation_scenarios": 28,
+  "capture_status": "no delivered frames; CSI/ISP/HAL integration remains",
+  "patch_application": "all three patches apply sequentially to pinned base",
+  "private_repack_validation": {
+    "ramdisk_unchanged": true,
+    "boot_settings_unchanged": true,
+    "fits_original_partition": true
+  },
+  "phone_boot_test": "not run",
+  "phone_stream_test": "not run",
+  "profile_wire_transactions": 50,
+  "maximum_program_burst_bytes": 8,
+  "snapshot_register_count": 20,
+  "snapshots_preserved_on_counter_stall": true,
+  "register_program_and_timing_unchanged": true,
+  "known_minor_limit": "reset-model mismatch does not export the reread value; ordinary model is pre-reset",
+  "validation_log_scope": "host simulation and private repack; new phone test pending"
+}
