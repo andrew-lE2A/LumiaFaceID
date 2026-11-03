@@ -77,4 +77,8 @@ copies. Future driver code must be built against the matching pinned kernel
 with its compatible ARM64 toolchain and configuration; Android modules need
 the matching LineageOS source tree. This workspace currently has roughly
 60 GiB free, so a full Android source sync/build has not been attempted.
-No boot image or flashable package has been built, and no phone has been flashed.
+The prerequisite kernel has now been built and privately repacked with the
+owner's supplied boot backup; see [the kernel build report](../kernel/README.md).
+The public artifact contains only the source-built kernel, with a local
+repacker for the owner's ramdisk and device trees. It does not yet acquire iris
+frames, and no phone has been flashed or boot-tested by this environment.

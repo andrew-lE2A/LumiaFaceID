@@ -64,8 +64,10 @@ pinned local ARM driver; it does not access the phone.
 
 The [kernel prerequisite patch](kernel/README.md) corrects the existing camera
 slave-read ioctl and has been compiled for the target ARM64 kernel, including
-its 32-bit compatibility path. It does not add an iris sensor or a flashable
-boot image.
+its 32-bit compatibility path. Iris acquisition and authentication remain
+unimplemented. A full prerequisite kernel is available for a
+[temporary boot compatibility test](kernel/BOOT-TEST.md); assemble its boot
+image locally with your own backup using `tools/repack_boot.py`.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

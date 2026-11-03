@@ -2,3 +2,4 @@ __pycache__/
 *.py[cod]
 /cityman-report*.json
 /reports/
+/artifacts/

@@ -75,8 +75,8 @@ Object SHA-256 from this run:
 This identifies the retained build output, not a required checksum for every
 rebuild with different timestamps or paths.
 
-No full kernel/boot image has been built for this patch, no hardware test has
-been run, and no phone was flashed. The next implementation still needs a
+The full `Image.gz-dtb` target subsequently built successfully with this patch.
+No hardware test has been run, and no phone was flashed. The next implementation still needs a
 dedicated opt-in iris/diagnostic slot with confirmed bus routing and sensor-only
 power sequencing. The IR illuminator should remain off for identification.
 
@@ -90,3 +90,44 @@ parameters and provides a recovery copy. Rooted ADB permits reading this
 partition without flashing anything. Compress the backup before sharing if
 the partition is padded. Do not build a guessed boot header from the old source
 comments or overwrite the owner's recovery backup.
+
+## Full build and packaging
+
+The uploaded backup is a 35651584-byte header-v0 image, page size 4096, with
+an appended-DTB gzip kernel and two board DTBs. Its ID uses the legacy empty-DT
+SHA-1 size term; the repacker detects and retains that convention. The original
+embedded effective `CONFIG_` settings match `mmo_defconfig`. An unchanged
+repack round-tripped the complete backup byte for byte.
+
+Full-build command after the patch and configuration steps above:
+
+```sh
+# In this disposable source tree only, preserve the existing release suffix.
+printf '%s\n' '-gcc84cab9' > "$lumia_kernel/.scmversion"
+PATH="/tmp/lumia-host-tools/usr/bin:$PATH" make -j3 -C "$lumia_kernel" \
+  O="$lumia_out" ARCH=arm64 \
+  CROSS_COMPILE="$lumia_gcc/bin/aarch64-linux-android-" \
+  CC="python3 $lumia_gcc/bin/aarch64-linux-android-gcc" \
+  KBUILD_BUILD_USER=lumiafaceid KBUILD_BUILD_HOST=cloud KBUILD_BUILD_VERSION=1 \
+  Image.gz-dtb
+```
+
+The PATH entry supplies Debian `bc` 1.07.1-4, obtained through signature-checked
+Debian repository metadata and extracted locally. Other build tools are the
+existing host GCC/Make and the pinned ARM64 toolchain. Compilation succeeded
+with existing warnings in the legacy source; no warnings or checks were disabled
+to make it pass.
+
+The public kernel-only artifact and build manifest are in
+[`builds/prep-01`](builds/prep-01/manifest.json). The kernel release remains the
+original value to avoid an unnecessary module-vermagic change, while the
+`lumiafaceid@cloud` builder stamp identifies the new build. Module compatibility
+and boot behavior still need hardware validation.
+
+The new private test image was packed and reparsed successfully. Its ramdisk,
+both DTBs, boot parameters, load addresses, OS-version word and partition length
+match the original backup. The public repacker has host tests for both supported
+checksum styles, corrupted data, footer/signature refusal, bounds, DTB
+preservation and output-file protection. See [BOOT-TEST.md](BOOT-TEST.md) for
+local assembly and temporary-boot instructions. No uploaded boot/ramdisk bytes
+are included in Git.

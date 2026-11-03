@@ -1,0 +1,21 @@
+{
+  "build_id": "prep-01",
+  "purpose": "camera slave-read prerequisite only; no iris sensor node, acquisition or IR control",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "patch": "kernel/patches/0001-camera-restore-slave-read-state.patch",
+  "patch_sha256": "8bed81c157e6f634e151848b47f155c37faa262acab3a2517a7a8aa105e18dec",
+  "toolchain_repository": "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "kernel_config": "mmo_defconfig; effective CONFIG settings match the uploaded current kernel",
+  "generated_config_sha256": "a4f56d7d1788cdc4be5d1a5413b64bcb1c31173c590cd0b1b70042cbffd4f8cd",
+  "release": "3.10.108-perf-gcc84cab9",
+  "release_override": ".scmversion=-gcc84cab9 retains original module vermagic; builder stamp identifies test build",
+  "version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #1 SMP PREEMPT Tue Nov 3 00:05:22 UTC 2026",
+  "image_gzip_sha256": "d68b7cf8704ba4a0ee581f97c310c9854bd77492dbb6ef225b30a6d14530ba6a",
+  "image_gzip_bytes": 9696989,
+  "full_Image_gz_dtb_build": "passed",
+  "host_tests_passed": 49,
+  "phone_boot_test": "not run",
+  "ramdisk_and_backup": "not included; repack locally with tools/repack_boot.py"
+}
