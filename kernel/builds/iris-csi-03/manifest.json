@@ -154,5 +154,8 @@
     "kernel/builds/iris-csi-02/phone-result.json",
     "kernel/builds/iris-csi-02/camera-control-result.json"
   ],
-  "phone_result_path": "kernel/builds/iris-csi-03/phone-result.json"
+  "phone_result_path": "kernel/builds/iris-csi-03/phone-result.json",
+  "mclk_result_path": "kernel/builds/iris-csi-03/mclk-result.json",
+  "internal_mclk_measurement": "owner measured 9600109\u20139600183 Hz on three stable enabled samples; sensor pin not measured; zero CSI packets and clean camera recovery",
+  "receiver_clock_measurement": "not run; see kernel/IRIS-RXCLK.md for clock-name audit and observation procedure"
 }

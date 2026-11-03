@@ -5,6 +5,27 @@ normal cameras recovered. Before changing another sensor or receiver setting,
 measure the existing MCLK1 branch during the powered diagnostic window.
 The owner confirmed the three required debugfs files are available.
 
+## Completed phone measurement
+
+The owner captured all 12 samples and confirmed both normal cameras work after
+the test. Samples 2–4 had stable software rate 9,600,000 Hz and enable=1 on
+both sides of the hardware count. They measured **9,600,109–9,600,183 Hz**.
+Sample 1 crossed the initial rate transition; samples 5–12 were disabled and
+measured zero, with the saved software rate returning to 19.2 MHz.
+
+This establishes that the internal branch counts near 9.6 MHz while enabled;
+it does not measure the sensor pin. The sensor counter and all CSI packet/error
+counts stayed zero. All 20 sensor and 22 receiver readback pairs matched the
+preceding interface-selection test. Sensor stop, receiver release and overall
+cleanup returned zero; all three camera services restarted.
+
+See [mclk-result.json](builds/iris-csi-03/mclk-result.json). The next
+[receiver clock observation](IRIS-RXCLK.md) measures the CSID3 core and PHY2
+timer on the same kernel. The MCLK instructions below document the completed
+test; an identical repeat would add no new observation.
+
+## Measurement procedure
+
 This uses the existing `cityman-iris-csi-03.img` and prepared profile. No new
 kernel, repack or ZIP is needed. Use the updated `tools/identify_cityman.sh`
 from GitHub. The helper's optional `--observe-mclk` flag starts 12 clock
@@ -73,5 +94,5 @@ program, exposure/gain and settle settings are unchanged.
 
 All 103 host tests pass, including missing clock files, read failure, saved
 samples and sampler completion before camera-service restoration. These tests
-exercise helper behavior with simulated files; phone frequency results remain
-pending.
+exercise helper behavior with simulated files. The phone result above supplies
+the actual internal branch measurement.

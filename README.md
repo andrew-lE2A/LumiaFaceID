@@ -104,9 +104,10 @@ The [explicit CSI-2 selection comparison](kernel/IRIS-CSI2.md) adds a
 separate one-shot control for the original driver's `0x0111=2` setting after
 mode programming. It preserves the receiver route and timing, requires
 readback before start, and latched on kernel #8. The receiver still recorded
-zero packets, with unchanged readbacks and clean camera recovery. The next
-[MCLK observation](kernel/IRIS-MCLK.md) uses the existing kernel #8 and its
-hardware clock counter; it needs only an updated helper.
+zero packets, with unchanged readbacks and clean camera recovery. The
+[MCLK observation](kernel/IRIS-MCLK.md) measured the internal enabled branch at
+about 9.6 MHz. The next [receiver clock check](kernel/IRIS-RXCLK.md) measures
+CSID3 and the PHY2 timer using the existing kernel #8 and an updated helper.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

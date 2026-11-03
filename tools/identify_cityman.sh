@@ -2,6 +2,7 @@
 # Run on the phone: adb shell sh < tools/identify_cityman.sh
 # Default: one ID attempt. stream-once: sensor counter; csi-once: CSI packets.
 # csi2-once additionally selects the fixed CSI-2 interface comparison.
+# Optional --observe-mclk or --observe-receiver-clocks samples debugfs clocks.
 # No mode configures image DMA or IR controls.
 set -u
 
@@ -17,6 +18,11 @@ services='cameraserver vendor.camera-provider-2-4 qcamerasvr'
 restore_services=
 attempted=0
 clock_root=/sys/kernel/debug/clk/camss_mclk1_clk
+receiver_clock_root=/sys/kernel/debug/clk
+clock_targets=$clock_root
+clock_label=MCLK
+clock_rounds='1 2 3 4 5 6 7 8 9 10 11 12'
+clock_log_template=/data/local/tmp/cityman-iris-mclk.XXXXXX
 clock_pid=
 clock_log=
 
@@ -42,20 +48,23 @@ clean_result() {
     esac
 }
 
-observe_mclk() {
+observe_clocks() {
     # The existing clock driver performs each hardware measurement (~15 ms).
     # Read software state on both sides to identify power/clock transitions.
     # Never write the debugfs rate/enable/parent controls.
-    for sample in 1 2 3 4 5 6 7 8 9 10 11 12; do
-        rate_before=$(cat "$clock_root/rate") || return 1
-        enable_before=$(cat "$clock_root/enable") || return 1
-        measured=$(cat "$clock_root/measure") || {
-            echo 'MCLK hardware measurement read failed.' >&2
-            return 1
-        }
-        rate_after=$(cat "$clock_root/rate") || return 1
-        enable_after=$(cat "$clock_root/enable") || return 1
-        echo "MCLK sample=$sample rate_before_hz=$rate_before enable_before=$enable_before measured_hz=$measured rate_after_hz=$rate_after enable_after=$enable_after"
+    # Use one sampler for every target: they share the hardware debug mux.
+    for sample in $clock_rounds; do
+        for observed_clock in $clock_targets; do
+            rate_before=$(cat "$observed_clock/rate") || return 1
+            enable_before=$(cat "$observed_clock/enable") || return 1
+            measured=$(cat "$observed_clock/measure") || {
+                echo "$clock_label hardware measurement read failed: $observed_clock" >&2
+                return 1
+            }
+            rate_after=$(cat "$observed_clock/rate") || return 1
+            enable_after=$(cat "$observed_clock/enable") || return 1
+            echo "$clock_label sample=$sample clock=${observed_clock##*/} rate_before_hz=$rate_before enable_before=$enable_before measured_hz=$measured rate_after_hz=$rate_after enable_after=$enable_after"
+        done
     done
 }
 
@@ -64,12 +73,12 @@ finish() {
     trap - 0 HUP INT TERM
     if [ -n "$clock_pid" ]; then
         if ! wait "$clock_pid"; then
-            echo 'MCLK_OBSERVATION_INCOMPLETE: the clock sampler failed.' >&2
+            echo "${clock_label}_OBSERVATION_INCOMPLETE: the clock sampler failed." >&2
             [ "$code" -ne 0 ] || code=5
         fi
-        echo "Saved MCLK observations: $clock_log"
+        echo "Saved $clock_label observations: $clock_log"
         cat "$clock_log" || {
-            echo 'MCLK observations could not be read.' >&2
+            echo "$clock_label observations could not be read." >&2
             [ "$code" -ne 0 ] || code=5
         }
     fi
@@ -126,12 +135,23 @@ case "$clock_option" in
     '') ;;
     --observe-mclk)
         [ "$streaming" = 1 ] || fail 'MCLK observation requires a stream diagnostic.'
-        for clock_file in measure rate enable; do
-            [ -r "$clock_root/$clock_file" ] || fail "MCLK observation unavailable: $clock_root/$clock_file; no hardware action performed."
-        done
         ;;
-    *) fail 'Unknown option; expected --observe-mclk.' ;;
+    --observe-receiver-clocks)
+        [ "$receiver_test" = 1 ] || fail 'Receiver clock observation requires csi-once or csi2-once.'
+        clock_targets="$receiver_clock_root/camss_csi3_clk $receiver_clock_root/camss_phy2_csi2phytimer_clk"
+        clock_label=RXCLK
+        clock_rounds='1 2 3 4 5 6'
+        clock_log_template=/data/local/tmp/cityman-iris-rxclk.XXXXXX
+        ;;
+    *) fail 'Unknown option; expected --observe-mclk or --observe-receiver-clocks.' ;;
 esac
+if [ -n "$clock_option" ]; then
+    for observed_clock in $clock_targets; do
+        for clock_file in measure rate enable; do
+            [ -r "$observed_clock/$clock_file" ] || fail "$clock_label observation unavailable: $observed_clock/$clock_file; no hardware action performed."
+        done
+    done
+fi
 set -- "$driver"/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || fail 'Expected exactly one bound iris-ID device.'
 result=$1
@@ -196,9 +216,9 @@ for service in $services; do
     [ "$(getprop "init.svc.$service")" = stopped ] || fail "$service restarted; no identification performed."
 done
 [ "$(cat "$result")" = "$initial" ] || fail 'Diagnostic state changed; no identification performed.'
-if [ "$clock_option" = --observe-mclk ]; then
-    clock_log=$(mktemp /data/local/tmp/cityman-iris-mclk.XXXXXX) || fail 'Cannot create MCLK observation log; no sensor test performed.'
-    observe_mclk > "$clock_log" 2>&1 &
+if [ -n "$clock_option" ]; then
+    clock_log=$(mktemp "$clock_log_template") || fail 'Cannot create clock observation log; no sensor test performed.'
+    observe_clocks > "$clock_log" 2>&1 &
     clock_pid=$!
 fi
 echo "Performing one $operation attempt."

@@ -34,8 +34,10 @@ Kernel #8's explicit CSI-2 selection then latched `0x0111=2`, but all other
 sensor pairs and all receiver pairs matched #7. Packet counts remained zero;
 cleanup and normal camera recovery passed. See the
 [comparison evidence](../kernel/builds/iris-csi-03/phone-result.json).
-The next [MCLK observation](../kernel/IRIS-MCLK.md) adds an internal clock
-frequency measurement while preserving the existing sensor/receiver settings.
+The subsequent [MCLK observation](../kernel/IRIS-MCLK.md) measured the internal
+enabled branch near 9.6 MHz, with clean cleanup and normal camera recovery.
+The next [receiver clock check](../kernel/IRIS-RXCLK.md) observes CSID3 and the
+PHY2 timer without changing the existing sensor/receiver settings.
 
 ## Routing evidence
 

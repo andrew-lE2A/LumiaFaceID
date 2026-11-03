@@ -227,3 +227,17 @@ The owner also confirmed that `camss_mclk1_clk` exposes debugfs `measure`,
 `rate` and `enable` files. This establishes measurement availability, not a
 frequency result. The [next helper-only test](../kernel/IRIS-MCLK.md) observes
 that internal branch during one powered cycle on the existing kernel #8.
+
+## Internal MCLK measurement and recovery
+
+The owner completed that clock observation. Three stable enabled samples
+measured 9,600,109–9,600,183 Hz against the requested 9,600,000 Hz. Samples
+after disable measured zero and the software rate returned to 19.2 MHz.
+This verifies the internal branch frequency, not the signal at the sensor pin.
+
+All sensor/receiver readback pairs matched the previous #8 test, and packet
+counts remained zero. Stop and cleanup returned zero, all services restarted,
+and the owner confirmed both normal cameras work. The selected output is in
+[mclk-result.json](../kernel/builds/iris-csi-03/mclk-result.json).
+The next [receiver clock measurement](../kernel/IRIS-RXCLK.md) follows a source
+audit of the port's clock-name mapping; its result remains pending.

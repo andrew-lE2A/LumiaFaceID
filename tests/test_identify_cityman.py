@@ -1,7 +1,7 @@
 """Exercise the actual device helper with simulated init services and sysfs.
 
-Only the absolute sysfs root is redirected into a fixture. The shell control
-flow and write are unchanged; Android commands are supplied through PATH.
+Filesystem paths are redirected into a fixture. The shell control flow and
+diagnostic write are unchanged; Android commands are supplied through PATH.
 """
 import json
 import os
@@ -89,7 +89,9 @@ class IdentifyHelperTests(unittest.TestCase):
             f'driver={self.root}/driver').replace(
             '/data/local/tmp/cityman-iris-stream-profile.hex', str(self.root / 'profile.hex')).replace(
             '/sys/kernel/debug/clk/camss_mclk1_clk', str(self.root / 'clock')).replace(
-            '/data/local/tmp/cityman-iris-mclk.XXXXXX', str(self.root / 'mclk-log.XXXXXX')))
+            '/data/local/tmp/cityman-iris-mclk.XXXXXX', str(self.root / 'mclk-log.XXXXXX')).replace(
+            'receiver_clock_root=/sys/kernel/debug/clk', f'receiver_clock_root={self.root}/rxclocks').replace(
+            '/data/local/tmp/cityman-iris-rxclk.XXXXXX', str(self.root / 'rxclk-log.XXXXXX')))
 
     def run_helper(self, fail_write=False, operation=None, option=None):
         (self.root / 'state.json').write_text(json.dumps(self.state))
@@ -336,6 +338,55 @@ class IdentifyHelperTests(unittest.TestCase):
             run = self.run_helper(operation=operation, option=option)
             self.assertEqual(run.returncode, 1)
             self.assertEqual(self.state['events'], [])
+
+    def receiver_clock_fixture(self):
+        self.csi_fixture()
+        (self.root / 'driver/device/csi2_once').write_text('')
+        for name, rate, measure in [('camss_csi3_clk', 240000000, 239999000),
+                                    ('camss_phy2_csi2phytimer_clk', 200000000, 199999000)]:
+            clock = self.root / 'rxclocks' / name
+            clock.mkdir(parents=True)
+            for key, value in [('rate', rate), ('enable', 1), ('measure', measure)]:
+                (clock / key).write_text(str(value) + '\n')
+
+    def test_receiver_clocks_are_interleaved_in_one_saved_log_before_restoration(self):
+        self.receiver_clock_fixture()
+        run = self.run_helper(operation='csi2-once', option='--observe-receiver-clocks')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        lines = [line for line in run.stdout.splitlines() if line.startswith('RXCLK sample=')]
+        self.assertEqual(len(lines), 12)
+        for index, line in enumerate(lines):
+            name = ('camss_csi3_clk', 'camss_phy2_csi2phytimer_clk')[index % 2]
+            self.assertIn(f'sample={index // 2 + 1} clock={name} ', line)
+        self.assertIn('measured_hz=239999000', run.stdout)
+        self.assertIn('measured_hz=199999000', run.stdout)
+        self.assertLess(run.stdout.index(lines[-1]), run.stdout.index('Restored:'))
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+        self.assertEqual(len(list(self.root.glob('rxclk-log.*'))), 1)
+
+    def test_missing_second_receiver_clock_refuses_before_stopping_services(self):
+        self.receiver_clock_fixture()
+        (self.root / 'rxclocks/camss_phy2_csi2phytimer_clk/measure').unlink()
+        run = self.run_helper(operation='csi-once', option='--observe-receiver-clocks')
+        self.assertEqual(run.returncode, 1)
+        self.assertIn('RXCLK observation unavailable', run.stderr)
+        self.assertEqual(self.state['events'], [])
+
+    def test_receiver_clock_samples_do_not_override_failed_cleanup(self):
+        self.receiver_clock_fixture()
+        self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=-5\n'
+        run = self.run_helper(operation='csi-once', option='--observe-receiver-clocks')
+        self.assertEqual(run.returncode, 3, run.stdout + run.stderr)
+        self.assertEqual(run.stdout.count('RXCLK sample='), 12)
+        self.assertIn('REBOOT_REQUIRED', run.stderr)
+        self.assertNotIn('Restored:', run.stdout)
+        self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)
+
+    def test_receiver_clock_option_rejects_sensor_only_mode(self):
+        run = self.run_helper(operation='stream-once', option='--observe-receiver-clocks')
+        self.assertEqual(run.returncode, 1)
+        self.assertIn('requires csi-once or csi2-once', run.stderr)
+        self.assertEqual(self.state['events'], [])
 
 
 if __name__ == '__main__':
