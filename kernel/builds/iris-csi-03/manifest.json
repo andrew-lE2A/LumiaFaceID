@@ -157,5 +157,6 @@
   "phone_result_path": "kernel/builds/iris-csi-03/phone-result.json",
   "mclk_result_path": "kernel/builds/iris-csi-03/mclk-result.json",
   "internal_mclk_measurement": "owner measured 9600109\u20139600183 Hz on three stable enabled samples; sensor pin not measured; zero CSI packets and clean camera recovery",
-  "receiver_clock_measurement": "not run; see kernel/IRIS-RXCLK.md for clock-name audit and observation procedure"
+  "receiver_clock_measurement": "Owner summary: CSID3 stable enabled 239999157 Hz; PHY2 timer stable enabled 199999414\u2013200000878 Hz; zero packets/ECC/CRC and sensor counter, clean cleanup and normal-camera recovery. Raw sample rows unavailable.",
+  "receiver_clock_result_path": "kernel/builds/iris-csi-03/rxclk-result.json"
 }

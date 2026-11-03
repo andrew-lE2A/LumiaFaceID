@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-03",
+  "helper_commit_expected": "25fdf7a0db2c7ba1c58b758b75996c3982d926a5",
+  "provenance": "Owner-reported summary supplied at local-workspace handoff. Full terminal log and individual sample rows were not supplied in this session; do not reconstruct them.",
+  "operation": "csi2-once --observe-receiver-clocks",
+  "kernel_build_number_reported": 8,
+  "boot_method": "fastboot boot (temporary)",
+  "clock_observations": [
+    {
+      "clock": "camss_csi3_clk",
+      "stable_enabled_reported": true,
+      "measured_hz_min": 239999157,
+      "measured_hz_max": 239999157
+    },
+    {
+      "clock": "camss_phy2_csi2phytimer_clk",
+      "stable_enabled_reported": true,
+      "measured_hz_min": 199999414,
+      "measured_hz_max": 200000878
+    }
+  ],
+  "raw_samples_available": false,
+  "sensor": {
+    "model": "0x0861",
+    "interface_0111": 2,
+    "counter_first": 0,
+    "counter_last": 0,
+    "counter_samples": 16,
+    "counter_changes": 0
+  },
+  "diagnostic": {
+    "stage": "stream-test",
+    "errno": -110,
+    "sensor_stop_errno": 0,
+    "receiver_release_errno": 0,
+    "cleanup_errno": 0
+  },
+  "receiver_counts": {
+    "packets": 0,
+    "ecc": 0,
+    "crc": 0
+  },
+  "camera_services_restored_count": 3,
+  "normal_camera_behavior_after_test": "Owner confirmed both ordinary cameras still work after every test.",
+  "interpretation": {
+    "internal_receiver_branches_near_expected_frequencies": true,
+    "incoming_mipi_clock_measured": false,
+    "sensor_mclk_pin_measured": false,
+    "physical_transmission_established": false,
+    "image_frames_delivered": false,
+    "root_cause": "unresolved"
+  }
+}

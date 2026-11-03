@@ -36,8 +36,10 @@ cleanup and normal camera recovery passed. See the
 [comparison evidence](../kernel/builds/iris-csi-03/phone-result.json).
 The subsequent [MCLK observation](../kernel/IRIS-MCLK.md) measured the internal
 enabled branch near 9.6 MHz, with clean cleanup and normal camera recovery.
-The next [receiver clock check](../kernel/IRIS-RXCLK.md) observes CSID3 and the
-PHY2 timer without changing the existing sensor/receiver settings.
+The completed [receiver clock check](../kernel/IRIS-RXCLK.md) measured stable
+enabled CSID3 near 240 MHz and PHY2 timer near 200 MHz, with zero packet/error
+counts and clean camera recovery. The [startup/link audit](iris-startup-audit.md)
+tracks the remaining uncertainties without changing sensor registers.
 
 ## Routing evidence
 

@@ -14,7 +14,25 @@ These clocks are generated inside the SoC; neither is a recovered MIPI clock
 from the sensor. The measurements cannot establish an incoming physical signal
 or a delivered image.
 
-## Run once on a fresh temporary boot
+## Completed phone measurement
+
+The owner reports stable enabled CSID3 core measurements of **239,999,157 Hz**
+and PHY2 timer measurements of **199,999,414–200,000,878 Hz** on kernel #8.
+Model `0x0861` and interface `0x0111=2` were confirmed. The sensor counter stayed
+zero across 16 reads, and CSID3 packet/ECC/CRC counts stayed zero. The diagnostic
+returned `-110` at stream-test. Sensor stop, receiver release and overall cleanup
+returned zero; all three camera services restored. The owner confirmed both
+ordinary cameras still work after every test.
+
+[rxclk-result.json](builds/iris-csi-03/rxclk-result.json) records the handoff
+summary. Individual sample rows and the full terminal log were not supplied in
+this local session; sample indices, transitions and register-pair equivalence
+are therefore not asserted. These internal measurements support the expected
+240/200 MHz receiver clocks. They do not establish a recovered MIPI clock,
+physical lane activity, valid packets or a delivered image. Another identical
+clock test is not the next step. See the [startup/link audit](../docs/iris-startup-audit.md).
+
+## Reproduction on a fresh temporary boot
 
 Use the updated helper from GitHub. Keep the existing kernel #8 image and
 prepared profile. No kernel rebuild or repack is needed. First run on the Mac:
@@ -96,5 +114,4 @@ All 107 host tests pass. The added cases exercise both clocks in one saved
 sequence, missing second-clock refusal before service changes, rejection of
 sensor-only modes, and leaving cameras stopped when cleanup fails despite
 successful sampling. Existing MCLK and service-recovery cases still pass.
-Kernel binary, source hashes and DTBs are unchanged. Receiver frequency
-measurements on the phone remain pending.
+Kernel binary, source hashes and DTBs are unchanged. Receiver measurements are now recorded above; raw sample rows remain unavailable.
