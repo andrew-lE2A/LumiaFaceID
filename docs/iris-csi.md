@@ -6,9 +6,16 @@ could be read back. The counter stayed zero. The complete
 stop/unwind and the owner's confirmation that both normal cameras still work.
 Neither counter behavior nor mode select establishes packet transmission.
 
-The next implementation needs a receiver configured before sensor start and
-an observable result afterward. Another identical counter-only run will not
-answer that question.
+The owner subsequently completed the first receiver test on kernel #6:
+setup/release succeeded, receiver version was `0x30010003`, all recorded
+packet/ECC/CRC values were zero, and normal cameras remained unchanged. These
+observations do not establish a missing physical signal; receiver configuration
+and PHY status were not captured. See the
+[phone evidence](../kernel/builds/iris-csi-01/phone-result.json).
+
+The next test needs receiver configuration readbacks and better observation
+of its active state. Another identical counter-only run will not answer
+whether the sensor is transmitting packets.
 
 ## Routing evidence
 
@@ -20,9 +27,9 @@ Linux register/node mappings below use kernel commit
 
 | Item | Evidence | What remains unresolved |
 | --- | --- | --- |
-| Iris receiver | CAMT exposes `0xfda08c00`, corresponding to Linux CSID3 | Packet reception on that receiver has not been tested |
-| Iris PHY | Hardware preparation maps `0xfda0b400` and supplies PHY selector 2 / combo flag 1 | Physical reception remains untested |
-| Shared dependency | CAMT depends on CAMF in `_DEP`; the iris one-lane combo request is forwarded through the front interface | Independent ownership and normal-front recovery require a phone check |
+| Iris receiver | CAMT exposes `0xfda08c00`, corresponding to Linux CSID3 | Packet reception has not been established |
+| Iris PHY | Hardware preparation maps `0xfda0b400` and supplies PHY selector 2 / combo flag 1 | Physical reception remains unverified |
+| Shared dependency | CAMT depends on CAMF in `_DEP`; the iris one-lane combo request is forwarded through the front interface | Normal-front recovery passed once; repeatability remains untested |
 | Lane count and placement | The matched program uses one lane; the original combo path selects data lane 4 and clock lane 3 | Physical reception and polarity have not been measured |
 | Format | The matched mode and phone readback both give `0x0112=0x0a0a` | Actual packet data type, virtual channel and delivered byte layout |
 | PHY combo support | Linux supports mask `0x18` / upper mux nibble, with lane 3 serving as combo clock | Initial settle count has no measured working window |
@@ -70,6 +77,29 @@ measurement of packets on the owner's phone.
 Driver identity and provenance are in
 [windows-driver-analysis.md](windows-driver-analysis.md).
 
+## Receiver observation settings
+
+The original CSID construction at `0x41ded8`–`0x41dee4` builds
+`(phy << 17) | 0x1000f`; the CSID3 register copy at `0x41e4a4`–`0x41e4a8`
+writes it to receiver offset `0x8` (`CORE_CTRL_1`). The Linux configuration
+builds `(phy << 17) | 0xf`. This establishes a bit-16 difference, not its exact
+semantics or a proven cause of the zero counters. Linux mainline v6.6's
+`camss-csid-4-1.c` likewise streams without that bit but does not collect these
+statistics; its stream setup does not validate our counter measurements.
+
+Version 02 matches the original bit in the diagnostic owner helper and saves
+the control-word readback. For PHY2 it should read `0x0005000f`. Sensor
+programming and PHY lane/timing settings remain fixed. Readbacks additionally
+cover CSID lane/format configuration, PHY power/combo/lane configuration and
+the eight PHY IRQ status words used by the existing IRQ handler. No extra
+IRQs, test generator or image DMA is enabled. The observations are sampled
+before the sensor stop writes, including after a sensor-counter timeout.
+
+The original statistics reader at `0x41f1e4`–`0x41f29c` exports the low 16 bits
+of the ECC word at `0x98`; version 02 follows that width. Packet count at `0x90`
+and CRC at `0x94` remain 32-bit. A physical signal and counter behavior still
+need to be established on the phone.
+
 ## Linux integration boundary
 
 The existing diagnostic owns only its sensor power/reset/clock votes and CCI
@@ -86,7 +116,7 @@ lane routing and RAW10 reception, then executes the existing one-shot sensor
 start/stop. It saves packet/error observations before releasing the receiver
 and unwinding power. Receiver failures remain distinct from the sensor's
 unchanged-counter criterion. The initial settle count 20 is unmeasured; the
-new build still needs its first phone test. Receiver diagnostics are useful
+version 02 still needs its first phone test. Receiver diagnostics are useful
 for link bring-up but do not prove a delivered image.
 
 The first capture milestone then adds an ISPIF/VFE RDI path and returns a

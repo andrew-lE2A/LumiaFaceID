@@ -9,8 +9,29 @@ static struct csid_device *cityman_iris_csid_device;
 static void cityman_iris_csi_counts(struct csid_device *d, struct iris_csi_counts *c)
 {
 	c->packets = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_stats_total_pkts_rcvd_addr);
-	c->ecc = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_stats_ecc_addr);
+	/* The original statistics reader exports only the lower 16 ECC bits. */
+	c->ecc = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_stats_ecc_addr) & 0xffff;
 	c->crc = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_stats_crc_addr);
+}
+
+static void cityman_iris_csid_sample(struct csid_device *d, u32 *values)
+{
+	struct csid_reg_parms_t *r = &d->ctrl_reg->csid_reg;
+	values[0] = msm_camera_io_r(d->base + r->csid_core_ctrl_0_addr);
+	values[1] = msm_camera_io_r(d->base + r->csid_core_ctrl_1_addr);
+	values[2] = msm_camera_io_r(d->base + r->csid_cid_lut_vc_0_addr);
+	values[3] = msm_camera_io_r(d->base + r->csid_cid_n_cfg_addr);
+	values[4] = msm_camera_io_r(d->base + r->csid_irq_status_addr);
+}
+
+void cityman_iris_csi_sample(struct iris_csi *s)
+{
+	if (!s->before_valid || s->after_valid)
+		return;
+	cityman_iris_csi_counts(s->csid, &s->after);
+	cityman_iris_csid_sample(s->csid, s->csid_after);
+	cityman_iris_phy_sample(s, true);
+	s->after_valid = true;
 }
 
 int cityman_iris_csi_end(struct iris_csi *s)
@@ -19,8 +40,9 @@ int cityman_iris_csi_end(struct iris_csi *s)
 	int rc = 0, phy_rc;
 	if (d) {
 		if (s->csid_initialized) {
-			cityman_iris_csi_counts(d, &s->after);
-			s->after_valid = true;
+			/* Fallback only; normal sampling occurs while the sensor is
+			 * still running, before its stop writes. Preserve that snapshot. */
+			cityman_iris_csi_sample(s);
 			rc = msm_csid_release(d);
 			if (!rc && (d->csid_state != CSID_POWER_DOWN || d->base))
 				rc = -EIO;
@@ -49,6 +71,7 @@ int cityman_iris_csi_begin(struct iris_csi *s)
 		.phy_sel = 2, .csi_clk = 200000000,
 	};
 	int rc;
+	u32 control;
 	s->stage = "phy-lock";
 	rc = cityman_iris_phy_lock(s);
 	if (rc)
@@ -91,11 +114,22 @@ int cityman_iris_csi_begin(struct iris_csi *s)
 	rc = msm_csid_config(d, &params);
 	if (rc)
 		goto failed;
+	s->stage = "csid-observation-config";
+	control = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_core_ctrl_1_addr);
+	msm_camera_io_w(control | IRIS_CSI_ORIGINAL_CTRL1_FLAG,
+		d->base + d->ctrl_reg->csid_reg.csid_core_ctrl_1_addr);
+	control = msm_camera_io_r(d->base + d->ctrl_reg->csid_reg.csid_core_ctrl_1_addr);
+	if (!(control & IRIS_CSI_ORIGINAL_CTRL1_FLAG)) {
+		rc = -EIO;
+		goto failed;
+	}
 	s->stage = "phy-config";
 	rc = cityman_iris_phy_config(s);
 	if (rc)
 		goto failed;
 	cityman_iris_csi_counts(d, &s->before);
+	cityman_iris_csid_sample(d, s->csid_before);
+	cityman_iris_phy_sample(s, false);
 	s->before_valid = true;
 	s->stage = "listening";
 	return 0;

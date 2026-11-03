@@ -7,7 +7,7 @@ import unittest
 
 class IrisCsiTests(unittest.TestCase):
     def test_production_receiver_lifecycle(self):
-        self.run_harness('iris_csi_host.c', '20 production receiver lifecycle scenarios passed')
+        self.run_harness('iris_csi_host.c', '21 production receiver lifecycle scenarios passed')
 
     def test_sensor_receiver_integration(self):
         self.run_harness('iris_csi_sequence_host.c', '5 production sensor/receiver integration scenarios passed')

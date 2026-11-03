@@ -309,8 +309,10 @@ static int iris_identify(struct cityman_iris *iris)
 			rc = iris_stream_program(&iris->stream, &io);
 			if (!rc)
 				rc = cityman_iris_csi_begin(&iris->csi);
-			if (!rc)
+			if (!rc) {
 				rc = iris_stream_start(&iris->stream, &io);
+				cityman_iris_csi_sample(&iris->csi);
+			}
 		} else
 #endif
 		rc = iris_stream_run(&iris->stream, &io);
@@ -535,6 +537,33 @@ static ssize_t csi_result_show(struct device *dev, struct device_attribute *attr
 	return size;
 }
 static DEVICE_ATTR(csi_result, 0444, csi_result_show, NULL);
+static ssize_t csi_readback_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	static const char * const csid_names[IRIS_CSI_CSID_REGS] = {
+		"control0", "control1", "vc0_lut", "cid0_config", "irq_status",
+	};
+	static const char * const phy_names[IRIS_CSI_PHY_REGS] = {
+		"clock_mux", "power", "mode", "clock_cfg2", "clock_settle", "clock_misc",
+		"data_cfg2", "data_settle", "data_misc", "irq_status0", "irq_status1",
+		"irq_status2", "irq_status3", "irq_status4", "irq_status5", "irq_status6", "irq_status7",
+	};
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct iris_csi *s = &iris->csi;
+	ssize_t size = 0;
+	unsigned int i;
+	mutex_lock(&iris->lock);
+	for (i = 0; i < IRIS_CSI_CSID_REGS; i++)
+		size += scnprintf(buf + size, PAGE_SIZE - size,
+			"csid_%s before=0x%08x before_valid=%u after=0x%08x after_valid=%u\n",
+			csid_names[i], s->csid_before[i], s->before_valid, s->csid_after[i], s->after_valid);
+	for (i = 0; i < IRIS_CSI_PHY_REGS; i++)
+		size += scnprintf(buf + size, PAGE_SIZE - size,
+			"phy_%s before=0x%08x before_valid=%u after=0x%08x after_valid=%u\n",
+			phy_names[i], s->phy_before[i], s->before_valid, s->phy_after[i], s->after_valid);
+	mutex_unlock(&iris->lock);
+	return size;
+}
+static DEVICE_ATTR(csi_readback, 0444, csi_readback_show, NULL);
 static DEVICE_ATTR(csi_once, 0200, NULL, stream_once_store);
 #endif
 static struct attribute *iris_attrs[] = {
@@ -544,7 +573,7 @@ static struct attribute *iris_attrs[] = {
 	&dev_attr_stream_readback.attr,
 #endif
 #ifdef CONFIG_CITYMAN_IRIS_CSI
-	&dev_attr_csi_result.attr, &dev_attr_csi_once.attr,
+	&dev_attr_csi_result.attr, &dev_attr_csi_readback.attr, &dev_attr_csi_once.attr,
 #endif
 	NULL,
 };

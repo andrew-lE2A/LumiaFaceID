@@ -61,6 +61,28 @@ int cityman_iris_phy_config(struct iris_csi *s)
 	return msm_csiphy_lane_config(s->phy, &params);
 }
 
+void cityman_iris_phy_sample(struct iris_csi *s, bool after)
+{
+	struct csiphy_device *p = s->phy;
+	struct csiphy_reg_parms_t *r = &p->ctrl_reg->csiphy_reg;
+	u32 *values = after ? s->phy_after : s->phy_before;
+	unsigned int i;
+	values[0] = msm_camera_io_r(p->clk_mux_base);
+	values[1] = msm_camera_io_r(p->base + r->mipi_csiphy_glbl_pwr_cfg_addr);
+	values[2] = msm_camera_io_r(p->base + r->mipi_csiphy_glbl_reset_addr);
+	values[3] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_cfg2_addr + 0x40 * 3);
+	values[4] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_cfg3_addr + 0x40 * 3);
+	values[5] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_misc1_addr + 0x40 * 3);
+	values[6] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_cfg2_addr + 0x40 * 4);
+	values[7] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_cfg3_addr + 0x40 * 4);
+	values[8] = msm_camera_io_r(p->base + r->mipi_csiphy_lnn_misc1_addr + 0x40 * 4);
+	/* These are the same eight status registers read by the owner's IRQ
+	 * handler. Do not clear them or enable additional interrupts here. */
+	for (i = 0; i < 8; i++)
+		values[9 + i] = msm_camera_io_r(p->base +
+			r->mipi_csiphy_interrupt_status0_addr + i * 4);
+}
+
 int cityman_iris_phy_end(struct iris_csi *s)
 {
 	struct csiphy_device *p = s->phy;

@@ -170,3 +170,23 @@ EXTCLK/control readback semantics remain unresolved: registers `0x0136` and
 `0x0138` returned zero. No physical clock measurement, receiver configuration
 or image capture was performed. The full selected readbacks are preserved in
 [phone-result.json](../kernel/builds/iris-stream-02/phone-result.json).
+
+## First CSI receiver test: setup/release pass, recorded counters zero
+
+The owner temporarily booted iris-csi-01, kernel #6. The repacked boot SHA-256
+matched the locally validated image. The diagnostic reported receiver version
+`0x30010003`, PHY2 combo / CSID3 configuration, successful setup and release,
+and valid before/after packet/ECC/CRC reads, all zero. The sensor again accepted
+the program and mode select but its 16 counter reads stayed zero, returning
+the diagnostic's `-110`. Sensor stop and overall cleanup returned zero.
+
+All three camera services restarted, and the owner confirmed both normal
+cameras work as before. Release warnings in the supplied log precede the
+diagnostic's own initialization and refer to already-idle receivers/CCI.
+They do not establish a transfer or release failure during this cycle.
+
+Receiver configuration/status was not captured in this build. Source review
+also found an original `CORE_CTRL_1` bit-16 setting omitted by the Linux path.
+Its effect on observations is untested. The zero counters therefore do not
+establish physical absence of packets. The full selected result is saved in
+[iris-csi-01/phone-result.json](../kernel/builds/iris-csi-01/phone-result.json).

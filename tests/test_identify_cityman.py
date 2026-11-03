@@ -241,12 +241,14 @@ class IdentifyHelperTests(unittest.TestCase):
 
     def test_csi_mode_uses_separate_control_and_prints_packet_result(self):
         self.csi_fixture()
+        (self.root / 'driver/device/csi_readback').write_text('csid_control1 before=0x0005000f after=0x0005000f\n')
         run = self.run_helper(operation='csi-once')
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertEqual((self.root / 'driver/device/csi_once').read_text(), 'csi-once\n')
         self.assertEqual((self.root / 'driver/device/stream_once').read_text(), '')
         self.assertIn('CSI after:', run.stdout)
         self.assertIn('packets_after=100', run.stdout)
+        self.assertIn('csid_control1 before=0x0005000f after=0x0005000f', run.stdout)
         self.assertLess(run.stdout.index('CSI after:'), run.stdout.index('Restored:'))
         self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
 

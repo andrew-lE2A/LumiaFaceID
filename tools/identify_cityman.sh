@@ -54,6 +54,10 @@ finish() {
         if [ "$operation" = csi-once ]; then
             csi_after=$(cat "$node/csi_result") || csi_after=unreadable
             echo "CSI after: $csi_after"
+            if [ -r "$node/csi_readback" ]; then
+                echo 'Saved receiver configuration/status (before and after start):'
+                cat "$node/csi_readback" || echo 'Saved receiver readback unavailable.' >&2
+            fi
             case " $csi_after " in *' cleanup_errno=0 '*) ;; *) stream_clean=0 ;; esac
         fi
         if ! clean_result "$after" || [ "$stream_clean" != 1 ]; then

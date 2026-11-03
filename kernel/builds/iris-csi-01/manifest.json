@@ -108,8 +108,8 @@
   "sensor_receiver_integration_scenarios": 5,
   "existing_stream_simulation_scenarios": 116,
   "existing_power_simulation_scenarios": 28,
-  "phone_boot_test": "not run",
-  "phone_receiver_test": "not run",
+  "phone_boot_test": "owner confirmed kernel #6 running",
+  "phone_receiver_test": "setup/release errno=0; CSID version 0x30010003; saved packet/ECC/CRC counters zero; sensor counter unchanged; normal cameras unchanged",
   "capture_status": "no delivered frames; receiver packet observation untested; no ISPIF/VFE/image DMA integration",
   "private_repack_validation": {
     "ramdisk_unchanged": true,
@@ -122,5 +122,6 @@
     "Simulations cover owner-helper API boundaries, not all internals of the legacy receiver drivers.",
     "Some legacy receiver init failures can leave partial state; detected dirty state is reported as cleanup failure and requires reboot.",
     "Sensor counter timeout remains separate from receiver observations."
-  ]
+  ],
+  "phone_result_path": "kernel/builds/iris-csi-01/phone-result.json"
 }

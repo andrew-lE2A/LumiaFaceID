@@ -7,6 +7,11 @@
 #define IRIS_CSI_LANE_MASK 0x18
 #define IRIS_CSI_LANE_ASSIGN 0x0004
 #define IRIS_CSI_SETTLE 20
+/* Original CORE_CTRL_1 construction at VA 0x41ded8 sets this flag.
+ * Its exact statistics semantics remain unverified; save the readback. */
+#define IRIS_CSI_ORIGINAL_CTRL1_FLAG (1U << 16)
+#define IRIS_CSI_CSID_REGS 5
+#define IRIS_CSI_PHY_REGS 17
 
 /* Legacy release helpers otherwise discard clock/regulator errors. Keep the
  * first failure while still attempting all remaining teardown operations. */
@@ -27,6 +32,8 @@ struct iris_csi {
 	u32 version;
 	u32 phy_mux_before;
 	bool phy_mux_valid;
+	u32 csid_before[IRIS_CSI_CSID_REGS], csid_after[IRIS_CSI_CSID_REGS];
+	u32 phy_before[IRIS_CSI_PHY_REGS], phy_after[IRIS_CSI_PHY_REGS];
 	const char *stage;
 	int error, cleanup_error;
 };
@@ -37,6 +44,8 @@ int cityman_iris_phy_lock(struct iris_csi *s);
 int cityman_iris_phy_init(struct iris_csi *s);
 int cityman_iris_phy_config(struct iris_csi *s);
 int cityman_iris_phy_end(struct iris_csi *s);
+void cityman_iris_phy_sample(struct iris_csi *s, bool after);
 int cityman_iris_csi_begin(struct iris_csi *s);
+void cityman_iris_csi_sample(struct iris_csi *s);
 int cityman_iris_csi_end(struct iris_csi *s);
 #endif
