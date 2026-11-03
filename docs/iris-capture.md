@@ -114,7 +114,7 @@ Next implementation work:
    test; an actual returned frame with known geometry/format is the acceptance
    criterion. Enumeration and CSI interrupts alone are insufficient.
 
-The current kernel remains the tested ID diagnostic. The extractor was run on
+At the extraction milestone, the kernel was the tested ID diagnostic. The extractor was run on
 the exact original calibration and produced the nine blocks and mode summary
 above. Twelve tests use synthetic data to cover malformed directories, bounds,
 record terminators, ambiguous mode registers, input identity and output-file
@@ -123,3 +123,9 @@ The subsequent [sensor-stream diagnostic](../kernel/IRIS-STREAM.md)
 now implements a bounded sensor program/start/counter/stop cycle. Its recovered
 Siiri clock calculation, fixed test timing and shutdown path can be tested
 before adding CSI/ISP reception. It does not yet return image frames.
+
+On build #5, the owner subsequently confirmed that mode select latched and the
+programmed timing/geometry read back. The counter remained zero, with clean
+stop/unwind and unchanged normal cameras. This does not resolve packet output.
+See [the phone evidence](../kernel/builds/iris-stream-02/phone-result.json) and
+[the CSI receiver investigation](iris-csi.md) for the next integration boundary.

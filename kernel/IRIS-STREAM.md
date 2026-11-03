@@ -19,7 +19,34 @@ establish whether mode select latched or packets were emitted.
 Version 02 preserves the program and timing but matches the original driver's
 atomic word writes and contiguous bursts. It also captures configuration before
 and after start, including after a stalled counter. This is a controlled next
-diagnostic; the transfer difference is not yet proven to be the cause.
+diagnostic. The owner has now tested it: the transfer change did not satisfy
+the counter-change criterion. No repeat of this same test is requested.
+
+## Version 02 phone result
+
+Kernel #5 booted and accepted the profile. All 117 program bytes completed in
+50 transactions; all 20 before/after snapshot pairs were valid and
+`readback_errno=0`. Mode select (`0x0100`) changed from 0 to 1, reset cleared,
+group hold was released, and frame/line length, dimensions, exposure and gain
+matched the requested settings. All 16 counter reads still returned zero.
+The diagnostic therefore returned `errno=-110`, with `stop_errno=0`,
+`cleanup_errno=0` and `blocked=0`. All three camera services were restored, and
+the owner confirmed both normal cameras work as before.
+
+The [transcribed phone evidence](builds/iris-stream-02/phone-result.json)
+preserves all 20 register pairs. These snapshots describe the powered interval
+before cleanup; mode select 1 does not mean the sensor was left running.
+EXTCLK (`0x0136`) and control (`0x0138`) read zero despite the source-derived
+writes. Their readback behavior on this model is unresolved, so these zeros
+do not establish a missing physical MCLK or justify changing its frequency.
+
+This build does not configure a receiver. Mode select 1 proves a latched
+control value; it does not prove sensor frames or MIPI packets. A constant
+counter also cannot decide whether packets are present. The next hardware
+milestone is CSI reception and then a returned RAW10 frame, following the
+[receiver investigation](../docs/iris-csi.md). The commands below remain the
+reproduction procedure for this completed diagnostic, not a request to repeat
+it on the owner's phone.
 
 ## Prepare on the Mac
 
@@ -163,4 +190,4 @@ The production stream and power functions pass 116 integrated simulated stream
 scenarios plus the existing 28 power scenarios, covering every startup/program
 write failure, read failures, counter stalls, stop failures and blocked retries.
 The helper's service restoration and profile preparation are also tested. All
-92 host tests pass. The version 02 on-phone test has not yet been run.
+92 host tests pass. The version 02 on-phone result is recorded above.

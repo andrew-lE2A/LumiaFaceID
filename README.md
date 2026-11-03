@@ -87,7 +87,10 @@ the sensor and checks its internal frame counter, then stops and unwinds power.
 It does not yet configure CSI reception or return an image. IR remains off.
 The first test completed programming and cleanup but its counter remained zero.
 Version 02 matches the original transaction shapes and records configuration
-readbacks even when the counter stalls; its phone test is pending.
+readbacks even when the counter stalls. Its phone test confirmed mode select
+latched and timing/geometry read back, with clean cleanup and unchanged normal
+cameras. The counter still remained zero; no image packets or frames have been
+verified. The next step is resolving and integrating CSI reception.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

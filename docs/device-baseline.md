@@ -149,6 +149,24 @@ diagnostic initializes the controller. The pinned enum defines its state 1 as
 disabled, and the guard rejects release with zero references. That earlier
 warning does not establish a transfer failure during this test.
 
-The next [version 02 test](../kernel/IRIS-STREAM.md) corrects the transfer-shape
+The [version 02 test](../kernel/IRIS-STREAM.md) corrects the transfer-shape
 discrepancy against the original driver and preserves pre/post-start readbacks.
 The register payload, power sequence, timing and IR-control scope are unchanged.
+
+## Second sensor-stream diagnostic: configuration latched, counter unchanged
+
+The owner booted `iris-stream-02`, kernel #5, using repository commit
+`cd3717815bd14754fa4b12cfdc1dd4cd49e5bce3`. Its 117 program bytes completed
+in 50 transactions. All 20 pre/post-start register pairs were valid, with
+`readback_errno=0`. Mode select changed from 0 to 1; reset and group hold read
+zero. The timing, geometry, exposure and gain settings read back as programmed.
+
+All 16 counter reads returned zero again. The result was `errno=-110`,
+`cleanup_errno=0`, `stop_errno=0`, `attempts=1` and `blocked=0`. The helper
+restored all three camera services, and the owner confirmed both ordinary
+cameras work as before. This establishes recovery for this particular test.
+
+EXTCLK/control readback semantics remain unresolved: registers `0x0136` and
+`0x0138` returned zero. No physical clock measurement, receiver configuration
+or image capture was performed. The full selected readbacks are preserved in
+[phone-result.json](../kernel/builds/iris-stream-02/phone-result.json).

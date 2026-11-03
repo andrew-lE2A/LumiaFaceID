@@ -75,13 +75,14 @@
     "boot_settings_unchanged": true,
     "fits_original_partition": true
   },
-  "phone_boot_test": "not run",
-  "phone_stream_test": "not run",
+  "phone_boot_test": "owner confirmed kernel #5 running",
+  "phone_stream_test": "mode select latched; timing/geometry read back; all 16 counter reads zero; diagnostic errno=-110; stop/cleanup errno=0; normal cameras unchanged",
+  "phone_result_path": "kernel/builds/iris-stream-02/phone-result.json",
   "profile_wire_transactions": 50,
   "maximum_program_burst_bytes": 8,
   "snapshot_register_count": 20,
   "snapshots_preserved_on_counter_stall": true,
   "register_program_and_timing_unchanged": true,
   "known_minor_limit": "reset-model mismatch does not export the reread value; ordinary model is pre-reset",
-  "validation_log_scope": "host simulation and private repack; new phone test pending"
+  "validation_log_scope": "host simulation, private repack and owner-supplied phone result; no image delivery"
 }

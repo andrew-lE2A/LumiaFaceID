@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-stream-02",
+  "repository_commit_used": "cd3717815bd14754fa4b12cfdc1dd4cd49e5bce3",
+  "provenance": "Manually transcribed from owner-supplied terminal output; no direct cloud access to the phone.",
+  "kernel_build_number": 5,
+  "kernel_build_timestamp_utc": "2026-11-03T08:46:57Z",
+  "boot_method": "temporary fastboot boot, as reported by owner",
+  "before": {
+    "status": "ready", "stage": "idle", "errno": 0, "model": "0x0000",
+    "cleanup_errno": 0, "attempts": 0, "blocked": 0, "rail_uv": 0
+  },
+  "after": {
+    "status": "failed", "stage": "stream-test", "errno": -110,
+    "model": "0x0861", "cleanup_errno": 0, "attempts": 1,
+    "blocked": 0, "rail_uv": 1200000
+  },
+  "stream_after": {
+    "profile_loaded": 1, "stage": "frame-counter", "first": "0x00",
+    "last": "0x00", "changes": 0, "samples": 16,
+    "program_writes": 117, "stop_errno": 0, "program_transactions": 50,
+    "readback_errno": 0
+  },
+  "register_readback": [
+    {"name":"model", "address":"0x0000", "width_bytes":2, "before":"0x0861", "after":"0x0861", "before_valid":true, "after_valid":true},
+    {"name":"mode", "address":"0x0100", "width_bytes":1, "before":"0x0000", "after":"0x0001", "before_valid":true, "after_valid":true},
+    {"name":"reset", "address":"0x0103", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"hold", "address":"0x0104", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"fast", "address":"0x0106", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"ctrl", "address":"0x0138", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"ext", "address":"0x0136", "width_bytes":2, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"signal", "address":"0x0111", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"format", "address":"0x0112", "width_bytes":2, "before":"0x0a0a", "after":"0x0a0a", "before_valid":true, "after_valid":true},
+    {"name":"lanes", "address":"0x0114", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true},
+    {"name":"pre", "address":"0x0304", "width_bytes":2, "before":"0x0001", "after":"0x0001", "before_valid":true, "after_valid":true},
+    {"name":"mult", "address":"0x0306", "width_bytes":2, "before":"0x0092", "after":"0x0092", "before_valid":true, "after_valid":true},
+    {"name":"frame", "address":"0x0340", "width_bytes":2, "before":"0x045c", "after":"0x045c", "before_valid":true, "after_valid":true},
+    {"name":"line", "address":"0x0342", "width_bytes":2, "before":"0x0834", "after":"0x0834", "before_valid":true, "after_valid":true},
+    {"name":"width", "address":"0x034c", "width_bytes":2, "before":"0x0780", "after":"0x0780", "before_valid":true, "after_valid":true},
+    {"name":"height", "address":"0x034e", "width_bytes":2, "before":"0x0440", "after":"0x0440", "before_valid":true, "after_valid":true},
+    {"name":"coarse", "address":"0x0202", "width_bytes":2, "before":"0x000c", "after":"0x000c", "before_valid":true, "after_valid":true},
+    {"name":"gain", "address":"0x0204", "width_bytes":2, "before":"0x0038", "after":"0x0038", "before_valid":true, "after_valid":true},
+    {"name":"a06", "address":"0x0a06", "width_bytes":1, "before":"0x0001", "after":"0x0001", "before_valid":true, "after_valid":true},
+    {"name":"a0a", "address":"0x0a0a", "width_bytes":1, "before":"0x0000", "after":"0x0000", "before_valid":true, "after_valid":true}
+  ],
+  "camera_services_stopped_and_restored": [
+    "cameraserver", "vendor.camera-provider-2-4", "qcamerasvr"
+  ],
+  "normal_camera_behavior_after_test": "Owner confirmed both work as before.",
+  "interpretation": {
+    "timeout_origin": "Diagnostic counter-change criterion; all 16 counter reads completed.",
+    "mode_select_latched": true,
+    "configuration_snapshots_taken_before_cleanup": true,
+    "physical_mclk_measured": false,
+    "csi_receiver_configured": false,
+    "image_frames_delivered": false,
+    "ir_requested_by_diagnostic": false,
+    "root_cause": "unresolved"
+  }
+}
