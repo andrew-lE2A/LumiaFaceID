@@ -1,16 +1,16 @@
 # Hardware evidence
 
-These are inspected source snapshots, not measurements on the user's phone.
-Research date: 2026-11-02. The supplied XDA thread was inaccessible through the
-cloud network proxy; matching public maintainer sources were inspected instead.
+Source research began on 2026-11-02. The supplied XDA thread was inaccessible
+through the cloud network proxy; matching public maintainer sources were inspected instead.
 Confirm the installed ROM's build before applying future patches.
 
 Follow-up work on 2026-11-03 recovered CCI master 0 and narrowed the candidate
 to model `0x0861`/eight-bit address `0x6c` from the original firmware and code;
 see [the analysis](windows-driver-analysis.md). The owner boot-tested the
-prerequisite kernel. The new [dormant iris-ID diagnostic](../kernel/IRIS-ID.md)
-has not yet identified physical hardware; streaming and illumination limits
-remain unresolved.
+prerequisite kernel. The owner has now measured model `0x0861` using
+[iris-id-02](../kernel/IRIS-ID.md), with a clean unwind and unchanged normal
+cameras. This is phone evidence; the source descriptions below remain distinct
+from measurements. Streaming and illumination limits remain unresolved.
 
 ## Android port baseline
 
@@ -62,7 +62,9 @@ at `cfc68a4d19fc7e8645bff6d8fce7308ad8494a76` provides leads:
 - FLHT around line 46623 depends on CAMT and references PM02 pins
   `0xE9E/0xE9F`. This is not a validated illuminator operating profile.
 
-No sensor ID, slave address or register program is asserted here.
+The DSDT alone does not identify the sensor model or register program. The
+subsequent on-phone diagnostic established the model/address response described
+above; it has not established CSI capture routing.
 
 ## Public original Windows driver metadata
 
@@ -82,10 +84,11 @@ at `b5af93f99ea800c28551727df55e57a07ba61a82` includes:
   or a validated sequence of register writes.
 
 The sensor binary contains runtime manufacturer/model/NVM discovery diagnostic
-strings. No validated sensor identity, complete initialization program, or
-illumination limits were recovered. Calibration filenames were not assigned to
-iris: inspected descriptions included Carrera, Ducati, Karma and Jopo families,
-which is insufficient to identify the iris calibration file.
+strings. Initial string inspection did not establish the sensor identity.
+The later model read supports the `0C086101.dcc` association through the original
+Siiri ID formula; [the capture investigation](iris-capture.md) now recovers its
+directory, read overrides and static mode geometry. A complete startup/capture
+program and illumination limits remain unresolved.
 
 Provenance hashes of inspected files below the package's `Camera/` directory:
 
@@ -103,9 +106,11 @@ binary was executed or copied into this repository.
 
 ## Information needed before a sensor driver
 
-1. Iris sensor/module identity and a verified chip-ID read procedure.
-2. CCI master, slave address (including 7-bit vs 8-bit convention), register
-   address/data widths, reset polarity and complete power sequence.
+1. Sensor model `0x0861` and the two-byte ID read are confirmed for one cycle;
+   manufacturer and revision are not measured.
+2. Master 0, seven-bit SID `0x36`, 16-bit register addressing, reset and the
+   sensor-only power sequence worked for that cycle. Repeatability and power
+   recovery across suspend remain to be tested.
 3. MIPI/CSI lane mapping, link clocks, pixel format and frame timing.
 4. Initialization, stream-on/off and exposure/gain register sequences.
 5. Calibration/firmware requirements and redistribution permissions.

@@ -79,7 +79,10 @@ Its filename is consistent with the Siiri ID formula if the runtime model were
 `0x0861`. This is a candidate association only: neither the filename nor that
 formula proves that this phone's iris sensor responds with that model. Apparent
 register records in the calibration need their format and consumer semantics
-validated before any attempt to turn them into sensor writes.
+validated before any attempt to turn them into sensor writes. Subsequent phone
+testing now measured model `0x0861`; [iris-capture.md](iris-capture.md) records
+the ID-formula association and the recovered block roles/static mode. The
+manufacturer/revision constants remain unmeasured.
 
 Additional static evidence narrows the role of this candidate: at virtual
 addresses `0x4088dc`–`0x4088f8`, startup explicitly checks for model `0x0861`
@@ -129,23 +132,18 @@ path but supplies no validated numeric illumination limits. The `.dfc` loader
 is part of the flash path; a `.dfc` filename must not be assumed to identify
 the image sensor.
 
-## What is still needed for the first hardware probe
+## First hardware probe completed; capture remains
 
-Before adding a Linux probe, implement and review a sensor-only CAMT power
-sequence with the illuminator off, using the source-derived master-0 route.
-Then verify the responding model rather than accepting an ACK alone. Where
-the original driver hardcodes manufacturer/revision, do not present those as
-values measured from the sensor.
-Only after identity is known can a matching initialization program and capture
-mode be implemented. Optical illumination limits and Android enrollment/matching
-remain separate requirements.
+The owner ran the separate iris-id-02 Linux diagnostic once. It read model
+`0x0861` on master 0/SID `0x36`, with clean unwind and unchanged normal cameras
+after the camera services restarted. No stream or illumination was commanded.
+This establishes the first model read, not repeatability or frame acquisition.
 
-For planning a later on-phone probe, the following command checks current shell
-privileges and debugging configuration without changing them:
+The next implementation needs the complete initialization program, dynamic
+timing/exposure updates, CSI routing and actual returned frames. The matching
+calibration's mode block is only part of that program. Optical illumination
+limits and Android enrollment/matching remain separate requirements.
 
-```sh
-adb shell 'id; getprop ro.debuggable; getenforce'
-```
-
-It does not identify or power a sensor. Rooted debugging, if supported, would
-still not supply the missing bus route or make guessed register writes valid.
+The static inspector still reports supported candidates rather than turning
+offline bytes into hardware observations; the measured result is recorded
+separately in [device-baseline.md](device-baseline.md#iris-sensor-model-confirmed).

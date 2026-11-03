@@ -6,7 +6,10 @@ platform device under CCI. It is not a camera HAL sensor slot or Android
 biometric implementation. The first test boots it and **reads status only**.
 The owner has now confirmed build #3 binds with `stage=ready errno=0` and
 `status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0`.
-The zero model is the initial value; a sensor read has not yet been performed.
+That zero model was the initial value. The owner subsequently ran the helper
+once and obtained model `0x0861`, `errno=0`, `cleanup_errno=0`, `attempts=1` and
+`blocked=0`. All three services restarted, and the owner confirmed unchanged
+normal rear/front camera behavior. This validates one ID cycle, not streaming.
 
 ## Prepare and temporarily boot
 
@@ -94,7 +97,7 @@ Previously running services are restored in reverse order after clean cleanup,
 including after a failed identification. Previously stopped services stay
 stopped. Stop failures abort before the write and restore services already
 stopped by the helper. Service changes and the sequence are simulated in host
-tests; running this helper on the phone remains untested.
+tests. The owner has also completed one successful on-phone helper run.
 
 Paste the complete output, especially the `After:` line. The expected match is:
 
@@ -129,13 +132,14 @@ repository file. The generated DTBs preserve board identities/order and the
 exact original Talkman DTB. The Cityman diagnostic's supply phandles, GPIO102
 and non-default pinctrl states were checked in the resulting DTB. Private
 repacking preserved the owner's ramdisk and boot settings and fit the original
-partition. The owner confirmed on-phone binding on build #3; physical sensor
-identification has not yet been tested.
+partition. The owner confirmed on-phone binding on build #3, then one successful
+model read with clean unwind and unchanged normal cameras.
 See [the build manifest](builds/iris-id-02/manifest.json) for source and hashes.
 
 The helper adds ten host fixture tests for init service lifecycle and result
-handling, including a failed sysfs write after clean unwind. All 67 host tests
-pass. These checks do not exercise the physical sensor or Android init itself.
+handling, including a failed sysfs write after clean unwind. The current suite,
+including the later offline calibration inspector, passes all 79 host tests.
+These simulations do not exercise the physical sensor or Android init itself.
 
 
 ## Binding correction after iris-id-01
@@ -155,4 +159,5 @@ also adds stage-specific probe messages and a read-only fallback parameter at
 `stage=ready errno=0`; otherwise it reports the last resource and error.
 `not-probed` means the driver callback was not entered. This output cannot be
 assigned from the boot command line or written through sysfs. The owner has
-confirmed ready binding on the corrected build. Sensor power remains untested.
+confirmed ready binding and one successful sensor power/ID cycle on the corrected
+build. The [capture investigation](../docs/iris-capture.md) records the next work.

@@ -3,9 +3,9 @@
 Bring-up of the **Lumia 950 XL (cityman) Windows Hello iris camera** on
 **LineageOS 23.2 / Android 16**.
 
-**Status: hardware investigation. There is no working iris driver or biometric
-unlock implementation in this repository yet.** The first tool collects a
-read-only baseline from the existing port. It does not power the sensor, enable
+**Status: sensor identification confirmed. The experimental kernel diagnostic
+reads model `0x0861`; image capture and biometric unlock are not implemented.**
+The first tool collects a read-only baseline from the existing port. It does not power the sensor, enable
 the infrared illuminator, enroll a user, or authenticate anyone.
 
 ## Collect a baseline
@@ -55,8 +55,9 @@ collector there. A phone must be connected to the host running the collector;
 this cloud environment does not provide access to your computer's USB devices.
 
 Tests use simulated ADB, init services and kernel APIs. The owner has confirmed
-temporary kernel boot and idle diagnostic binding; sensor identification,
-acquisition and authentication have not been validated on hardware.
+temporary kernel boot and one successful sensor identification with clean
+cleanup and unchanged normal cameras. Acquisition and authentication have not
+been validated on hardware.
 See [the verified sources and missing hardware information](docs/hardware.md)
 and [the implementation milestones](docs/bring-up.md).
 
@@ -75,7 +76,10 @@ image locally with your own backup using `tools/repack_boot.py`.
 The next [iris-ID diagnostic](kernel/IRIS-ID.md) is a separate, root-triggered
 kernel path. Its initial status-only boot check now passes on the phone. A
 one-attempt helper stops and restores camera services around the next explicit
-model read; acquisition and authentication are still not provided.
+model read. The owner completed that read successfully. The
+[capture investigation](docs/iris-capture.md) and offline `tools/inspect_iris_dcc.py`
+recover the matching calibration's static mode; acquisition and authentication
+are still not provided.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

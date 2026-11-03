@@ -50,7 +50,15 @@
   "phone_boot_test": "owner confirmed kernel build #3 and ready diagnostic binding",
   "phone_probe_status": "stage=ready errno=0",
   "phone_initial_result": "status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0",
-  "sensor_power_test": "not run",
+  "sensor_power_test": "owner confirmed one identify cycle, model 0x0861, clean unwind and unchanged rear/front cameras",
+  "phone_identification_result": "status=identified stage=model-read errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+  "phone_service_restoration": [
+    "qcamerasvr",
+    "vendor.camera-provider-2-4",
+    "cameraserver"
+  ],
+  "phone_post_identification_cameras": "owner confirmed both work as before",
+  "sensor_repeatability_test": "not run",
   "IR_and_stream_control": "not implemented",
   "first_expected_result": "status=ready stage=idle attempts=0 blocked=0",
   "binding_correction": "Reset groups are direct TLMM controller children; prior iris-id-01 is a known-bad regression input",

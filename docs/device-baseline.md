@@ -101,7 +101,28 @@ stage=ready errno=0
 status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0
 ```
 
-This establishes successful dormant binding on iris-id-02. It does not establish
-the physical sensor model: no identification or power sequence has run yet.
-The next step is the [one-attempt helper](../kernel/IRIS-ID.md#one-controlled-identification-attempt),
-which stops and restores the camera services around the explicit model read.
+This established successful dormant binding on iris-id-02. At that point no
+identification or power sequence had run, so the model was still unknown.
+
+## Iris sensor model confirmed
+
+The owner then ran `tools/identify_cityman.sh` from repository commit
+`9175c862e013831f37e82f37150aab1799454dca`, with build #3 still temporarily booted.
+The helper stopped cameraserver, vendor.camera-provider-2-4 and qcamerasvr, and
+issued one explicit identify write. The reported result was:
+
+```text
+status=identified stage=model-read errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000
+```
+
+All three camera services were restored. The owner subsequently confirmed both
+normal rear and front cameras work as before. This verifies the first complete
+sensor power/reset/CCI-model-read/unwind cycle through master 0, SID `0x36` and
+the two-byte model register zero. The driver did not request illumination or
+streaming. `rail_uv` is the final checked rail reading, not a simultaneous
+measurement of every supply.
+
+The model matches the original driver's Siiri/`0x0861` condition. Manufacturer
+and module revision remain source-derived constants rather than measurements.
+Repeated cycles, suspend/resume, capture and authentication remain untested.
+See [the first-frame investigation](iris-capture.md) for the remaining work.

@@ -21,21 +21,23 @@ there is no compiled driver, and a `collected` status is not sensor readiness.
 The [first phone baseline](device-baseline.md) verifies the expected product,
 API and kernel revision. Its missing live tree exports are expected for the
 pinned kernel. The collector now supports passive platform uevents as an
-alternative source of registered-node identity. Full DT properties and iris
-sensor identification remain outstanding.
+alternative source of registered-node identity. Full DT properties remain
+unexported; subsequent source/DTB analysis and the on-phone model read provide
+the additional evidence recorded below.
 
-## 2. Identify and power the iris sensor — blocked on hardware evidence
+## 2. Identify and power the iris sensor — first cycle passed
 
 Use the original driver/firmware and hardware observations to fill the unknowns
 in [hardware.md](hardware.md). First implement sensor power ownership and
 verified ID reads in the target Qualcomm kernel/stack. Keep IR illumination off
 for initial identification. Avoid blind I²C bus scans and guessed register writes.
 
-Only after the complete wiring and sensor program are established, add an opt-in
-cityman device-tree patch and the appropriate sensor implementation to the
-port's camera stack. Test failed probe, power unwind and shared camera-rail
-ownership. A disabled dummy sensor node would not provide a usable driver, so
-none is included here.
+The owner ran the separate, opt-in `iris-id-02` diagnostic and measured model
+`0x0861` with clean cleanup, one attempt and no blocked state. Camera services
+were restored, and the owner confirmed rear/front cameras unchanged afterward.
+The diagnostic has no illumination/stream controls and does not occupy a HAL
+sensor slot. Repeatability and suspend/resume remain untested. See the
+[hardware result](device-baseline.md#iris-sensor-model-confirmed).
 
 ## 3. Deliver repeatable frames — not implemented
 
@@ -44,6 +46,11 @@ kernel sensor interface. Acceptance needs actual IR-camera frame delivery,
 known format/geometry, repeated open/close and failure recovery. CSI counters,
 enumeration, or a camera ID alone do not pass this milestone. Keep capture data
 local and out of this repository.
+
+The [first-frame investigation](iris-capture.md) recovers the matching original
+calibration's block roles and 1920×1088 RAW10 mode. Its read overrides are kept
+separate from configuration records; complete dynamic timing and CSI integration
+still need implementation.
 
 Integrate the illuminator only after its control and optical limits are verified.
 Add bounded exposure and a fail-off path before enabling it in a capture session.
