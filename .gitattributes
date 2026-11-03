@@ -1,0 +1,2 @@
+# Unified-diff context lines contain a mandatory leading space before code.
+kernel/patches/*.patch whitespace=-blank-at-eol,-space-before-tab
