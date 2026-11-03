@@ -1,0 +1,54 @@
+{
+  "build_id": "iris-id-01",
+  "purpose": "dormant root-triggered sensor ID diagnostic; first check is status read only",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "patches": [
+    {
+      "path": "kernel/patches/0001-camera-restore-slave-read-state.patch",
+      "sha256": "8bed81c157e6f634e151848b47f155c37faa262acab3a2517a7a8aa105e18dec"
+    },
+    {
+      "path": "kernel/patches/0002-cityman-iris-id-integration.patch",
+      "sha256": "afb3d30d30e8d8739758ee20e4b03c07e0184aa1d411ce0ff649f77908b8ddee"
+    }
+  ],
+  "driver_source": "kernel/driver/cityman_iris_id.c",
+  "driver_sha256": "3a7dfc7d994cec271764e197fbc2237857952333232ad9d6b9abfad1e1af6d37",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "configuration_change_from_original": [
+    "CONFIG_CITYMAN_IRIS_ID=y"
+  ],
+  "generated_config_sha256": "8f7545e2e9d1a1505434c8fc3201034abfea5e4b799224671cf8484d43bbb28b",
+  "release": "3.10.108-perf-gcc84cab9",
+  "version": "Linux version 3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) (gcc version 4.9.x 20150123 (prerelease) (GCC) ) #2 SMP PREEMPT Tue Nov 3 00:29:34 UTC 2026",
+  "files": {
+    "Image.gz": {
+      "sha256": "86c7f7a068ea08de8b2e4f29c8621273e7683f441293a0fde19a86dbe0cb1ffd",
+      "bytes": 9699000
+    },
+    "boards.dtb": {
+      "sha256": "0745ccea62631a63cae2463ff177ef6821f34ed09f9bca88d39bd8ad483c178a",
+      "bytes": 534371
+    }
+  },
+  "device_trees": [
+    {
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "size": 275999,
+      "sha256": "0bad57f4b6f895fd8cc127f0eb2028ce91a3f6e8d0b4f162889a1d363fd12d79"
+    }
+  ],
+  "board_identities_preserved": true,
+  "talkman_dtb_unchanged": true,
+  "full_kernel_build": "passed",
+  "host_tests_passed": 54,
+  "production_sequence_simulated_scenarios": 28,
+  "phone_boot_test": "not run",
+  "sensor_power_test": "not run",
+  "IR_and_stream_control": "not implemented",
+  "first_expected_result": "status=ready stage=idle attempts=0 blocked=0"
+}

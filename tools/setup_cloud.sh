@@ -53,4 +53,5 @@ PY
 mkdir -p "$HOME/.android"
 /workspace/.lumiafaceid/sdk/platform-tools/adb version
 /workspace/.lumiafaceid/sdk/platform-tools/fastboot --version
+command -v cc >/dev/null || { echo 'A host C compiler is required for the kernel sequence tests' >&2; exit 1; }
 python3 -m unittest discover -s tests -v

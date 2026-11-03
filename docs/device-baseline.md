@@ -73,3 +73,10 @@ The user's subsequent command output reported `ro.debuggable=1` and SELinux
 succeeded and `adb shell id` reported `uid=0(root)`. This confirms debugging
 access, not sensor identification or image capture. The old kernel ioctl still
 needs the prerequisite described in [kernel/README.md](../kernel/README.md).
+
+## Prerequisite kernel boot result
+
+The owner temporarily booted `prep-01`. `/proc/version` reported
+`3.10.108-perf-gcc84cab9 (lumiafaceid@cloud) ... #1 ... Nov 3 00:05:22 UTC 2026`.
+The owner confirmed the normal home screen and unchanged rear/front camera
+behavior. No iris acquisition or authentication test was performed.

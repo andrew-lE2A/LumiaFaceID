@@ -24,10 +24,14 @@ python3 tools/repack_boot.py "$HOME/Documents/cityman-current-boot.img" \
 
 The repacker verifies the original boot-image ID and retains the ramdisk,
 appended device trees, boot command line, load addresses, OS-version word and
-partition size. It refuses an unfamiliar checksum convention, changed DTBs,
+partition size. By default it refuses changed DTBs. It also refuses an unfamiliar checksum convention,
 nonzero trailing signature/footer data, oversized replacement or existing output
 file. It supports the inspected legacy cityman format, not arbitrary Android
 boot formats.
+
+The separate iris-ID package uses an explicit, reviewed `--dtbs` update. That
+mode additionally verifies the board identities, DTB count and ordering; it is
+not used for this baseline build.
 
 ## Temporary boot
 

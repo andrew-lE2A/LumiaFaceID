@@ -41,7 +41,8 @@ and does not require enabling root or changing the kernel.
 
 ## Development
 
-No third-party Python dependencies are required:
+No third-party Python dependencies are required. The kernel sequence tests also
+require a host C compiler (`cc`, such as GCC or Clang):
 
 ```sh
 python3 -m unittest discover -s tests -v
@@ -68,6 +69,10 @@ its 32-bit compatibility path. Iris acquisition and authentication remain
 unimplemented. A full prerequisite kernel is available for a
 [temporary boot compatibility test](kernel/BOOT-TEST.md); assemble its boot
 image locally with your own backup using `tools/repack_boot.py`.
+
+The next [iris-ID diagnostic](kernel/IRIS-ID.md) is a separate, root-triggered
+kernel path. Its initial boot check reads status only; acquisition and
+authentication are still not provided.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

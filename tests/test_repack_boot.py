@@ -29,9 +29,9 @@ def kernel(payload=b'kernel fixture'):
     return gzip.compress(bytes(image) + payload, mtime=0)
 
 
-def container(style=2, *, kpad=None):
+def container(style=2, *, kpad=None, trees=None):
     page = 4096
-    k = kernel() + dtb() + dtb()
+    k = kernel() + (dtb() + dtb() if trees is None else trees)
     ramdisk = gzip.compress(b'private ramdisk fixture', mtime=0)
     header = bytearray(page)
     header[:8] = b'ANDROID!'
@@ -123,6 +123,55 @@ class InputValidationTests(unittest.TestCase):
         for data in variants:
             with self.subTest(length=len(data)), self.assertRaises(ValueError):
                 boot.check_dtbs(data)
+
+
+def board_dtb(compatible='mmo,cityman', *, child=False, board_id=26):
+    names = b'compatible\0qcom,board-id\0'
+    structure = struct.pack('>I', 1) + b'\0' * 4
+    value = compatible.encode() + b'\0'
+    structure += struct.pack('>III', 3, len(value), 0) + value
+    structure += b'\0' * ((-len(value)) % 4)
+    structure += struct.pack('>IIII', 3, 4, 11, board_id)
+    if child:
+        structure += struct.pack('>I', 1) + b'iris\0\0\0\0' + struct.pack('>I', 2)
+    structure += struct.pack('>II', 2, 9)
+    strings = 56 + len(structure)
+    total = strings + len(names)
+    return struct.pack('>10I', 0xD00DFEED, total, 56, strings, 40, 17, 16, 0,
+                       len(names), len(structure)) + b'\0' * 16 + structure + names
+
+
+class ExplicitDtbUpdateTests(unittest.TestCase):
+    def test_explicit_update_preserves_board_order_ramdisk_and_default_refusal(self):
+        trees = board_dtb('mmo,talkman') + board_dtb()
+        update = board_dtb('mmo,talkman') + board_dtb(child=True)
+        original = container(trees=trees)
+        with self.assertRaises(ValueError):
+            boot.repack(original, kernel() + update)
+        result, summary = boot.repack(original, kernel(b'new'), update)
+        parsed = boot.parse_boot(result)
+        self.assertEqual(parsed['dtbs'], update)
+        self.assertEqual(parsed['ramdisk'], boot.parse_boot(original)['ramdisk'])
+        self.assertTrue(summary['explicit_dtb_update'])
+
+    def test_wrong_board_count_order_and_identity_are_rejected(self):
+        original = container(trees=board_dtb('mmo,talkman') + board_dtb())
+        for update in (board_dtb(), board_dtb() + board_dtb('mmo,talkman'),
+                       board_dtb('mmo,talkman') + board_dtb('other,phone'),
+                       board_dtb('mmo,talkman') + board_dtb(board_id=27)):
+            with self.subTest(size=len(update)), self.assertRaises(ValueError):
+                boot.repack(original, kernel(), update)
+
+    def test_missing_identity_or_broken_structure_is_rejected(self):
+        broken = bytearray(board_dtb()); struct.pack_into('>I', broken, 56, 0xff)
+        for value in (dtb(), bytes(broken), board_dtb()[:60]):
+            with self.subTest(size=len(value)), self.assertRaises(ValueError):
+                boot.dtb_identities(value)
+
+    def test_conflicting_appended_trees_cannot_be_silently_replaced(self):
+        original = container(trees=board_dtb())
+        with self.assertRaisesRegex(ValueError, 'Conflicting'):
+            boot.repack(original, kernel() + board_dtb(), board_dtb(child=True))
 
 
 class CliTests(unittest.TestCase):

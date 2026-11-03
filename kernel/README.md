@@ -76,9 +76,10 @@ This identifies the retained build output, not a required checksum for every
 rebuild with different timestamps or paths.
 
 The full `Image.gz-dtb` target subsequently built successfully with this patch.
-No hardware test has been run, and no phone was flashed. The next implementation still needs a
-dedicated opt-in iris/diagnostic slot with confirmed bus routing and sensor-only
-power sequencing. The IR illuminator should remain off for identification.
+The owner subsequently confirmed a successful temporary boot of `prep-01` and
+unchanged rear/front camera behavior. No phone was flashed. A separate dormant
+[iris-ID diagnostic](IRIS-ID.md) now supplies an opt-in sensor-only test path;
+its own binding and physical sensor behavior remain untested.
 
 The original firmware/platform-driver trace now supports CCI master 0 for the
 iris path; see [windows-driver-analysis.md](../docs/windows-driver-analysis.md).

@@ -68,6 +68,60 @@ def kernel_parts(data, require_dtbs=True):
     return compressed, dtbs
 
 
+def dtb_identities(data):
+    """Read root board-selection properties for an explicit DTB update."""
+    identities = []
+    offset = 0
+    for info in check_dtbs(data):
+        blob = data[offset:offset + info['size']]
+        _, _, start, strings, _, _, _, _, nstrings, nstruct = struct.unpack_from('>10I', blob)
+        cursor, end, depth, root_seen, finished = start, start + nstruct, 0, False, False
+        properties = {}
+        keys = {'model', 'compatible', 'qcom,msm-id', 'qcom,board-id', 'qcom,pmic-id'}
+        while cursor + 4 <= end:
+            token, = struct.unpack_from('>I', blob, cursor); cursor += 4
+            if token == 1:  # BEGIN_NODE
+                stop = blob.find(b'\0', cursor, end)
+                if stop < 0 or (depth == 0 and (root_seen or stop != cursor)):
+                    raise ValueError('Invalid device-tree root')
+                root_seen = True
+                depth += 1
+                cursor = align(stop + 1, 4)
+            elif token == 2:  # END_NODE
+                depth -= 1
+                if depth < 0:
+                    raise ValueError('Unbalanced device tree')
+            elif token == 3:  # PROP
+                if not depth or cursor + 8 > end:
+                    raise ValueError('Invalid device-tree property')
+                size, nameoff = struct.unpack_from('>II', blob, cursor); cursor += 8
+                if cursor + size > end or nameoff >= nstrings:
+                    raise ValueError('Device-tree property outside bounds')
+                stop = blob.find(b'\0', strings + nameoff, strings + nstrings)
+                if stop < 0:
+                    raise ValueError('Unterminated property name')
+                name = blob[strings + nameoff:stop].decode('ascii', errors='strict')
+                if depth == 1 and name in keys:
+                    if name in properties:
+                        raise ValueError('Duplicate board identity property')
+                    properties[name] = blob[cursor:cursor + size]
+                cursor = align(cursor + size, 4)
+            elif token == 4:  # NOP
+                pass
+            elif token == 9:  # END
+                if depth or not root_seen:
+                    raise ValueError('Unbalanced device tree')
+                finished = True
+                break
+            else:
+                raise ValueError('Invalid device-tree token')
+        if not finished or not properties.get('compatible'):
+            raise ValueError('Missing device-tree board identity')
+        identities.append(properties)
+        offset += info['size']
+    return identities
+
+
 def boot_id(kernel, ramdisk, zero_terms):
     digest = hashlib.sha1()
     for part in (kernel, ramdisk):
@@ -107,12 +161,20 @@ def parse_boot(data):
                         "id_style": "aosp_v0" if styles[0] == 1 else "legacy_empty_dt"}}
 
 
-def repack(original, replacement):
+def repack(original, replacement, dtb_update=None):
     boot = parse_boot(original)
     compressed, replacement_dtbs = kernel_parts(replacement, require_dtbs=False)
-    if replacement_dtbs and replacement_dtbs != boot['dtbs']:
+    if dtb_update is not None:
+        if replacement_dtbs and replacement_dtbs != dtb_update:
+            raise ValueError('Conflicting replacement device trees')
+        if dtb_identities(dtb_update) != dtb_identities(boot['dtbs']):
+            raise ValueError('DTB update changes board identities/count/order')
+        selected_dtbs = dtb_update
+    else:
+        selected_dtbs = boot['dtbs']
+    if dtb_update is None and replacement_dtbs and replacement_dtbs != boot['dtbs']:
         raise ValueError("Replacement changes device trees; this tool preserves the original board layout")
-    kernel = compressed + boot['dtbs']
+    kernel = compressed + selected_dtbs
     page = boot['page']
     header = bytearray(original[:page])
     struct.pack_into('<I', header, 8, len(kernel))
@@ -128,8 +190,9 @@ def repack(original, replacement):
         raise ValueError("Replacement does not fit the original boot partition")
     result += b'\0' * (len(original) - len(result))
     verified = parse_boot(result)
-    if verified['ramdisk'] != boot['ramdisk'] or verified['dtbs'] != boot['dtbs']:
+    if verified['ramdisk'] != boot['ramdisk'] or verified['dtbs'] != selected_dtbs:
         raise ValueError("Repack preservation check failed")
+    verified['summary']['explicit_dtb_update'] = dtb_update is not None
     return result, verified['summary']
 
 
@@ -145,16 +208,20 @@ def main(argv=None):
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument('--inspect', action='store_true')
     modes.add_argument('--kernel', type=Path, help='replacement ARM64 Image.gz')
+    parser.add_argument('--dtbs', type=Path, help='explicit reviewed DTB update; board identities must match')
     parser.add_argument('--output', type=Path, help='new image file; never overwritten')
     args = parser.parse_args(argv)
     if bool(args.output) != bool(args.kernel):
         parser.error('--output is required only with --kernel')
+    if args.dtbs and not args.kernel:
+        parser.error('--dtbs requires --kernel')
     try:
         original = read_file(args.boot)
         if args.inspect:
             summary = parse_boot(original)['summary']
         else:
-            data, summary = repack(original, read_file(args.kernel))
+            data, summary = repack(original, read_file(args.kernel),
+                                   read_file(args.dtbs) if args.dtbs else None)
             with args.output.open('xb') as output:
                 output.write(data)
         print(json.dumps(summary, indent=2))

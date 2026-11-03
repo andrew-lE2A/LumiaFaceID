@@ -5,6 +5,13 @@ Research date: 2026-11-02. The supplied XDA thread was inaccessible through the
 cloud network proxy; matching public maintainer sources were inspected instead.
 Confirm the installed ROM's build before applying future patches.
 
+Follow-up work on 2026-11-03 recovered CCI master 0 and narrowed the candidate
+to model `0x0861`/eight-bit address `0x6c` from the original firmware and code;
+see [the analysis](windows-driver-analysis.md). The owner boot-tested the
+prerequisite kernel. The new [dormant iris-ID diagnostic](../kernel/IRIS-ID.md)
+has not yet identified physical hardware; streaming and illumination limits
+remain unresolved.
+
 ## Android port baseline
 
 | Component | Public source | Inspected commit |
