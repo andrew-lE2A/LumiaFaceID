@@ -42,7 +42,7 @@ static const u8 iris_program_sha256[32] = {
 
 struct iris_stream {
 	u8 program[IRIS_PROGRAM_BYTES];
-	bool loaded, requested, entered;
+	bool loaded, requested, entered, select_csi2;
 	u8 first, last;
 	unsigned int samples, changes, writes, transactions;
 	u16 before[IRIS_READBACK_COUNT], after[IRIS_READBACK_COUNT];
@@ -172,8 +172,27 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 		rc = iris_stream_byte(io, 0x0104, 0);
 	if (rc)
 		return rc;
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	/* Optional comparison only: the original sensor_config path explicitly
+	 * selects CSI-2. Its order relative to the mode's 0111=0 is unresolved. */
+	if (s->select_csi2) {
+		s->stage = "csi2-interface";
+		rc = iris_stream_byte(io, 0x0111, 2);
+		if (rc)
+			return rc;
+	}
+#endif
 	s->stage = "config-readback";
-	return iris_stream_snapshot(s, io, false);
+	rc = iris_stream_snapshot(s, io, false);
+	if (rc)
+		return rc;
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	if (s->select_csi2 && s->before[7] != 2) {
+		s->stage = "csi2-interface";
+		return -EIO;
+	}
+#endif
+	return 0;
 }
 
 static int iris_stream_start(struct iris_stream *s, const struct iris_stream_io *io)

@@ -13,6 +13,23 @@ observations do not establish a missing physical signal; receiver configuration
 and PHY status were not captured. See the
 [phone evidence](../kernel/builds/iris-csi-01/phone-result.json).
 
+Version 02 on kernel #7 then confirmed the complete target configuration in
+readbacks, including the original bit-16 flag, while CSID3 still recorded zero
+packets. PHY IRQ status words 3/4 changed to `0x4` and word 6 to `0x10` before
+sensor stop. Their exact meanings have not been recovered, so these latched
+changes cannot be called valid sensor transmission. Stop/cleanup and normal
+camera recovery passed. The
+[version 02 evidence](../kernel/builds/iris-csi-02/phone-result.json) preserves
+all register pairs.
+
+The same boot's working front/rear previews recorded positive packet counts
+on CSID2/CSID0 with zero ECC/CRC errors. Front preview reached 128,964 packets
+and rear preview 260,410. The additional bit-16 write is absent from the normal
+camera path, showing that it is not generally required for nonzero counters on
+these receivers. This comparison validates observation on receivers 0/2; it
+does not supply a positive input control for CSID3. See
+[camera-control-result.json](../kernel/builds/iris-csi-02/camera-control-result.json).
+
 The next test needs receiver configuration readbacks and better observation
 of its active state. Another identical counter-only run will not answer
 whether the sensor is transmitting packets.
@@ -116,7 +133,7 @@ lane routing and RAW10 reception, then executes the existing one-shot sensor
 start/stop. It saves packet/error observations before releasing the receiver
 and unwinding power. Receiver failures remain distinct from the sensor's
 unchanged-counter criterion. The initial settle count 20 is unmeasured; the
-version 02 still needs its first phone test. Receiver diagnostics are useful
+version 02 recorded configuration and status but no packets. Receiver diagnostics are useful
 for link bring-up but do not prove a delivered image.
 
 The first capture milestone then adds an ISPIF/VFE RDI path and returns a
@@ -132,8 +149,21 @@ physical MCLK was not measured. Readback semantics for these two registers
 remain unresolved; changing the hardware clock solely because they read zero
 would not follow from this evidence.
 
-The original generic static-information path writes `0x0111=2` before the
-matched mode program later writes `0x0111=0`. Build #5 read zero. The generic
-SMIA enum alone is therefore insufficient justification to override the
-matched mode to 2. Keep this ordering question explicit while tracing the
-original configuration; no new register/clock variant is prescribed here.
+The original generic static-information path writes `0x0111=2`; the matched
+mode program contains `0x0111=0`. Builds #5–#7 read zero at start. The complete
+original session's final ordering remains unresolved. The generic SMIA enum
+alone does not establish that overriding the mode's value will fix reception.
+
+Following the kernel #7 result and same-boot working-camera comparison, a
+separate [explicit CSI-2 selection test](../kernel/IRIS-CSI2.md) is now provided.
+The generic sensor configuration at `0x4165f2`–`0x4165fa` writes 2 to `0x0111`;
+the call is reached through `read_static_information` at `0x40f2f0`. That
+function is invoked from initial configuration (`0x40cac6`) and get-details
+(`0x40ba10`). This identifies a real source operation but does not establish
+the final write order for the original iris session.
+
+The optional `csi2-once` comparison applies only that fixed interface selection
+after the matched program, verifies its readback, then uses the same bounded
+receiver/sensor cycle. It does not silently replace `csi-once` or change lane
+routing, clock requests or settle count. A comparison outcome is required
+before concluding whether this register explains the missing packets.

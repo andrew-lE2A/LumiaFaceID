@@ -1,12 +1,15 @@
 #!/system/bin/sh
 # Run on the phone: adb shell sh < tools/identify_cityman.sh
 # Default: one ID attempt. stream-once: sensor counter; csi-once: CSI packets.
+# csi2-once additionally selects the fixed CSI-2 interface comparison.
 # No mode configures image DMA or IR controls.
 set -u
 
 operation=${1:-identify}
 streaming=0
-case "$operation" in stream-once|csi-once) streaming=1 ;; esac
+receiver_test=0
+case "$operation" in stream-once|csi-once|csi2-once) streaming=1 ;; esac
+case "$operation" in csi-once|csi2-once) receiver_test=1 ;; esac
 driver=/sys/bus/platform/drivers/cityman-iris-id
 profile=/data/local/tmp/cityman-iris-stream-profile.hex
 services='cameraserver vendor.camera-provider-2-4 qcamerasvr'
@@ -51,7 +54,7 @@ finish() {
             fi
             case " $stream_after " in *' stop_errno=0 '*) ;; *) stream_clean=0 ;; esac
         fi
-        if [ "$operation" = csi-once ]; then
+        if [ "$receiver_test" = 1 ]; then
             csi_after=$(cat "$node/csi_result") || csi_after=unreadable
             echo "CSI after: $csi_after"
             if [ -r "$node/csi_readback" ]; then
@@ -68,6 +71,7 @@ finish() {
             identify:*' status=identified stage=model-read errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
             stream-once:*' status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
             csi-once:*' status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
+            csi2-once:*' status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 '*) ;;
             *) [ "$code" -ne 0 ] || code=1 ;;
         esac
     fi
@@ -84,7 +88,7 @@ finish() {
 }
 
 [ "$(id -u)" = 0 ] || fail 'Root ADB is required: run adb root, then adb wait-for-device.'
-case "$operation" in identify|stream-once|csi-once) ;; *) fail 'Expected identify, stream-once or csi-once.' ;; esac
+case "$operation" in identify|stream-once|csi-once|csi2-once) ;; *) fail 'Expected identify, stream-once, csi-once or csi2-once.' ;; esac
 set -- "$driver"/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || fail 'Expected exactly one bound iris-ID device.'
 result=$1
@@ -95,8 +99,9 @@ if [ "$streaming" = 1 ]; then
     [ -r "$node/stream_result" ] && [ -w "$node/stream_profile" ] && [ -r "$profile" ] ||
         fail 'Stream build and /data/local/tmp/cityman-iris-stream-profile.hex are required.'
 fi
-if [ "$operation" = csi-once ]; then
+if [ "$receiver_test" = 1 ]; then
     control=$node/csi_once
+    [ "$operation" != csi2-once ] || control=$node/csi2_once
     [ -r "$node/csi_result" ] || fail 'The CSI diagnostic build is required.'
     csi_before=$(cat "$node/csi_result") || fail 'Cannot read CSI status.'
     echo "CSI before: $csi_before"

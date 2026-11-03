@@ -412,9 +412,9 @@ static ssize_t stream_result_show(struct device *dev, struct device_attribute *a
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d\n",
+		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d interface_csi2_requested=%u\n",
 		s->loaded, s->stage, s->first, s->last, s->changes,
-		s->samples, s->writes, s->stop_error, s->transactions, s->readback_error);
+		s->samples, s->writes, s->stop_error, s->transactions, s->readback_error, s->select_csi2);
 	mutex_unlock(&iris->lock);
 	return size;
 }
@@ -493,6 +493,7 @@ static ssize_t stream_once_store(struct device *dev, struct device_attribute *at
 	if (!sysfs_streq(buf, "stream-once")
 #ifdef CONFIG_CITYMAN_IRIS_CSI
 	    && !sysfs_streq(buf, "csi-once")
+	    && !sysfs_streq(buf, "csi2-once")
 #endif
 	)
 		return -EINVAL;
@@ -508,7 +509,8 @@ static ssize_t stream_once_store(struct device *dev, struct device_attribute *at
 	}
 	iris->stream.requested = true;
 #ifdef CONFIG_CITYMAN_IRIS_CSI
-	iris->csi.requested = sysfs_streq(buf, "csi-once");
+	iris->stream.select_csi2 = sysfs_streq(buf, "csi2-once");
+	iris->csi.requested = sysfs_streq(buf, "csi-once") || iris->stream.select_csi2;
 #endif
 	rc = iris_identify(iris);
 out:
@@ -565,6 +567,7 @@ static ssize_t csi_readback_show(struct device *dev, struct device_attribute *at
 }
 static DEVICE_ATTR(csi_readback, 0444, csi_readback_show, NULL);
 static DEVICE_ATTR(csi_once, 0200, NULL, stream_once_store);
+static DEVICE_ATTR(csi2_once, 0200, NULL, stream_once_store);
 #endif
 static struct attribute *iris_attrs[] = {
 	&dev_attr_result.attr, &dev_attr_identify.attr,
@@ -574,6 +577,7 @@ static struct attribute *iris_attrs[] = {
 #endif
 #ifdef CONFIG_CITYMAN_IRIS_CSI
 	&dev_attr_csi_result.attr, &dev_attr_csi_readback.attr, &dev_attr_csi_once.attr,
+	&dev_attr_csi2_once.attr,
 #endif
 	NULL,
 };

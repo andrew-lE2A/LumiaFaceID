@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-02",
+  "kernel_build_number": 7,
+  "provenance": "Manually transcribed from owner-supplied log after normal camera previews. Raw terminal identity text is omitted.",
+  "same_boot_association": "Log retains the iris test at 98 seconds and subsequent normal camera sessions through 386 seconds.",
+  "front_camera": {
+    "phy": 2,
+    "csid": 2,
+    "lane_count": 2,
+    "lane_assign": "0x4320",
+    "lane_mask": "0x7",
+    "combo_mode": 0,
+    "settle_count": 14,
+    "requested_csi_clock_hz": 0,
+    "requested_phy_clock_hz": 0,
+    "virtual_channels": [
+      {
+        "cid": 0,
+        "data_type": "0x2b",
+        "decode_format": 2
+      },
+      {
+        "cid": 1,
+        "data_type": "0x12",
+        "decode_format": 1
+      }
+    ],
+    "release_observations": [
+      {
+        "uptime_seconds": 135.119174,
+        "irq_status": "0x255",
+        "packets": 42988,
+        "ecc": 0,
+        "crc": 0
+      },
+      {
+        "uptime_seconds": 145.501516,
+        "irq_status": "0x255",
+        "packets": 47873,
+        "ecc": 0,
+        "crc": 0
+      },
+      {
+        "uptime_seconds": 374.157563,
+        "irq_status": "0x255",
+        "packets": 12701,
+        "ecc": 0,
+        "crc": 0
+      },
+      {
+        "uptime_seconds": 386.926633,
+        "irq_status": "0x255",
+        "packets": 128964,
+        "ecc": 0,
+        "crc": 0
+      }
+    ]
+  },
+  "rear_camera": {
+    "phy": 0,
+    "csid": 0,
+    "lane_count": 4,
+    "lane_assign": "0x0423",
+    "lane_mask": "0x1f",
+    "combo_mode": 0,
+    "settle_count": 22,
+    "requested_csi_clock_hz": 0,
+    "requested_phy_clock_hz": 0,
+    "virtual_channels": [
+      {
+        "cid": 0,
+        "data_type": "0x2b",
+        "decode_format": 2
+      }
+    ],
+    "release_observations": [
+      {
+        "uptime_seconds": 131.573128,
+        "irq_status": "0x80002dd",
+        "packets": 98204,
+        "ecc": 0,
+        "crc": 0
+      },
+      {
+        "uptime_seconds": 140.651552,
+        "irq_status": "0x80002dd",
+        "packets": 260410,
+        "ecc": 0,
+        "crc": 0
+      },
+      {
+        "uptime_seconds": 376.475664,
+        "irq_status": "0x80002dd",
+        "packets": 82528,
+        "ecc": 0,
+        "crc": 0
+      }
+    ]
+  },
+  "interpretation": {
+    "working_camera_preview_reported": true,
+    "positive_packet_counts_observed_on_csid0_and_csid2": true,
+    "csid3_positive_packet_control_available": false,
+    "normal_configuration_does_not_add_diagnostic_bit16": "Source fact: the added bit-16 write is gated to the explicit iris test; ordinary camera sessions use the normal configuration path.",
+    "zero_clock_request_meaning": "Use the legacy driver default/max clock request; this does not mean an observed zero-frequency clock.",
+    "limit": "Working cameras establish functional packet observation on receivers 0/2, not proof of the complete one-lane combo/CSID3 path."
+  }
+}

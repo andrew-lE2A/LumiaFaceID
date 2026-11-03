@@ -6,6 +6,38 @@ It does not configure ISPIF/VFE or image DMA, return an image, enable IR, or
 implement authentication. Boot/probe remain idle; only `csi-once` requests the
 receiver. Ordinary `identify` and `stream-once` retain their previous scope.
 
+## Phone results
+
+The owner completed version 02 on kernel #7. All 20 sensor and 22 receiver
+register pairs were valid. CSID/PHY configuration matched the target, including
+`CORE_CTRL_1=0x0005000f`, mux `0x30`, PHY power `0x31` and combo mode `0x10`.
+Recorded packet/ECC/CRC counts remained zero. Three PHY status words changed:
+
+| Row | Before | After |
+| --- | --- | --- |
+| `phy_irq_status3` | `0x0` | `0x4` |
+| `phy_irq_status4` | `0x0` | `0x4` |
+| `phy_irq_status6` | `0x0` | `0x10` |
+
+These are latched raw bits, not event counts or a decoded link verdict. They
+could reflect PHY initialization/idle transitions or incoming signalling; the
+bit meanings have not been established. Sensor stop and receiver/overall
+cleanup returned zero, all services restarted, and both normal cameras worked.
+See [phone-result.json](builds/iris-csi-02/phone-result.json).
+
+Working-camera previews on the same boot provided a comparison: front CSID2
+recorded 12,701–128,964 packets and rear CSID0 recorded 82,528–260,410 packets,
+with zero ECC/CRC errors. The normal paths do not add the diagnostic bit-16
+write. This confirms packet observation works on those receivers; it does not
+validate every part of the one-lane combo/CSID3 path. The comparison is saved in
+[camera-control-result.json](builds/iris-csi-02/camera-control-result.json).
+
+There is no reason to repeat the identical iris test. The next
+[explicit CSI-2 selection comparison](IRIS-CSI2.md) tests the original generic
+interface selection after mode programming, while preserving receiver routing
+and timing. Its outcome is not known. Commands below reproduce the completed
+version 02 test.
+
 ## Version 01 result and version 02 changes
 
 The owner booted version 01, kernel #6. PHY2/CSID3 setup and release returned
@@ -173,4 +205,5 @@ validation. All 98 host tests pass, including 21 receiver lifecycle scenarios,
 five sensor/receiver ordering scenarios and the earlier 116 stream/28 power
 scenarios. The complete ARM64 kernel #7 build passed. A private local repack
 preserved the original ramdisk and boot settings and fit the original partition.
-The phone boot and receiver result remain pending until the owner runs this test.
+The phone boot, receiver snapshots and working-camera comparison are recorded
+above. No iris frame delivery has been established.

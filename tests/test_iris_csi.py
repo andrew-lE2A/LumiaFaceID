@@ -10,7 +10,7 @@ class IrisCsiTests(unittest.TestCase):
         self.run_harness('iris_csi_host.c', '21 production receiver lifecycle scenarios passed')
 
     def test_sensor_receiver_integration(self):
-        self.run_harness('iris_csi_sequence_host.c', '5 production sensor/receiver integration scenarios passed')
+        self.run_harness('iris_csi_sequence_host.c', '9 production sensor/receiver integration scenarios passed')
 
     def run_harness(self, filename, expected):
         with tempfile.TemporaryDirectory() as directory:

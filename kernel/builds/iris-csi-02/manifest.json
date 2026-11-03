@@ -108,9 +108,9 @@
   "sensor_receiver_integration_scenarios": 5,
   "existing_stream_simulation_scenarios": 116,
   "existing_power_simulation_scenarios": 28,
-  "phone_boot_test": "not run",
-  "phone_receiver_test": "not run",
-  "capture_status": "no delivered frames; version 01 recorded zero counters with unvalidated observation setup; version 02 phone test pending",
+  "phone_boot_test": "owner confirmed kernel #7 running",
+  "phone_receiver_test": "receiver controls and PHY settings read back; packet/ECC/CRC counters zero; PHY status3/4 changed to 0x4, status6 to 0x10; clean cleanup and normal cameras unchanged",
+  "capture_status": "no delivered frames; version 02 configuration latched and PHY status words changed, but no packets recorded and signalling remains unverified",
   "private_repack_validation": {
     "ramdisk_unchanged": true,
     "boot_settings_unchanged": true,
@@ -136,5 +136,7 @@
     "ecc_count_width_bits": 16,
     "sensor_program_clock_route_settle_unchanged": true
   },
-  "configuration_byte_identical_to": "iris-csi-01"
+  "configuration_byte_identical_to": "iris-csi-01",
+  "phone_result_path": "kernel/builds/iris-csi-02/phone-result.json",
+  "normal_camera_control_path": "kernel/builds/iris-csi-02/camera-control-result.json"
 }

@@ -70,6 +70,7 @@ static int stream_read(void *context, u16 address, u8 *data,
     } else {
         memcpy(data, sensor_registers + address, length);
         if (address == 0x0100 && counter_kind == 4) *data = 0;
+        if (address == 0x0111 && counter_kind == 6) *data = 0;
     }
     memcpy(log->data, data, length);
     return 0;

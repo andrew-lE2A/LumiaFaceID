@@ -43,6 +43,8 @@ elif name == 'cat':
     streaming = (node / 'stream_once').read_text() == 'stream-once\\n'
     if (node / 'csi_once').exists():
         streaming = streaming or (node / 'csi_once').read_text() == 'csi-once\\n'
+        if (node / 'csi2_once').exists():
+            streaming = streaming or (node / 'csi2_once').read_text() == 'csi2-once\\n'
         if streaming and path.name == 'csi_result':
             path.write_text(state.get('csi_after', 'requested=1 stage=listening errno=0 cleanup_errno=0 packets_before=0 packets_after=100\\n'))
     if triggered or (streaming and path.name in ('result', 'stream_result')):
@@ -270,6 +272,19 @@ class IdentifyHelperTests(unittest.TestCase):
         run = self.run_helper(fail_write=True, operation='csi-once')
         self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
         self.assertIn('packets_after=100', run.stdout)
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_csi2_variant_requires_separate_control_and_preserves_result_dump(self):
+        self.csi_fixture()
+        run = self.run_helper(operation='csi2-once')
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(self.state['events'], [])
+        (self.root / 'driver/device/csi2_once').write_text('')
+        run = self.run_helper(operation='csi2-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('CSI after:', run.stdout)
+        self.assertEqual((self.root / 'driver/device/csi2_once').read_text(), 'csi2-once\n')
+        self.assertEqual((self.root / 'driver/device/csi_once').read_text(), '')
         self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
 
 

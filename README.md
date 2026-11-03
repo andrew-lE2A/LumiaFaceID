@@ -94,8 +94,16 @@ verified. The next [CSI packet test](kernel/IRIS-CSI.md) uses the recovered PHY2
 combo/CSID3 route and records receiver counters around one sensor cycle. Its
 first phone test completed setup and cleanup but recorded zero receiver
 counters. Version 02 matches an additional original receiver control flag and
-saves receiver/PHY readbacks before sensor stop; its phone test is pending.
+saves receiver/PHY readbacks before sensor stop. Its phone test confirmed the
+target configuration and changed PHY status bits, but still recorded zero iris
+packets. Working normal cameras produced positive packet counts on the same
+boot; the iris transmit/receiver issue remains unresolved.
 It does not configure image DMA or deliver a frame.
+
+The next [explicit CSI-2 selection comparison](kernel/IRIS-CSI2.md) adds a
+separate one-shot control for the original driver's `0x0111=2` setting after
+mode programming. It preserves the receiver route and timing, requires
+readback before start, and remains untested on the phone.
 
 Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
 No firmware, sensor calibration, Windows driver binaries, or biometric data are

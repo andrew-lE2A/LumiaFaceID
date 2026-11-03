@@ -190,3 +190,25 @@ also found an original `CORE_CTRL_1` bit-16 setting omitted by the Linux path.
 Its effect on observations is untested. The zero counters therefore do not
 establish physical absence of packets. The full selected result is saved in
 [iris-csi-01/phone-result.json](../kernel/builds/iris-csi-01/phone-result.json).
+
+## Second CSI test and working-camera comparison
+
+The owner booted iris-csi-02, kernel #7. All receiver configuration readbacks
+matched the target, including the original bit-16 control flag. All 20 sensor
+and 22 receiver before/after pairs were valid. Sensor mode select latched and
+the counter stayed zero. CSID3 still recorded zero packets/ECC/CRC errors.
+PHY status words 3 and 4 changed from zero to `0x4`, and word 6 to `0x10`.
+Their exact bit meanings remain unresolved; they are not proof of valid MIPI
+transmission. Cleanup returned zero, services restarted, and the owner confirmed
+both normal cameras work as before.
+
+The same boot's normal preview sessions recorded positive packet counts on
+CSID2 (front) and CSID0 (rear), all with zero ECC/CRC errors. The largest supplied
+front/rear counts were 128,964 and 260,410. This establishes functioning packet
+observation on those receivers; CSID3 still lacks a known working input.
+The additional control flag alone did not resolve the iris result.
+
+Sanitized [phone evidence](../kernel/builds/iris-csi-02/phone-result.json) and
+[working-camera controls](../kernel/builds/iris-csi-02/camera-control-result.json)
+preserve the selected values. Source tracing of startup/transmit behavior and
+interpretation of the PHY status bits remain before another justified variant.
