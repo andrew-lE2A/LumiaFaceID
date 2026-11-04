@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-04",
+  "notes_commit": "3a407632d9b2a1c83e9a67370cda0daba934959a",
+  "kernel_image": "/private/tmp/cityman-iris-android-03.img",
+  "kernel_image_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+  "boot_method": "fastboot boot only",
+  "temporary_kernel": "#18",
+  "installed_kernel_after_cleanup": "#29",
+  "plugin_sha256": "f14b92e8373be6b74570e803b1e912a796f6ff7043d53185a9871d5460f888b0",
+  "sensor_list_original_sha256": "2d14928f825d21dc3c0f1d7fd4ad3610cdfb56de34b0122eca213da1064bec1b",
+  "sensor_list_patched_sha256": "925042257481e08a371a06efc9013a77e485fa43ec548a9ed6e2ed9aa0e9a86b",
+  "step_b": {
+    "probe": "PASS: dmesg: msm_sensor_match_id: ir0861 read id 0x861 expected 0x861 slave 0x6c; ir0861 probe succeeded",
+    "camera_count": "PASS: 3 devices; IDs 0 back, 1 front, 2 front",
+    "iris_camera_id": "2, identified by front facing metadata, GRBG order, and 1920x1088 pixel array",
+    "vendor_install": "Temporary bind mounts of the plugin and patched sensor list; original sensor list hash verified before and after cleanup",
+    "stream": "NOT RUN: no installed utility or shell command available to open explicit camera ID 2. Aperture's generic front-camera selector could ambiguously select ID 1, so no camera was opened.",
+    "csid3": "0 packets, 0 ECC, 0 CRC in enumeration/probe cleanup logs before any stream; this does not meet the condition for kernel patch 0004",
+    "vfe_sof_and_frame_callbacks": "NOT MEASURED: stream was not opened",
+    "torch_0": "Not used; no frame arrived",
+    "sensor_strobe": "Skipped per FINDINGS section 18"
+  },
+  "cleanup": {
+    "camera_services": "Running after cleanup and reboot",
+    "vendor": "Read-only after cleanup; temporary iris file removed; stock sensor list and vs6955 library present",
+    "installed_boot": "Returned to installed kernel #29",
+    "camera_count_after_reboot": 2,
+    "active_camera_clients": 0,
+    "leds": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "boot_backup_and_private_profile": "Preserved"
+  }
+}
