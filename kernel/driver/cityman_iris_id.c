@@ -715,6 +715,41 @@ static ssize_t stream_readback_show(struct device *dev, struct device_attribute 
 	return size;
 }
 
+static ssize_t sensor_info_readback_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct cityman_iris *iris = dev_get_drvdata(dev);
+	struct iris_stream *s = &iris->stream;
+	ssize_t size = 0;
+	unsigned int i;
+	mutex_lock(&iris->lock);
+	for (i = 0; i < IRIS_SENSOR_INFO_COUNT && size < PAGE_SIZE; i++) {
+		const struct iris_stream_register *reg =
+			&iris_sensor_info_registers[i];
+		bool is_signed = reg->address >= 0x008c &&
+			reg->address <= 0x0092;
+		if (is_signed) {
+			s16 before = (s16)s->sensor_info_before[i];
+			s16 after = (s16)s->sensor_info_after[i];
+			size += scnprintf(buf + size, PAGE_SIZE - size,
+				"%s addr=0x%04x before=0x%04x signed=%d valid=%u after=0x%04x signed=%d valid=%u\n",
+				reg->name, reg->address, s->sensor_info_before[i],
+				before, !!(s->sensor_info_before_valid & (1U << i)),
+				s->sensor_info_after[i], after,
+				!!(s->sensor_info_after_valid & (1U << i)));
+		} else {
+			size += scnprintf(buf + size, PAGE_SIZE - size,
+				"%s addr=0x%04x before=0x%04x valid=%u after=0x%04x valid=%u\n",
+				reg->name, reg->address, s->sensor_info_before[i],
+				!!(s->sensor_info_before_valid & (1U << i)),
+				s->sensor_info_after[i],
+				!!(s->sensor_info_after_valid & (1U << i)));
+		}
+	}
+	mutex_unlock(&iris->lock);
+	return size;
+}
+
 static ssize_t stream_profile_store(struct device *dev, struct device_attribute *attr,
 	const char *buf, size_t count)
 {
@@ -800,6 +835,7 @@ out:
 
 static DEVICE_ATTR(stream_result, 0444, stream_result_show, NULL);
 static DEVICE_ATTR(stream_readback, 0444, stream_readback_show, NULL);
+static DEVICE_ATTR(sensor_info_readback, 0444, sensor_info_readback_show, NULL);
 static DEVICE_ATTR(stream_profile, 0200, NULL, stream_profile_store);
 static DEVICE_ATTR(stream_once, 0200, NULL, stream_once_store);
 
@@ -1119,6 +1155,7 @@ static struct attribute *iris_attrs[] = {
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 	&dev_attr_stream_result.attr, &dev_attr_stream_profile.attr, &dev_attr_stream_once.attr,
 	&dev_attr_stream_readback.attr,
+	&dev_attr_sensor_info_readback.attr,
 	&dev_attr_nvm_result.attr, &dev_attr_nvm_once.attr,
 #endif
 #ifdef CONFIG_CITYMAN_IRIS_CSI

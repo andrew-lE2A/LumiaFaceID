@@ -329,6 +329,33 @@ the pinned driver and remain raw evidence. See the
 [default interface result](builds/iris-csi-top-02/phone-result.json), and
 [explicit CSI-2 result](builds/iris-csi-top-02/csi2-phone-result.json).
 
+### Same-boot lower-lane and iris PHY status comparison
+
+The existing CSID3 front-camera positive-control image was RAM-booted once.
+Before the iris attempt, Aperture camera ID 1 produced 59 frames through the
+PHY2 lower-lane route to CSID3. Ten read-only PHY samples during preview were
+identical: only status word 6 was `0x1`. The one-shot iris test then produced
+`0x4` in PHY status words 3 and 4 and `0x10` in word 6, while CSID3 packet,
+ECC and CRC counts remained zero. Afterward, the front-camera preview still
+worked and produced 48 frames; its live PHY status returned to the same
+lower-lane pattern (`word 6 = 0x1`). The CAMSS TOP values during the iris run
+were `0xfda00040=0x30` and `0xfda00044=0x03`, matching the Windows-noted
+selection state.
+
+This same-boot control rules out a changed kernel or device-tree build as the
+reason for the lane-status difference. The raw word pattern shows lane-specific
+PHY events during the upper-pair iris attempt, but the event bit meanings are
+still unknown. It does not prove valid MIPI packets or distinguish a sensor
+transmission problem from PHY-to-CSID acceptance. Sensor, receiver and overall
+cleanup succeeded. Two additional tests ran on the same boot: settle 24
+(register `0x18`) produced the same zero counter/packet result and raw status
+pattern; repeating settle 22 (register `0x16`) reproduced it again. A final
+front preview produced 38 frames after all three iris attempts. All camera
+services returned, all LED channels were zero, and the phone was deliberately
+left on temporary kernel #11 for subsequent work without rebooting to installed
+#29. See the
+[same-boot result](builds/iris-csi3phy-lane-status-comparison-01/phone-result.json).
+
 The external notes' status-register analysis says each of these eight words
 is per-lane and each enabled lane is cleared/masked with `0x3f`; it does not
 name the individual status bits. Under that layout, words 3 and 4 both

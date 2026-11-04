@@ -1,0 +1,118 @@
+{
+  "test_id": "iris-csi3phy-lane-status-comparison-01",
+  "recorded_at_local": "2026-11-04",
+  "device": "Lumia 950 XL cityman, LineageOS 23.2 Android 16",
+  "temporary_boot": {
+    "method": "fastboot boot; no partition write",
+    "kernel": "3.10.108-perf-gcc84cab9 #11",
+    "image_sha256": "c97ea35f4202bf046a690e66d2ccf56b014febe4f6353ca631bdc035095a3ad6",
+    "dt_experiment": "CSI3 PHY gate on CSID3 and ordinary front camera routed to CSID3",
+    "returned_to_installed_kernel": false
+  },
+  "same_boot_front_control_before_iris": {
+    "app": "org.lineageos.aperture",
+    "camera_id": 1,
+    "route": "PHY2 lower lanes mask 0x7 to CSID3",
+    "frames_produced_at_snapshot": 59,
+    "live_phy_samples": 10,
+    "phy_status_words": [
+      "0x00000000", "0x00000000", "0x00000000", "0x00000000",
+      "0x00000000", "0x00000000", "0x00000001", "0x00000000"
+    ],
+    "samples_identical": true
+  },
+  "iris_trial": {
+    "operation": "csi-trial settle=22, default CSI3 PHY gate, no supplementary clock",
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+    "counter_before": "0x00",
+    "counter_samples": 16,
+    "counter_first": "0x00",
+    "counter_last": "0x00",
+    "counter_changes": 0,
+    "profile_writes": 117,
+    "readback_errno": 0,
+    "csid3_packets_before": 0,
+    "csid3_packets_after": 0,
+    "csid3_ecc_before": 0,
+    "csid3_ecc_after": 0,
+    "csid3_crc_before": 0,
+    "csid3_crc_after": 0,
+    "camss_top_40_before": "0x00000000",
+    "camss_top_40_after": "0x00000030",
+    "camss_top_44_before": "0x00000003",
+    "camss_top_44_after": "0x00000003",
+    "phy_status_words_after": [
+      "0x00000000", "0x00000000", "0x00000000", "0x00000004",
+      "0x00000004", "0x00000000", "0x00000010", "0x00000000"
+    ],
+    "phy2_csiphy_clock_settle": "0x16",
+    "receiver_result": "requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=22 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003",
+    "sensor_stop_errno": 0,
+    "overall_cleanup_errno": 0
+  },
+  "same_boot_settle_comparison": [
+    {
+      "settle_ticks": 24,
+      "settle_register": "0x18",
+      "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=2 blocked=0 rail_uv=1200000",
+      "counter_before": "0x00",
+      "counter_changes": 0,
+      "csid3_packet_delta": 0,
+      "csid3_ecc_delta": 0,
+      "csid3_crc_delta": 0,
+      "phy_status_words": [
+        "0x00000000", "0x00000000", "0x00000000", "0x00000004",
+        "0x00000004", "0x00000000", "0x00000010", "0x00000000"
+      ],
+      "cleanup_errno": 0
+    },
+    {
+      "settle_ticks": 22,
+      "settle_register": "0x16",
+      "repeat_of_first_trial": true,
+      "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=3 blocked=0 rail_uv=1200000",
+      "counter_before": "0x00",
+      "counter_changes": 0,
+      "csid3_packet_delta": 0,
+      "csid3_ecc_delta": 0,
+      "csid3_crc_delta": 0,
+      "phy_status_words": [
+        "0x00000000", "0x00000000", "0x00000000", "0x00000004",
+        "0x00000004", "0x00000000", "0x00000010", "0x00000000"
+      ],
+      "cleanup_errno": 0
+    }
+  ],
+  "same_boot_front_control_after_iris": {
+    "app": "org.lineageos.aperture",
+    "camera_id": 1,
+    "route": "PHY2 lower lanes mask 0x7 to CSID3",
+    "frames_produced_at_snapshot": 48,
+    "live_phy_status_words": [
+      "0x00000000", "0x00000000", "0x00000000", "0x00000000",
+      "0x00000000", "0x00000000", "0x00000001", "0x00000000"
+    ]
+  },
+  "final_front_camera_recovery": {
+    "frames_produced_at_snapshot": 38,
+    "cameraserver": "running",
+    "vendor_camera_provider_2_4": "running",
+    "qcamerasvr": "running"
+  },
+  "recovery": {
+    "aperture_force_stopped": true,
+    "cameraserver": "running",
+    "vendor_camera_provider_2_4": "running",
+    "qcamerasvr": "running",
+    "torch_flash_brightness_all_zero": true,
+    "ir_illumination": "disabled",
+    "phone_left_on_temporary_kernel": "#11; no reboot to installed #29 was performed"
+  },
+  "interpretation": "On the same PHY2/CSID3 configuration, front-camera preview repeatedly produced frames with only raw PHY status word 6 equal to 0x1. The iris run produced raw status 0x4 on its configured upper pair (words 3 and 4) and 0x10 in word 6, but no CSID packets, ECC or CRC. The lane-specific status difference confirms the receiver observed different raw PHY events during the iris attempt; the event bit meanings are not decoded, so this does not establish a valid MIPI stream. CAMSS TOP values were already at the Windows-noted target (0x40=0x30, 0x44=0x03). The test narrows the issue to PHY event interpretation/PHY-to-CSID acceptance or the sensor's emitted signal, without distinguishing these causes.",
+  "limits": [
+    "No image was delivered by the iris sensor.",
+    "No illuminator was enabled.",
+    "Raw PHY status bits are preserved as measurements and not labeled as link success or failure.",
+    "No Android iris authentication or screen-unlock path is implemented."
+  ]
+}

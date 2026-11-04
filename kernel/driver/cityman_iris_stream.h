@@ -16,6 +16,36 @@ struct iris_stream_register {
 	u16 address;
 	unsigned int width;
 };
+/* Startup values read by the original Windows driver; read-only diagnostics. */
+static const struct iris_stream_register iris_sensor_info_registers[] = {
+	{ "gain_capability", 0x0080, 2 },
+	{ "gain_code_min", 0x0084, 2 }, { "gain_code_max", 0x0086, 2 },
+	{ "gain_code_step", 0x0088, 2 },
+	{ "gain_code_reserved", 0x008a, 2 },
+	{ "gain_m0", 0x008c, 2 }, { "gain_c0", 0x008e, 2 },
+	{ "gain_m1", 0x0090, 2 }, { "gain_c1", 0x0092, 2 },
+	{ "coarse_min", 0x1004, 2 }, { "coarse_max_margin", 0x1006, 2 },
+	{ "black_level", 0x0008, 2 }, { "pixel_order", 0x0006, 1 },
+	{ "pixel_order_control", 0x0101, 1 }, { "mono_capability", 0x11ca, 1 },
+	{ "flash_capability_00", 0x1a00, 1 },
+	{ "flash_capability_01", 0x1a01, 1 },
+	{ "flash_capability_02", 0x1a02, 1 },
+	{ "flash_capability_03", 0x1a03, 1 },
+	{ "flash_capability_04", 0x1a04, 1 },
+	{ "flash_capability_05", 0x1a05, 1 },
+	{ "flash_capability_06", 0x1a06, 1 },
+	{ "flash_capability_07", 0x1a07, 1 },
+	{ "flash_capability_08", 0x1a08, 1 },
+	{ "flash_capability_09", 0x1a09, 1 },
+	{ "flash_capability_0a", 0x1a0a, 1 },
+	{ "flash_capability_0b", 0x1a0b, 1 },
+	{ "flash_capability_0c", 0x1a0c, 1 },
+	{ "flash_capability_0d", 0x1a0d, 1 },
+	{ "flash_capability_0e", 0x1a0e, 1 },
+	{ "flash_capability_0f", 0x1a0f, 1 },
+};
+#define IRIS_SENSOR_INFO_COUNT (sizeof(iris_sensor_info_registers) / \
+	 sizeof(iris_sensor_info_registers[0]))
 
 /* Only fixed identity/control and already-programmed fields; no NVM/image data. */
 static const struct iris_stream_register iris_stream_registers[] = {
@@ -70,6 +100,9 @@ struct iris_stream {
 	unsigned int samples, changes, writes, transactions;
 	u16 before[IRIS_READBACK_COUNT], after[IRIS_READBACK_COUNT];
 	unsigned int before_valid, after_valid;
+	u16 sensor_info_before[IRIS_SENSOR_INFO_COUNT];
+	u16 sensor_info_after[IRIS_SENSOR_INFO_COUNT];
+	u32 sensor_info_before_valid, sensor_info_after_valid;
 	int stop_error, readback_error;
 	const char *stage;
 };
@@ -123,6 +156,26 @@ static int iris_stream_snapshot(struct iris_stream *s, const struct iris_stream_
 		values[i] = reg->width == 2 ? (data[0] << 8) | data[1] : data[0];
 		*valid |= 1U << i;
 	}
+	{
+		u16 *info_values = after_start ? s->sensor_info_after :
+			s->sensor_info_before;
+		u32 *info_valid = after_start ? &s->sensor_info_after_valid :
+			&s->sensor_info_before_valid;
+		for (i = 0; i < IRIS_SENSOR_INFO_COUNT; i++) {
+			u8 data[2] = { 0, 0 };
+			const struct iris_stream_register *reg =
+				&iris_sensor_info_registers[i];
+			rc = io->read_bytes(io->context, reg->address, data,
+				reg->width);
+			if (rc) {
+				s->readback_error = rc;
+				return rc;
+			}
+			info_values[i] = reg->width == 2 ?
+				(data[0] << 8) | data[1] : data[0];
+			*info_valid |= 1U << i;
+		}
+	}
 	return 0;
 }
 
@@ -135,6 +188,7 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 		return -ENODATA;
 	s->samples = s->changes = s->writes = s->transactions = 0;
 	s->before_valid = s->after_valid = 0;
+	s->sensor_info_before_valid = s->sensor_info_after_valid = 0;
 	s->readback_error = 0;
 	s->virtual_channel_before = 0xff;
 	s->virtual_channel_before_valid = false;

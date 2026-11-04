@@ -214,6 +214,10 @@ finish() {
                 echo 'Saved register readback (before and after stream-on):'
                 cat "$node/stream_readback" || echo 'Saved register readback unavailable.' >&2
             fi
+            if [ -r "$node/sensor_info_readback" ]; then
+                echo 'Sensor capability readback (after profile, before and after stream-on):'
+                cat "$node/sensor_info_readback" || echo 'Sensor capability readback unavailable.' >&2
+            fi
             case " $stream_after " in *' stop_errno=0 '*) ;; *) stream_clean=0 ;; esac
         fi
         if [ "$receiver_test" = 1 ]; then

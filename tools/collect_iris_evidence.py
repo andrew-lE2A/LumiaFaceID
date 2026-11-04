@@ -19,7 +19,8 @@ CLOCK_SETS = (
 STATUS_COMMAND = f'''set -- {DRIVER}/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || exit 66
 cat "$1"'''
-FILES = ('result', 'stream_result', 'stream_readback', 'csi_result', 'csi_readback')
+FILES = ('result', 'stream_result', 'stream_readback', 'sensor_info_readback',
+         'csi_result', 'csi_readback')
 SNAPSHOT_COMMAND = f'''set -- {DRIVER}/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || exit 66
 device=${{1%/result}}

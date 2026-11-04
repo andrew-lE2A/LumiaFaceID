@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-04",
+  "scope": "Experimental IR0861 Android bring-up, bounded Step A precondition check",
+  "kernel": {
+    "release": "3.10.108-perf-gcc84cab9",
+    "build_number": 18,
+    "image": "/private/tmp/cityman-iris-android-02.img",
+    "sha256": "b49c6022326b8a9861c6552d3267f205a85fd98d5ecd1df92331d35026619ba6",
+    "boot_method": "fastboot boot; never flashed",
+    "patches": [
+      "android/0001 upper combo-lane MISC1",
+      "android/0002 CSID3 CSI3PHY clock",
+      "android/0003 camera@2 enabled",
+      "kernel/0008 existing boost consumer mapping"
+    ]
+  },
+  "preconditions": {
+    "iris_platform_device_present": true,
+    "diagnostic_driver_bound": false,
+    "probe_status": "stage=csi3phy-gate errno=-517",
+    "probe_error": "EPROBE_DEFER while acquiring csi3phy_clk",
+    "register_dump_run": false,
+    "iris_diagnostic_sensor_register_writes": false,
+    "profile_sha256": "6884c497a0ca43800278bc9f844c77eab16feca73daf768b66e6380a2b25a838",
+    "profile_unchanged": true,
+    "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+    "original_boot_backup_unchanged": true
+  },
+  "teardown": {
+    "returned_to_installed_kernel": true,
+    "installed_kernel_release": "3.10.108-perf-gcc84cab9 #29",
+    "camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    },
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "result": "First boot stopped before sensor access because csi3phy_clk was missing from that disposable diagnostic-node DTB. Corrected the DT clock mapping and retried Step A. Probe then succeeded and CSID3 received clean packets, but all requested sensor info values were zero, making the gain calibration unusable. Stopped before Step B and illumination.",
+  "root_cause_of_first_boot_failure": "The temporary build DTB gave the diagnostic node only cam_src_clk and cam_clk; the driver also requests csi3phy_clk, csi2-camss-clk and csi0-camss-clk. The repository integration declares them, but that disposable build input did not.",
+  "retry": {
+    "boot_image": "/private/tmp/cityman-iris-android-03.img",
+    "boot_image_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+    "boot_method": "fastboot boot; never flashed",
+    "kernel_release": "3.10.108-perf-gcc84cab9 #18",
+    "probe_status": "stage=ready errno=0",
+    "diagnostic": "csi-trial 22 load misc",
+    "sensor_model": "0x0861",
+    "register_snapshot": "All requested 16-bit and 8-bit values returned valid reads, but every value was 0x0000; 0x0101 was 0x00. See step-a.log for every register and readback.",
+    "gain_coefficients": {
+      "m0": "0x0000",
+      "c0": "0x0000",
+      "m1": "0x0000",
+      "c1": "0x0000"
+    },
+    "diagnostic_status": "failed stage=stream-test errno=-110; cleanup_errno=0; stop_errno=0; sensor frame counter unchanged at 0x00 over 16 samples",
+    "csi": {
+      "packets_before": 0,
+      "packets_after": 13244,
+      "ecc_before": 0,
+      "ecc_after": 0,
+      "crc_before": 0,
+      "crc_after": 0,
+      "csid_version": "0x30010003",
+      "upper_lane_irq3": "0x00000004",
+      "upper_lane_irq4": "0x00000004",
+      "phy_clock_misc": "0x06",
+      "phy_data_misc": "0x0a"
+    },
+    "camera_services_restored": true,
+    "all_led_channels_zero": true,
+    "step_b_started": false,
+    "step_c_started": false,
+    "log": "kernel/builds/iris-android-readback-01/step-a.log",
+    "profile_program_writes_by_existing_diagnostic": 117
+  }
+}
