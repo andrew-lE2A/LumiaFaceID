@@ -1,0 +1,71 @@
+{
+  "test_id": "iris-csi3phy-clock-01",
+  "operation": "one csi-once run with read-only clock-state polling during camera-service stop window",
+  "local_only": true,
+  "phone": {
+    "model": "Lumia 950 XL (cityman)",
+    "rom": "LineageOS 23.2 / Android 16",
+    "temporary_kernel": "3.10.108-perf-gcc84cab9 #8",
+    "installed_kernel_after_reboot": "3.10.108-perf-gcc84cab9 #29"
+  },
+  "boot_method": "fastboot boot; no partition was flashed",
+  "clock_observation": {
+    "method": "debugfs rate and enable reads, sampled while camera services were stopped; no hardware measure reads or clock control writes",
+    "samples": [
+      {
+        "phase": "receiver startup transition",
+        "camss_csi3phy_clk": { "rate_hz": 0, "enable": 0 },
+        "camss_csi2phy_clk": { "rate_hz": 240000000, "enable": 0 },
+        "camss_csi3_clk": { "rate_hz": 0, "enable": 1 },
+        "camss_phy2_csi2phytimer_clk": { "rate_hz": 200000000, "enable": 1 }
+      },
+      {
+        "phase": "fully active iris receiver window",
+        "camss_csi3phy_clk": { "rate_hz": 240000000, "enable": 0 },
+        "camss_csi2phy_clk": { "rate_hz": 240000000, "enable": 1 },
+        "camss_csi3_clk": { "rate_hz": 240000000, "enable": 1 },
+        "camss_phy2_csi2phytimer_clk": { "rate_hz": 200000000, "enable": 1 }
+      },
+      {
+        "phase": "receiver teardown and later samples",
+        "camss_csi3phy_clk": { "rate_hz": 240000000, "enable": 0 },
+        "camss_csi2phy_clk": { "rate_hz": 240000000, "enable": 0 },
+        "camss_csi3_clk": { "rate_hz": 240000000, "enable": 0 },
+        "camss_phy2_csi2phytimer_clk": { "rate_hz": 200000000, "enable": 0 }
+      }
+    ],
+    "raw_sample_lines": [
+      "sample camss_csi3phy_clk:0:0 camss_csi2phy_clk:240000000:0 camss_csi3_clk:0:1 camss_phy2_csi2phytimer_clk:200000000:1",
+      "sample camss_csi3phy_clk:240000000:0 camss_csi2phy_clk:240000000:1 camss_csi3_clk:240000000:1 camss_phy2_csi2phytimer_clk:200000000:1",
+      "sample camss_csi3phy_clk:240000000:0 camss_csi2phy_clk:240000000:0 camss_csi3_clk:240000000:0 camss_phy2_csi2phytimer_clk:200000000:0",
+      "sample camss_csi3phy_clk:240000000:0 camss_csi2phy_clk:240000000:0 camss_csi3_clk:240000000:0 camss_phy2_csi2phytimer_clk:200000000:0"
+    ],
+    "interpretation": "camss_csi3phy_clk stays disabled through the active iris receiver interval. The Linux-selected PHY2 branch camss_csi2phy_clk, CSID3 core, and PHY2 timer are enabled. These are software-reported gate/rate values, not pin waveform measurements."
+  },
+  "sensor": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+    "frame_counter_samples": 16,
+    "frame_counter_first": "0x00",
+    "frame_counter_last": "0x00",
+    "frame_counter_changes": 0,
+    "profile_program_writes": 117,
+    "program_transactions": 50,
+    "stop_errno": 0
+  },
+  "receiver": {
+    "result": "requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=20 before_valid=1 after_valid=1 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003",
+    "phy_irq_status3": "0x00000004",
+    "phy_irq_status4": "0x00000004",
+    "phy_irq_status6": "0x00000010"
+  },
+  "recovery": {
+    "camera_services_running": [
+      "cameraserver",
+      "vendor.camera-provider-2-4",
+      "qcamerasvr"
+    ],
+    "returned_to_installed_kernel": true,
+    "all_iris_and_flash_leds_off": true
+  },
+  "interpretation": "This confirms a software clock-state difference: the Linux iris route enables PHY2's camss_csi2phy_clk, while camss_csi3phy_clk remains off during the stream attempt. The original Windows CAMT startup is documented as referencing CSI3 clock resources, but the exact mapping from that resource to this Linux gate and whether it is required for the selected PHY2-to-CSID3 route have not been verified. A temporary clock-vote comparison is justified only after that mapping is checked."
+}

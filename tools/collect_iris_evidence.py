@@ -10,7 +10,12 @@ import sys
 from collect_cityman import Adb
 
 DRIVER = '/sys/bus/platform/drivers/cityman-iris-id'
-CLOCKS = ('camss_csi3_clk', 'camss_phy2_csi2phytimer_clk')
+CLOCK_SETS = (
+    ('camss_csi3_clk', 'camss_phy2_csi2phytimer_clk'),
+    ('camss_csi3phy_clk', 'camss_csi3_clk', 'camss_phy2_csi2phytimer_clk'),
+    ('camss_csi3phy_clk', 'camss_csi2_clk', 'camss_csi0_clk',
+     'camss_csi3_clk', 'camss_phy2_csi2phytimer_clk'),
+)
 STATUS_COMMAND = f'''set -- {DRIVER}/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || exit 66
 cat "$1"'''
@@ -69,21 +74,24 @@ def parse_rxclk(text):
         if [pair[0] for pair in pairs] != list(keys):
             raise ValueError('Unexpected receiver-clock sample fields')
         row = dict(pairs)
-        if row['clock'] not in CLOCKS:
+        if row['clock'] not in {clock for clock_set in CLOCK_SETS for clock in clock_set}:
             raise ValueError('Unexpected clock target')
         for key in keys:
             if key != 'clock':
                 if not re.fullmatch(r'[0-9]+', row[key]):
                     raise ValueError('Non-numeric receiver-clock value')
                 row[key] = int(row[key])
-        expected_clock = CLOCKS[len(samples) % 2]
-        if row['sample'] != len(samples) // 2 + 1 or row['clock'] != expected_clock:
-            raise ValueError('Missing, duplicate or out-of-order receiver-clock sample')
         row['stable_enabled'] = (row['enable_before'] > 0 and row['enable_after'] > 0
                                  and row['rate_before_hz'] == row['rate_after_hz'])
         samples.append(row)
-    if len(samples) != 12:
-        raise ValueError('Expected six interleaved rounds (12 saved samples)')
+    supported = any(
+        len(samples) == 6 * len(candidate)
+        and all(row['clock'] == candidate[i % len(candidate)]
+                and row['sample'] == i // len(candidate) + 1
+                for i, row in enumerate(samples))
+        for candidate in CLOCK_SETS)
+    if not supported:
+        raise ValueError('Expected six interleaved rounds from a supported receiver-clock set')
     return samples
 
 

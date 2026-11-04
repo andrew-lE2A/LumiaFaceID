@@ -12,6 +12,15 @@ can be present while the sensor engine or physical MIPI link is inactive.
 The unchanged sensor counter is the origin of `-110`; receiver initialization
 and release succeeded independently. No iris image has been delivered.
 
+A subsequent active-window sample also found `camss_csi3phy_clk` disabled while
+the selected PHY2 clock (`camss_csi2phy_clk`), CSID3 core and PHY2 timer were
+enabled. The [clock result](../kernel/builds/iris-csi3phy-clock-01/phone-result.json)
+records the full read-only sample sequence. The Linux PHY2 device-tree node
+names `camss_csi2phy_clk`; the Windows CAMT description references CSI3 clock
+resources. Whether that Windows resource maps to `camss_csi3phy_clk` and must
+be enabled in addition to PHY2 remains unverified, so the branch has not been
+manually enabled.
+
 ## Source inputs rechecked locally
 
 The former cloud workspace is not needed for this audit. Original inputs were
@@ -252,3 +261,35 @@ packets from the otherwise working front sensor. Receiver routing/configuration
 therefore remains unresolved independently of iris startup. No new startup
 write follows from either observation. Both comparisons used temporary boots;
 IR stayed disabled and development remains local.
+
+## CSI3 PHY gate and pre-stream counter
+
+The next build added a dedicated iris-driver vote for the Windows-noted
+`camss_csi3phy_clk`, without extending the shared CSID clock table. It also
+captured sensor register `0x0005` immediately before stream-on. The pre-value
+was already `0x00` (valid), so it did not show a standby-to-stream transition.
+The CSI3 PHY clock was measured at 239,999,157 Hz while enabled, but the sensor
+still timed out with zero counter changes and CSID3 packet/ECC/CRC counts at
+zero. Cleanup was clean; services restored; phone returned to kernel #29.
+See [local phone evidence](../kernel/builds/iris-csi3phy-precount-01/phone-result.json).
+
+This rules out the CSI3 PHY gate simply remaining off in the tested iris path;
+it does not prove the signal reaches the sensor pin or that a link is present.
+Follow-up trials voted `camss_csi2_clk` and `camss_csi0_clk` separately, as
+listed in the Windows CAMT resources. Their enabled clocks measured near
+240 MHz, but both trials retained the zero pre-stream counter, zero frame
+changes, and zero CSID3 packet/ECC/CRC counts. Both cleanly released and the
+phone returned to #29. See the [CAMT gate evidence](../kernel/builds/iris-csi-camt-clocks-01/phone-result.json).
+
+The immediate software question is now whether the programmed profile is
+actually sufficient to start this sensor in the Windows initialization
+context. Compare the profile setup, ordering, and preconditions against the
+matched Windows driver before adding further receiver configuration.
+
+An external CSID3 control subsequently routed the working front camera to
+CSID3 and added `camss_csi3phy_clk` to the CSID3 clock list. Aperture delivered
+416 frames; CSID3 counted 1,094,240 packets, one lane event (`0x55`), and no
+ECC/CRC. The iris run on the same boot still produced no packets. This confirms
+the lower PHY2-to-CSID3 path with that gate enabled and narrows the unresolved
+branch to iris sensor startup/transmission or its upper-combo receiver path.
+See the [positive-control record](../kernel/builds/iris-csi3phy-front-control-01/phone-result.json).

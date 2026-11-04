@@ -10,7 +10,7 @@ diff --git a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi b/arch/arm64/boo
 index 7c18a3af..d5e9847c 100644
 --- a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
 +++ b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
-@@ -56,6 +56,24 @@
+@@ -56,6 +56,28 @@
   */
  
  &cci {
@@ -24,8 +24,12 @@ index 7c18a3af..d5e9847c 100644
 +		vdig-supply = <&pm8994_l3>;
 +		reset-gpios = <&msm_gpio 102 0>;
 +		clocks = <&clock_mmss clk_mclk1_clk_src>,
-+			 <&clock_mmss clk_camss_mclk1_clk>;
-+		clock-names = "cam_src_clk", "cam_clk";
++			 <&clock_mmss clk_camss_mclk1_clk>,
++			 <&clock_mmss clk_camss_csi3phy_clk>,
++			 <&clock_mmss clk_camss_csi2_clk>,
++			 <&clock_mmss clk_camss_csi0_clk>;
++		clock-names = "cam_src_clk", "cam_clk", "csi3phy_clk",
++			"csi2-camss-clk", "csi0-camss-clk";
 +		/* No default state: binding this node must not configure its pins. */
 +		pinctrl-names = "iris_active", "iris_sleep";
 +		pinctrl-0 = <&cam_sensor_mclk1_active &cityman_iris_reset_active>;

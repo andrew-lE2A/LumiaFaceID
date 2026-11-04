@@ -31,6 +31,9 @@
 #define IRIS_MODEL 0x0861
 #define IRIS_MCLK 9600000
 #define IRIS_RAILS 4
+#define IRIS_EXTRA_CSI_NONE 0
+#define IRIS_EXTRA_CSI2 1
+#define IRIS_EXTRA_CSI0 2
 
 static const char * const rail_names[IRIS_RAILS] = {
 	"vana", "vio", "core", "vdig",
@@ -43,6 +46,12 @@ struct cityman_iris {
 	struct regulator *rails[IRIS_RAILS];
 	bool enabled[IRIS_RAILS];
 	struct clk *source, *clock;
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	struct clk *csi3phy_clock;
+	struct clk *csi2_clock, *csi0_clock;
+	bool csi3phy_on, csi2_on, csi0_on;
+	unsigned int extra_csi_clock;
+#endif
 	struct pinctrl *pins;
 	struct pinctrl_state *active, *sleep;
 	struct msm_camera_cci_client client;
@@ -325,6 +334,18 @@ static void iris_cleanup(struct cityman_iris *iris)
 		if (rc || iris->csi.cleanup_error)
 			iris->cleanup_error = rc ? rc : iris->csi.cleanup_error;
 	}
+	if (iris->csi3phy_on) {
+		clk_disable_unprepare(iris->csi3phy_clock);
+		iris->csi3phy_on = false;
+	}
+	if (iris->csi2_on) {
+		clk_disable_unprepare(iris->csi2_clock);
+		iris->csi2_on = false;
+	}
+	if (iris->csi0_on) {
+		clk_disable_unprepare(iris->csi0_clock);
+		iris->csi0_on = false;
+	}
 #endif
 	if (iris->gpio_owned) {
 		gpio_set_value_cansleep(iris->reset, 0);
@@ -468,6 +489,21 @@ static int iris_identify(struct cityman_iris *iris)
 #ifdef CONFIG_CITYMAN_IRIS_CSI
 		if (iris->csi.requested) {
 			rc = iris_stream_program(&iris->stream, &io);
+			if (!rc && iris->extra_csi_clock == IRIS_EXTRA_CSI2) {
+				rc = clk_prepare_enable(iris->csi2_clock);
+				if (!rc)
+					iris->csi2_on = true;
+			}
+			if (!rc && iris->extra_csi_clock == IRIS_EXTRA_CSI0) {
+				rc = clk_prepare_enable(iris->csi0_clock);
+				if (!rc)
+					iris->csi0_on = true;
+			}
+			if (!rc) {
+				rc = clk_prepare_enable(iris->csi3phy_clock);
+				if (!rc)
+					iris->csi3phy_on = true;
+			}
 			if (!rc)
 				rc = cityman_iris_csi_begin(&iris->csi);
 			if (!rc) {
@@ -573,8 +609,9 @@ static ssize_t stream_result_show(struct device *dev, struct device_attribute *a
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"profile_loaded=%u stage=%s first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d interface_csi2_requested=%u vc_before=0x%02x vc_before_valid=%u extclk_immediate=0x%04x extclk_immediate_valid=%u extclk_immediate_errno=%d extclk_single=0x%04x extclk_single_errno=%d control_pair=0x%04x control_pair_errno=%d control_single=0x%04x control_single_errno=%d override_requested=%u override_address=0x%04x override_value=0x%02x override_readback=0x%02x override_readback_valid=%u\n",
-		s->loaded, s->stage, s->first, s->last, s->changes,
+		"profile_loaded=%u stage=%s extra_csi_clock=%u counter_before=0x%02x counter_before_valid=%u counter_before_errno=%d first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d interface_csi2_requested=%u vc_before=0x%02x vc_before_valid=%u extclk_immediate=0x%04x extclk_immediate_valid=%u extclk_immediate_errno=%d extclk_single=0x%04x extclk_single_errno=%d control_pair=0x%04x control_pair_errno=%d control_single=0x%04x control_single_errno=%d override_requested=%u override_address=0x%04x override_value=0x%02x override_readback=0x%02x override_readback_valid=%u\n",
+		s->loaded, s->stage, iris->extra_csi_clock, s->counter_before, s->counter_before_valid,
+		s->counter_before_errno, s->first, s->last, s->changes,
 		s->samples, s->writes, s->stop_error, s->transactions,
 		s->readback_error, s->select_csi2, s->virtual_channel_before,
 		s->virtual_channel_before_valid, s->extclk_immediate,
@@ -888,17 +925,29 @@ static ssize_t csi_trial_store(struct device *dev,
 	struct cityman_iris *iris = dev_get_drvdata(dev);
 	unsigned int settle, address = 0, value = 0, i;
 	bool override = false, found = false;
-	char extra;
+	char extra, clock_name[8];
+	unsigned int extra_clock = IRIS_EXTRA_CSI_NONE;
 	int rc;
 	if (!capable(CAP_SYS_RAWIO))
 		return -EPERM;
 	if (strncmp(buf, "settle=", 7))
 		return -EINVAL;
 	if (kstrtouint(buf + 7, 10, &settle)) {
-		if (sscanf(buf, "settle=%u reg=%x value=%x %c", &settle,
-			   &address, &value, &extra) != 3 || address > 0xffff || value > 0xff)
+		if (sscanf(buf, "settle=%u clock=%7s %c", &settle,
+			   clock_name, &extra) == 2) {
+			if (!strcmp(clock_name, "csi2"))
+				extra_clock = IRIS_EXTRA_CSI2;
+			else if (!strcmp(clock_name, "csi0"))
+				extra_clock = IRIS_EXTRA_CSI0;
+			else
+				return -EINVAL;
+		} else if (sscanf(buf, "settle=%u reg=%x value=%x %c", &settle,
+				  &address, &value, &extra) == 3 &&
+			   address <= 0xffff && value <= 0xff) {
+			override = true;
+		} else {
 			return -EINVAL;
-		override = true;
+		}
 	}
 	if (settle < 1 || settle > 63)
 		return -EINVAL;
@@ -939,6 +988,7 @@ static ssize_t csi_trial_store(struct device *dev,
 	memset(&iris->csi, 0, sizeof(iris->csi));
 	iris->csi.requested = true;
 	iris->csi.settle = settle;
+	iris->extra_csi_clock = extra_clock;
 	iris->stream.requested = true;
 	iris->stream.select_csi2 = true;
 	iris->stream.override_requested = override;
@@ -1021,6 +1071,17 @@ static int cityman_iris_probe(struct platform_device *pdev)
 	iris->clock = devm_clk_get(dev, "cam_clk");
 	if (IS_ERR(iris->clock))
 		return iris_probe_report(dev, "mclk-gate", PTR_ERR(iris->clock));
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+	iris->csi3phy_clock = devm_clk_get(dev, "csi3phy_clk");
+	if (IS_ERR(iris->csi3phy_clock))
+		return iris_probe_report(dev, "csi3phy-gate", PTR_ERR(iris->csi3phy_clock));
+	 iris->csi2_clock = devm_clk_get(dev, "csi2-camss-clk");
+	if (IS_ERR(iris->csi2_clock))
+		return iris_probe_report(dev, "csi2-camss-gate", PTR_ERR(iris->csi2_clock));
+	 iris->csi0_clock = devm_clk_get(dev, "csi0-camss-clk");
+	if (IS_ERR(iris->csi0_clock))
+		return iris_probe_report(dev, "csi0-camss-gate", PTR_ERR(iris->csi0_clock));
+#endif
 	iris->pins = devm_pinctrl_get(dev);
 	if (IS_ERR(iris->pins))
 		return iris_probe_report(dev, "pinctrl-handle", PTR_ERR(iris->pins));

@@ -1,0 +1,44 @@
+{
+  "build_id": "iris-csi-camt-clocks-01",
+  "purpose": "independently test Windows CAMT supplementary camss_csi2_clk and camss_csi0_clk gates on top of the CSI3 PHY vote; capture pre-stream counter",
+  "kernel_base": "cc84cab9900ee4e7a3046b3756858e9832caee72 with integration patches 0001-0007 and current driver files",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #11",
+  "build_method": "ARM64 Image.gz-dtb using local Linux Docker kernel build environment",
+  "boot_method": "fastboot boot; no partition write",
+  "ram_boot_image_sha256": "994df2c6bb9d9aef3b99d00002d168a90b4d600d4c614e9977b8a4b6970e8975",
+  "ram_boot_image_metadata": {
+    "header_version": 0,
+    "page_size": 4096,
+    "partition_size": 35651584,
+    "kernel_size": 10243999,
+    "ramdisk_size": 1572947,
+    "kernel_address": 32768,
+    "ramdisk_address": 33554432,
+    "tags_address": 31457280,
+    "os_version_word": 536871338,
+    "boot_sha256": "994df2c6bb9d9aef3b99d00002d168a90b4d600d4c614e9977b8a4b6970e8975",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "dtbs": [
+      {
+        "size": 258372,
+        "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+      },
+      {
+        "size": 276067,
+        "sha256": "a4f3ec5a9ebbcf565119e3341bf9defe8ceda6dba56e52400a7b107408066bf3"
+      }
+    ],
+    "id_style": "legacy_empty_dt"
+  },
+  "artifacts": {
+    "Image.gz_sha256": "bf0f586a5899436305702f3355a134c0a27dfe75033d886b718ae4b7cd7774da",
+    "boards.dtb_sha256": "624065909990e8ff44d7fe4e043091f2f21553ae4bfbfed90b1ca508b08d4b01",
+    "driver_sha256": "a11cd048d1d33f02fac4150288509efbad234e067c7e405d5d8db457e418f111",
+    "stream_header_sha256": "deb4c7e86127d618a2b2e11a9f936f90f0fcb7943520301f49dd3e2af3e33d0e",
+    "profile_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5"
+  },
+  "phone_result": "kernel/builds/iris-csi-camt-clocks-01/phone-result.json",
+  "conclusion": "Neither supplementary CAMT gate resolved startup or reception: pre-stream counter was 0x00 and CSID3 packet/ECC/CRC counters remained zero in both clean trials.",
+  "device_restored": "installed kernel #29; three camera services running; flash and torch brightness channels zero",
+  "publication": "local only; no Git push or PR"
+}

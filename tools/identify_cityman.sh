@@ -13,10 +13,30 @@ clock_option=
 trial_settle=
 trial_register=
 trial_value=
+trial_clock=
 if [ "$operation" = csi-trial ]; then
     trial_settle=${2:-}
-    trial_register=${3:-}
-    trial_value=${4:-}
+    arg3=${3:-}
+    arg4=${4:-}
+    arg5=${5:-}
+    case "$arg3" in
+        --observe-mclk|--observe-receiver-clocks)
+            clock_option=$arg3
+            trial_register=
+            trial_value=
+            ;;
+        clock=csi2|clock=csi0)
+            trial_clock=${arg3#clock=}
+            clock_option=$arg4
+            trial_register=
+            trial_value=
+            ;;
+        *)
+            trial_register=$arg3
+            trial_value=$arg4
+            clock_option=$arg5
+            ;;
+    esac
 else
     clock_option=${2:-}
 fi
@@ -178,7 +198,7 @@ finish() {
 [ "$(id -u)" = 0 ] || fail 'Root ADB is required: run adb root, then adb wait-for-device.'
 case "$operation" in identify|nvm-once|stream-once|csi-once|csi2-once|csi-trial|tpg-once) ;; *) fail 'Expected identify, nvm-once, stream-once, csi-once, csi2-once, csi-trial or tpg-once.' ;; esac
 if [ "$operation" = csi-trial ]; then
-    [ "$#" -le 4 ] || fail 'Unexpected extra arguments.'
+    [ "$#" -le 5 ] || fail 'Unexpected extra arguments.'
     case "$trial_settle" in ''|*[!0-9]*|0*) fail 'csi-trial requires a decimal settle value from 1 to 63.' ;; esac
     [ "$trial_settle" -ge 1 ] && [ "$trial_settle" -le 63 ] || fail 'csi-trial settle must be from 1 to 63.'
     if [ -n "$trial_register$trial_value" ]; then
@@ -195,7 +215,7 @@ case "$clock_option" in
         ;;
     --observe-receiver-clocks)
         [ "$receiver_test" = 1 ] || fail 'Receiver clock observation requires csi-once or csi2-once.'
-        clock_targets="$receiver_clock_root/camss_csi3_clk $receiver_clock_root/camss_phy2_csi2phytimer_clk"
+        clock_targets="$receiver_clock_root/camss_csi3phy_clk $receiver_clock_root/camss_csi2_clk $receiver_clock_root/camss_csi0_clk $receiver_clock_root/camss_csi3_clk $receiver_clock_root/camss_phy2_csi2phytimer_clk"
         clock_label=RXCLK
         clock_rounds='1 2 3 4 5 6'
         clock_log_template=/data/local/tmp/cityman-iris-rxclk.XXXXXX
@@ -312,7 +332,11 @@ if [ -n "$clock_option" ]; then
     clock_pid=$!
 fi
 if [ "$operation" = csi-trial ]; then
-    echo "Performing one CSI-2 trial at settle=$trial_settle (VC0)."
+    if [ -n "$trial_clock" ]; then
+        echo "Performing one CSI-2 trial at settle=$trial_settle (VC0) with extra gate $trial_clock."
+    else
+        echo "Performing one CSI-2 trial at settle=$trial_settle (VC0)."
+    fi
 else
     echo "Performing one $operation attempt."
 fi
@@ -322,6 +346,9 @@ write_value=$operation
 [ "$operation" != csi-trial ] || write_value="settle=$trial_settle"
 if [ "$operation" = csi-trial ] && [ -n "$trial_register" ]; then
     write_value="$write_value reg=$trial_register value=$trial_value"
+fi
+if [ "$operation" = csi-trial ] && [ -n "$trial_clock" ]; then
+    write_value="$write_value clock=$trial_clock"
 fi
 printf '%s\n' "$write_value" > "$control"
 exit "$?"

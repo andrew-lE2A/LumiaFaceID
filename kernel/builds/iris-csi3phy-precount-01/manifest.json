@@ -1,0 +1,44 @@
+{
+  "build_id": "iris-csi3phy-precount-01",
+  "purpose": "test Windows-noted camss_csi3phy_clk with an isolated driver clock vote, and record sensor frame counter immediately before stream-on",
+  "kernel_base": "cc84cab9900ee4e7a3046b3756858e9832caee72 with integration patches 0001-0007 and current driver files",
+  "kernel_version": "3.10.108-perf-gcc84cab9 #10",
+  "build_method": "ARM64 Image.gz-dtb in local Linux Docker environment",
+  "boot_method": "fastboot boot; no partition write",
+  "ram_boot_image_sha256": "e3303eaac073a8b7cb9518007ea584a1c7496041d6aee35734a286be4efa9668",
+  "ram_boot_image_metadata": {
+    "header_version": 0,
+    "page_size": 4096,
+    "partition_size": 35651584,
+    "kernel_size": 10243740,
+    "ramdisk_size": 1572947,
+    "kernel_address": 32768,
+    "ramdisk_address": 33554432,
+    "tags_address": 31457280,
+    "os_version_word": 536871338,
+    "boot_sha256": "e3303eaac073a8b7cb9518007ea584a1c7496041d6aee35734a286be4efa9668",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "dtbs": [
+      {
+        "size": 258372,
+        "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+      },
+      {
+        "size": 276019,
+        "sha256": "1bd461579527bddae147af3313f2e790a92edb1d69bf551ba872884439a47caa"
+      }
+    ],
+    "id_style": "legacy_empty_dt"
+  },
+  "artifacts": {
+    "Image.gz_sha256": "79c975a2a6bf3524d1d65e0fee6227c05577d7456e312055acfa213d61a4e87c",
+    "boards.dtb_sha256": "70db097c12aec7abb676cc793c005e12b08f3b1f5cea90d48f4da411eaea6ab1",
+    "driver_sha256": "0a7602b2c06328b1390b56bf00a2854252d89ef4d53141409ae622a661e118c6",
+    "stream_header_sha256": "deb4c7e86127d618a2b2e11a9f936f90f0fcb7943520301f49dd3e2af3e33d0e",
+    "profile_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5"
+  },
+  "phone_result": "kernel/builds/iris-csi3phy-precount-01/phone-result.json",
+  "conclusion": "CSI3 PHY gate activation and an approximately 240 MHz internal measurement did not produce sensor frames or CSID3 packets. Pre-stream counter was already 0x00. Sensor startup/stream sequence and PHY-to-sensor MIPI delivery remain unresolved.",
+  "device_restored": "installed kernel #29; cameraserver, vendor.camera-provider-2-4, and qcamerasvr running; flash/torch brightness channels zero",
+  "publication": "local only; no Git push or PR"
+}

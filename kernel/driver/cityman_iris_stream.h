@@ -61,7 +61,9 @@ struct iris_stream {
 	bool extclk_immediate_valid;
 	u16 extclk_single, control_single, control_pair;
 	int extclk_single_errno, control_single_errno, control_pair_errno;
-	u8 first, last;
+	u8 first, last, counter_before;
+	bool counter_before_valid;
+	int counter_before_errno;
 	unsigned int samples, changes, writes, transactions;
 	u16 before[IRIS_READBACK_COUNT], after[IRIS_READBACK_COUNT];
 	unsigned int before_valid, after_valid;
@@ -142,6 +144,9 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 	memset(s->before, 0xff, sizeof(s->before));
 	memset(s->after, 0xff, sizeof(s->after));
 	s->first = s->last = 0xff;
+	s->counter_before = 0xff;
+	s->counter_before_valid = false;
+	s->counter_before_errno = 0;
 	s->stop_error = 0;
 	/* Even a failed write can have reached the sensor: always attempt stop. */
 	s->entered = true;
@@ -251,6 +256,13 @@ static int iris_stream_start(struct iris_stream *s, const struct iris_stream_io 
 	unsigned int i;
 	u8 value, previous = 0xff;
 	int rc, snapshot_rc;
+	/* Capture the standby/frame-counter state just before the start write. */
+	s->stage = "pre-stream-counter";
+	rc = io->read_bytes(io->context, 0x0005, &s->counter_before, 1);
+	s->counter_before_errno = rc;
+	if (rc)
+		return rc;
+	s->counter_before_valid = true;
 	s->stage = "stream-on";
 	rc = iris_stream_byte(io, 0x0100, 1);
 	/* The original unpause path also writes 0138 after mode select. */

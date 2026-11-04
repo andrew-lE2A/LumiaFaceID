@@ -87,6 +87,25 @@ illuminated attempt is recorded in
 [`phone result`](../kernel/builds/iris-csi-03-ir-on-01/phone-result.json). The phone
 was returned to installed kernel #29 and every LED channel read zero.
 
+A follow-up on the same temporary kernel saved `dmesg` immediately before and
+after one more `torch_0`-illuminated CSI attempt. The source CSIPHY v3.1 handler
+formats interrupt diagnostics as `MIPI_CSIPHY%d_INTERRUPT_STATUS%d = 0x%x`,
+but no new lines in that format appeared in the captured interval. Source
+inspection explains why: `DBG_CSIPHY` is 0, probe requests then disables this
+IRQ, and the only `enable_irq()` call is inside the excluded debug init path.
+The production init used by this kernel never enables it. Therefore, handler
+logs are unavailable by design; this says nothing about physical link activity.
+The test again had no sensor counter changes or CSID3 packets and cleaned up
+normally. Earlier direct status-register snapshots remain the only PHY event
+evidence, but their bits are not decoded. See the
+[IRQ log result](../kernel/builds/iris-csi-03-ir-phylog-01/phone-result.json).
+
+The next instrumented comparison could enable the IRQ only during an exclusive
+iris test. The existing handler clears each status register after logging, so
+that build must capture event logs in place of relying on the post-test raw
+status snapshot and must balance the existing disabled IRQ depth. No such IRQ
+behavior change has been made or tested yet.
+
 ## Original firmware descriptions
 
 [`WOA-Project/Lumia950XLPkg` DSDT](https://github.com/WOA-Project/Lumia950XLPkg/blob/cfc68a4d19fc7e8645bff6d8fce7308ad8494a76/AcpiTables/8994/src/DSDT.asl)

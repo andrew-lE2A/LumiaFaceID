@@ -71,7 +71,13 @@ def validate_nodes(nodes):
         raise ValueError('Unexpected additional power/boost supply')
     if any('flash' in name for name in device):
         raise ValueError('Diagnostic must not bind a flash controller')
-    if device.get('clock-names') != b'cam_src_clk\0cam_clk\0' or len(cells(device, 'clocks')) != 4:
+    clock_names = device.get('clock-names')
+    clock_cells = cells(device, 'clocks')
+    legacy_clocks = clock_names == b'cam_src_clk\0cam_clk\0' and len(clock_cells) == 4
+    csi3phy_clocks = (clock_names ==
+        b'cam_src_clk\0cam_clk\0csi3phy_clk\0csi2-camss-clk\0csi0-camss-clk\0'
+        and len(clock_cells) == 10)
+    if not (legacy_clocks or csi3phy_clocks):
         raise ValueError('Unexpected MCLK binding')
     return {'device': DEVICE, 'pinctrl_provider': TLMM,
             'pins': [14, 102], 'automatic_identification': False,

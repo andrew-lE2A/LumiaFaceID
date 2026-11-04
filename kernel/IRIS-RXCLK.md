@@ -8,6 +8,7 @@ measures two internal receiver branches during the same one-shot cycle:
 | --- | --- | --- |
 | `camss_csi3_clk` | CSID3 core | Initialization requests 240 MHz |
 | `camss_phy2_csi2phytimer_clk` | PHY2 timer used for settle timing | 200 MHz |
+| `camss_csi3phy_clk` | separate CSI3PHY gate | not part of the earlier measurement |
 
 The owner confirmed `measure`, `rate` and `enable` files exist for both clocks.
 These clocks are generated inside the SoC; neither is a recovered MIPI clock
@@ -42,6 +43,82 @@ These internal measurements support the expected
 physical lane activity, valid packets or a delivered image. Another identical
 clock test is not the next step. See the [startup/link audit](../docs/iris-startup-audit.md).
 
+## CSI3PHY gate observation
+
+A later one-shot added read-only `rate`/`enable` polling for
+`camss_csi3phy_clk` and the selected PHY2 branch `camss_csi2phy_clk` while the
+camera services were stopped. In the active iris receiver window,
+`camss_csi3phy_clk` reported 240 MHz / disabled, while `camss_csi2phy_clk`
+reported 240 MHz / enabled; `camss_csi3_clk` was 240 MHz / enabled and the
+PHY2 timer 200 MHz / enabled. The sensor again timed out with no frames or
+CSID3 packets, and cleanup was clean. The full [phone result](builds/iris-csi3phy-clock-01/phone-result.json)
+includes transitional and teardown samples.
+
+The pinned Linux CSIPHY2 device-tree node requests `camss_csi2phy_clk`, not
+`camss_csi3phy_clk`. Existing front-camera sampling also found CSI3PHY disabled.
+The Windows CAMT resource description refers to CSI3 clocks, but its exact
+mapping to this Linux gate and whether it is needed alongside the chosen PHY2
+route are unresolved. No clock was manually enabled. That mapping should be
+checked against the original Windows startup path; a driver-voted comparison
+is recorded below.
+
+### Driver-voted CSI3 PHY comparison and pre-stream counter
+
+Build `iris-csi3phy-precount-01` adds a named `camss_csi3phy_clk` handle to
+the isolated iris node and enables it only around the explicit CSI receiver
+test. It does not change the shared CSID clock table. It also records sensor
+register `0x0005` immediately before the `0x0100=1` stream-on write. The
+temporary image was RAM-booted; the installed kernel was not written.
+
+The pre-stream counter was already `0x00` (valid, errno 0). With the CSI3 PHY
+gate voted on, a hardware clock measurement reached 239,999,157 Hz. The sensor
+still timed out: all 16 post-start counter samples were `0x00`, and CSID3
+packet/ECC/CRC counts remained zero. Sensor stop, receiver release, and overall
+cleanup returned zero. All camera services were running after cleanup, and
+the phone returned to installed kernel #29. See the complete
+[build manifest](builds/iris-csi3phy-precount-01/manifest.json) and
+[phone result](builds/iris-csi3phy-precount-01/phone-result.json).
+
+This closes the CSI3 PHY gate-off question for this driver path, but does not
+prove the clock waveform reaches the sensor or establish MIPI reception. The
+`0x00` pre-value also does not distinguish standby from a transition into
+streaming. Next source-backed clock comparisons are the separate CAMT votes
+for `camss_csi2_clk` and `camss_csi0_clk`; their independent tests are below.
+
+### CAMT supplementary clock comparisons
+
+Build `iris-csi-camt-clocks-01` adds root-only `csi-trial` selectors for
+`clock=csi2` and `clock=csi0`. Each trial adds exactly one CAMSS gate to the
+baseline CSI3 PHY vote, then releases it during cleanup. The six-round
+read-only sampler was extended to include both selected gates.
+
+The `csi2` trial measured `camss_csi2_clk` at 240,000,109 Hz while enabled; the
+`csi0` trial measured `camss_csi0_clk` at 240,001,940 Hz while enabled. In both
+trials the pre-stream counter was `0x00`, all 16 post-start samples remained
+`0x00`, and CSID3 packet/ECC/CRC counts stayed zero. Both cleanly released
+sensor and receiver resources and restored the camera services. The phone
+returned to installed kernel #29. Full samples and outputs are in the
+[CAMT clock build manifest](builds/iris-csi-camt-clocks-01/manifest.json) and
+[phone result](builds/iris-csi-camt-clocks-01/phone-result.json).
+
+These two source-listed clock votes did not resolve sensor startup or link
+reception. The next useful branch is to establish whether the programmed
+stream profile reaches a valid sensor mode and begins MIPI transmission. The
+current pre-counter remains `0x00` before stream-on, so investigate the sensor
+startup sequence against the Windows driver (especially initialization order
+and the profile's execution context) before another receiver-clock sweep.
+
+### Front-camera CSID3 positive control
+
+The follow-up [CSID3 control](IRIS-CSID3-CONTROL.md#external-csid3-positive-control-with-the-csi3-phy-gate)
+adds the CSI3 PHY gate to the CSID3 device clock list and routes the working
+front camera to CSID3. Aperture then produced 416 preview frames; CSID3
+released 1,094,240 packets with IRQ `0x55` and zero ECC/CRC. This is a positive
+control for CSID3's lower PHY2 lane path when its CSI3 PHY gate is enabled.
+An iris trial on the same boot still had a zero pre-counter, zero frame changes,
+and zero CSID3 packets. The known-good lower-lane input now works; the iris
+upper-combo path or sensor transmission remains the gap.
+
 ## Reproduction on a fresh temporary boot
 
 Use the updated helper from GitHub. Keep the existing kernel #8 image and
@@ -70,8 +147,9 @@ restoration. After clean restoration, check both normal cameras and report
 their behavior. Follow `REBOOT_REQUIRED` if printed. Do not retry on the same
 boot. The sensor's unchanged-counter timeout is independent of this observation.
 
-One background sampler alternates between the two clocks for six rounds,
-twelve measurements total. The clocks share a hardware debug mux, so they
+The updated helper samples five clocks for six rounds (30 samples); earlier
+results have two- or three-clock logs. The clocks share a hardware debug mux,
+so they
 must not be measured by independent concurrent samplers. Readings are saved in
 `/data/local/tmp/cityman-iris-rxclk.*` and printed before service restoration.
 Missing files cause refusal before services stop. The helper never writes

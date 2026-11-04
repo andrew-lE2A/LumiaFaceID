@@ -1,0 +1,28 @@
+--- a/arch/arm/boot/dts/qcom/msm8994-camera.dtsi
++++ b/arch/arm/boot/dts/qcom/msm8994-camera.dtsi
+@@ -185,10 +185,11 @@
+ 			<&clock_mmss clk_camss_csi3_ahb_clk>,
+ 			<&clock_mmss clk_camss_csi3rdi_clk>,
+ 			<&clock_mmss clk_camss_csi3pix_clk>,
+-			<&clock_mmss clk_camss_ahb_clk>;
++			<&clock_mmss clk_camss_ahb_clk>,
++			<&clock_mmss clk_camss_csi3phy_clk>;
+ 		clock-names = "camss_top_ahb_clk",
+ 			"ispif_ahb_clk", "csi_clk", "csi_ahb_clk",
+ 			"csi_src_clk", "csi_rdi_clk",
+-			 "csi_pix_clk", "camss_ahb_clk";
+-		qcom,clock-rates = <0 0 240000000 0 0 0 0 0>;
++			 "csi_pix_clk", "camss_ahb_clk", "csi_phy_clk";
++		qcom,clock-rates = <0 0 240000000 0 0 0 0 0 0>;
+ 	};
+--- a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
++++ b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
+@@ -241,7 +241,7 @@
+ 	qcom,camera@1 {
+ 		cell-index = <1>;
+ 		compatible = "qcom,camera";
+ 		reg = <0x1>;
+ 		qcom,csiphy-sd-index = <2>;
+-		qcom,csid-sd-index = <2>;
++		qcom,csid-sd-index = <3>;
+ 		qcom,mount-angle = <90>;

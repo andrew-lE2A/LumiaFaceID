@@ -33,9 +33,10 @@ backup's SHA-256 before rebooting to the installed system.
 
 ## What this changes
 
-CSID3 has **no positive input control**. The failure with a working sensor
-makes receiver routing/configuration a concrete unresolved branch; zero iris
-packets must not be attributed solely to sensor startup. This result does not
+At the time of this control CSID3 had **no positive input control**. The
+failure with a working sensor made receiver routing/configuration a concrete
+unresolved branch; zero iris packets could not be attributed solely to sensor
+startup. This result does not
 prove a defective CSID3, a supported PHY2-to-CSID3 hardware connection, or that
 the iris sensor transmits. The control uses lower normal lanes, while iris uses
 upper combo lanes and a different CSID control flag. It therefore cannot
@@ -431,3 +432,28 @@ though the direct PHY readbacks were `0x16`. The local source formatter now
 prints the configured constant; that reporting fix was not included in the
 tested image. The source-derived timing comparison did not create packets, so
 mode startup and the physical MIPI link remain unresolved.
+
+## External CSID3 positive control with the CSI3 PHY gate
+
+The local [experiment patch](experiments/csid3-csi3phy-front-control.patch)
+adds `camss_csi3phy_clk` as the ninth clock on the CSID3 node and routes the
+ordinary front camera from CSID2 to CSID3. Kernel #11 and its ramdisk were
+unchanged; only those DT properties differed. The test used `fastboot boot`.
+
+With Aperture camera ID 1 active, CameraService reported 416 SurfaceView
+frames and latest sensor metadata frame count 413. CSID3 released with
+1,094,240 packets, IRQ `0x55`, one captured lane-event sample, and zero
+ECC/CRC. During preview, `camss_csi3phy_clk` and `camss_csi3_clk` were enabled;
+the selected PHY2 timer was enabled. This is a positive lower-lane input
+control. Earlier CSID3 front controls without the CSI3 PHY gate produced zero
+frames and packets.
+
+On the same temporary boot, the iris upper-combo trial still returned `-110`.
+Its pre-stream counter was `0x00`, all 16 samples stayed `0x00`, and CSID3
+packet/ECC/CRC counters were zero despite the gate being available. Cleanup was
+clean, all camera services were restored, and the phone returned to installed
+kernel #29 with torch/flash off. The gate therefore fixes the tested front
+camera CSID3 control but does not fix iris reception. The remaining split is
+sensor startup/transmission versus the PHY2 upper-combo route. See the
+[manifest](builds/iris-csi3phy-front-control-01/manifest.json) and
+[phone result](builds/iris-csi3phy-front-control-01/phone-result.json).

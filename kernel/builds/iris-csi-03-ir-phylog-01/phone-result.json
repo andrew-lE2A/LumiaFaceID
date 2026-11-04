@@ -1,0 +1,49 @@
+{
+  "test_id": "iris-csi-03-ir-phylog-01",
+  "operation": "single CSI diagnostic with front IR torch enabled and PHY handler log inspection",
+  "local_only": true,
+  "phone": {
+    "model": "Lumia 950 XL (cityman)",
+    "rom": "LineageOS 23.2 / Android 16",
+    "temporary_kernel": "3.10.108-perf-gcc84cab9 #8",
+    "installed_kernel_after_reboot": "3.10.108-perf-gcc84cab9 #29"
+  },
+  "boot_method": "fastboot boot; no partition was flashed",
+  "illumination": {
+    "channel": "led:torch_0",
+    "sysfs_brightness_requested": 14,
+    "timing": "set before the one-shot; a 30-second automatic shutoff was armed",
+    "final_brightness_all_channels": 0
+  },
+  "sensor": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+    "frame_counter_samples": 16,
+    "frame_counter_first": "0x00",
+    "frame_counter_last": "0x00",
+    "frame_counter_changes": 0,
+    "profile_program_writes": 117,
+    "program_transactions": 50,
+    "stop_errno": 0
+  },
+  "receiver": {
+    "result": "requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=20 before_valid=1 after_valid=1 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003"
+  },
+  "phy_interrupt_log_observation": {
+    "source": "/private/tmp/lumia-local-build/kernel/drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.c",
+    "handler_log_format": "MIPI_CSIPHY%d_INTERRUPT_STATUS%d = 0x%x",
+    "method": "dmesg was saved immediately before the one-shot and compared with the post-run log; the post-run log was also filtered for the handler format",
+    "new_handler_status_lines": 0,
+    "source_explanation": "In the pinned driver source, DBG_CSIPHY is 0. Probe requests the IRQ and immediately disables it. The only enable_irq call is inside the DBG_CSIPHY=1 implementation of msm_csiphy_init, which is excluded from this build; the active non-debug init does not enable it. Release disables it again. Thus the missing handler lines are expected for this kernel setup.",
+    "interpretation": "The normal CSIPHY IRQ handler cannot provide link-event logs in this diagnostic build because the IRQ remains disabled. The separately sampled raw status registers remain available, but are not decoded and do not establish whether valid MIPI signaling reached the receiver."
+  },
+  "recovery": {
+    "camera_services_running": [
+      "cameraserver",
+      "vendor.camera-provider-2-4",
+      "qcamerasvr"
+    ],
+    "returned_to_installed_kernel": true,
+    "all_led_channels_off": true
+  },
+  "interpretation": "With the front IR torch enabled, no sensor frame-counter change or CSID3 packets were observed. Unlike the prior raw status-register snapshots, the normal CSIPHY IRQ handler produced no status log lines in the captured interval. The reason for this logging gap is unresolved; it must not be read as decoded evidence about the physical MIPI signal."
+}

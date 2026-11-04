@@ -34,17 +34,24 @@ profile registers correctly. Therefore the zero `0x0136` readback alone is not
 proof that the EXTCLK write failed. Internal MCLK measurement likewise does not
 prove a signal reaches the sensor pin.
 
-The sensor-side sequence is not the only unresolved branch. Previous phone
-evidence found that a working front camera also delivered zero frames when
-routed through CSID3. This keeps CSID3 input routing as an independent issue;
-further sensor-register changes cannot repair that control result.
+The sensor-side sequence is not the only unresolved branch. A newer temporary
+DT control added `camss_csi3phy_clk` to the CSID3 clock list and routed the
+working front camera through CSID3. The preview produced 416 frames and CSID3
+counted 1,094,240 packets with no ECC or CRC errors. This establishes a working
+lower-lane CSID3 path when that gate is enabled. On the same boot, the iris
+upper-combo trial still timed out: the pre-stream sensor counter was zero, all
+16 samples stayed zero, and CSID3 counted no packets. See the
+[front-control result](../kernel/builds/iris-csi3phy-front-control-01/phone-result.json).
 
 ## Next source-backed investigation
 
-The timing comparison did not reveal a startup fix. The remaining software
-lead is the exact CAMT sensor power/reset dependency sequence versus Linux's
-four-rail sequence; CAMT's additional boost rail may serve the illuminator and
-must not be treated as a sensor rail without source proof. Receiver routing
-also remains independently unresolved because a working front camera failed
-when routed to CSID3. Do not replay opaque DCC/NVM blocks or enable boost as a
-follow-up to this negative test.
+The timing comparison and available clock-gate trials did not reveal a sensor
+startup fix. The remaining source-backed lead is to recover the exact CAMT
+power/reset and CSI setup ordering, including which execution context enables
+the upper-combo route. The lower-lane positive control means CSID3 itself can
+receive a valid stream with the CSI3 PHY gate enabled, but it does not validate
+PHY2's upper combo lanes or the iris sensor's MIPI output. Compare the iris
+driver's complete register/CCI transaction order and CAMT power sequence before
+changing sensor registers. CAMT's additional boost rail may serve the
+illuminator and must not be treated as a sensor rail without source proof; do
+not replay opaque DCC/NVM blocks or enable boost based on the current evidence.

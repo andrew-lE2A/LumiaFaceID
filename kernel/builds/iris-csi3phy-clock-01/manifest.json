@@ -1,0 +1,19 @@
+{
+  "build_id": "iris-csi3phy-clock-01",
+  "purpose": "read-only active-window observation of the CAMSS CSI3 PHY gate and the selected PHY2/CSID3 clock branches",
+  "kernel_build_reused": "iris-csi-03",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #8",
+  "boot_method": "fastboot boot; no partition write",
+  "temporary_boot_image_sha256": "621aab7c03a7be3a5f38aa34a1ba81ed5be1420f963f344ca1d8b595f8ef5a4e",
+  "clock_observation": {
+    "method": "read-only debugfs rate/enable polling while all camera services were stopped for the one-shot; no clock measure/rate/enable/parent controls were written",
+    "sampler_artifact": "local temporary sampler; not part of the repository"
+  },
+  "phone_result": "kernel/builds/iris-csi3phy-clock-01/phone-result.json",
+  "capture_status": "camss_csi3phy_clk remained disabled while selected PHY2, CSID3 core, and PHY2 timer were enabled; sensor timed out with zero frames; cleanup clean; phone returned to installed kernel #29",
+  "limitations": [
+    "Software debugfs enable/rate values do not prove clock waveform delivery.",
+    "The Linux PHY2 device-tree node requests camss_csi2phy_clk; mapping the Windows CAMT CSI3 resource to this Linux CSI3PHY branch is unresolved.",
+    "No clock was manually enabled during this comparison."
+  ]
+}

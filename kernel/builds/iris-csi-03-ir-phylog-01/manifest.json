@@ -1,0 +1,22 @@
+{
+  "build_id": "iris-csi-03-ir-phylog-01",
+  "purpose": "capture CSIPHY kernel handler log output during one IR-illuminated CSI attempt",
+  "kernel_build_reused": "iris-csi-03",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #8",
+  "boot_method": "fastboot boot; no partition write",
+  "temporary_boot_image_sha256": "621aab7c03a7be3a5f38aa34a1ba81ed5be1420f963f344ca1d8b595f8ef5a4e",
+  "private_profile": {
+    "decoded_bytes": 351,
+    "decoded_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+    "embedded_in_kernel": false
+  },
+  "additional_observation": "CSIPHY IRQ handler status log lines around the one-shot",
+  "phone_result": "kernel/builds/iris-csi-03-ir-phylog-01/phone-result.json",
+  "capture_status": "no PHY handler status lines because the pinned non-debug CSIPHY path leaves its IRQ disabled; no sensor frames or CSID3 packets; cleanup clean; phone returned to installed kernel #29",
+  "limitations": [
+    "The CSIPHY IRQ is requested then disabled at probe; its only enable_irq call is excluded by DBG_CSIPHY=0, so handler logs are unavailable in this build.",
+    "The raw PHY status snapshot values have no verified MSM8994 CSIPHY v3.1 bit decode.",
+    "Enabling the IRQ for future diagnostic logging would let the handler clear status registers and would change the current passive observation behavior.",
+    "The profile file remains private and was copied only to the phone's temporary data directory."
+  ]
+}

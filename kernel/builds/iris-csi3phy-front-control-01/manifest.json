@@ -1,0 +1,41 @@
+{
+  "build_id": "iris-csi3phy-front-control-01",
+  "purpose": "positive control: route working front camera to CSID3 with camss_csi3phy_clk included in the CSID3 DT clock list, then compare the iris upper-combo path on the same boot",
+  "kernel_base": "cc84cab9900ee4e7a3046b3756858e9832caee72, integration patches 0001-0007, #11 iris driver; kernel binary unchanged from iris-csi-camt-clocks-01",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #11",
+  "boot_method": "fastboot boot; no partition write",
+  "ram_boot_image_sha256": "c97ea35f4202bf046a690e66d2ccf56b014febe4f6353ca631bdc035095a3ad6",
+  "ram_boot_image_metadata": {
+    "header_version": 0,
+    "page_size": 4096,
+    "partition_size": 35651584,
+    "kernel_size": 10244023,
+    "ramdisk_size": 1572947,
+    "kernel_address": 32768,
+    "ramdisk_address": 33554432,
+    "tags_address": 31457280,
+    "os_version_word": 536871338,
+    "boot_sha256": "c97ea35f4202bf046a690e66d2ccf56b014febe4f6353ca631bdc035095a3ad6",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "dtbs": [
+      {
+        "size": 258372,
+        "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+      },
+      {
+        "size": 276091,
+        "sha256": "ea9e3d387dbfa5e2d56dd01a96f4f5dee156647abae4b7877a7ddf308f0be7f8"
+      }
+    ],
+    "id_style": "legacy_empty_dt"
+  },
+  "artifacts": {
+    "Image.gz_sha256": "bf0f586a5899436305702f3355a134c0a27dfe75033d886b718ae4b7cd7774da",
+    "boards.dtb_sha256": "32e7f2593f463fcf7ad7546a5baaf7b02ccf9a7aa2f0c61a1f1b427be7927799",
+    "front_control_experiment": "kernel/experiments/csid3-csi3phy-front-control.patch"
+  },
+  "phone_result": "kernel/builds/iris-csi3phy-front-control-01/phone-result.json",
+  "conclusion": "The CSID3 CSI3-PHY gate enabled a positive front-camera lower-lane control (416 preview frames, 1,094,240 packets, IRQ 0x55, zero ECC/CRC). The iris upper-combo test still timed out with zero frames/packets despite the same gate being enabled.",
+  "device_restored": "installed kernel #29; camera services running; flash and torch brightness channels zero",
+  "publication": "local only; no Git push or PR"
+}
