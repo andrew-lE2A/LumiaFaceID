@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-11-03T23:20:31Z",
+  "build_id": "iris-csid3-tpg-01",
+  "operation": "tpg-once",
+  "boot_method": "fastboot boot; temporary only",
+  "diagnostic_output": "requested=1 stage=released errno=0 cleanup_errno=0 version=0x30010003 before_valid=1 after_valid=1 packets_before=2 packets_after=176467 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 irq_before=0x00000000 irq_after=0x00000000 ctrl_before=0x00a06437 ctrl_after=0x00a06437 vc_before=0x10100000 vc_after=0x10100000 dt0_before=0x032001e0 dt0_after=0x032001e0 dt1_before=0x0000002b dt1_after=0x0000002b dt2_before=0x00000000 dt2_after=0x00000000",
+  "sensor_accessed": false,
+  "mclk_enabled": false,
+  "csiphy_or_phy2_enabled": false,
+  "ir_illumination": "disabled",
+  "iris_result_after": "status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0",
+  "interpretation": "The CSID3 test generator produced counted packets with no ECC/CRC errors. This confirms internal CSID3 generation and counter readout only; it does not demonstrate an external MIPI signal, PHY2 acquisition, or iris sensor output.",
+  "camera_services_after_test": {
+    "cameraserver": "running",
+    "vendor.camera-provider-2-4": "running",
+    "qcamerasvr": "running"
+  },
+  "return_to_installed_kernel": {
+    "verified": true,
+    "kernel_build": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "cameraserver": "running",
+    "vendor.camera-provider-2-4": "running",
+    "qcamerasvr": "running",
+    "camera_device_count": 2,
+    "active_camera_clients": 0
+  },
+  "installed_boot_partition_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "illumination": "IR disabled",
+  "publication": "local only"
+}

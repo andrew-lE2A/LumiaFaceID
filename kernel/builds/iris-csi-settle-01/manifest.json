@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-settle-01",
+  "kernel_build_number": 17,
+  "purpose": "Single-variable CSI PHY settle comparison using Windows-derived mode timing",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus local changes",
+  "compiled_driver_source_sha256": "5d72783609b57b5145b2dbb0cf2e04083c5abba83edbe463d69e7c345da21d85",
+  "compiled_csi_header_sha256": "4ad9aaac416480c4a82e76c48f67241ef868f5a79140c86bb8497d7a86b254ba",
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "build_result": "passed; ARM64 kernel linked",
+  "files": {
+    "Image.gz": "1bb55b5f3fc2bc262fdefdb6613c7d07aaa1e1a07a90a7755687bc579373693e",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+    "temporary_boot_image": "674807003e188c7118bd87918187d30a135d0b2d26a48f0913bc12f371d063aa"
+  },
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "repack_validation": {
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "partition_size_bytes": 35651584,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "phone_test": {
+    "device": "Lumia 950 XL cityman",
+    "kernel": "#17",
+    "operation": "csi2-once",
+    "configured_settle_ticks": 22,
+    "ir_illumination": "disabled",
+    "result": "no frame-counter change; no CSID packets",
+    "cleanup_errno": 0,
+    "camera_services_restored": true,
+    "returned_to_installed_kernel": "#29"
+  },
+  "publication": "local only; no push or PR"
+}

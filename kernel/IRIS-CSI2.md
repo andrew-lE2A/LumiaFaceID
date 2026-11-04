@@ -39,10 +39,56 @@ camera services restarted, and the owner confirmed both normal cameras still
 work as before. The selected values are saved in
 [phone-result.json](builds/iris-csi-03/phone-result.json).
 
+### Follow-up comparison on kernel #13
+
+The later [CAMSS TOP observer build](builds/iris-csi-top-02/manifest.json)
+repeated both `csi-once` and `csi2-once` with active-only mux snapshots. The
+explicit CSI-2 run again read `0x0111=2` before and after stream-on, but the
+frame counter and CSID packet count remained zero. At the same time the
+Windows-noted CAMSS TOP fields were present: `0xfda00040=0x30` while PHY2 was
+powered and `0xfda00044=0x03` before and during the run. Thus neither the
+missing interface selection nor the missing TOP select bit explains the
+current no-packet result. The detailed
+[csi2-once record](builds/iris-csi-top-02/csi2-phone-result.json) includes the
+PHY status words, which still need a hardware-version-specific decode.
+
 The next [MCLK observation](IRIS-MCLK.md) reuses this kernel and profile with
 an updated helper. The reproduction instructions below document the completed
 interface comparison; another identical run without added observation would
 not answer the unresolved clock question.
+
+## Runtime settle comparison: iris-csi-trials-01
+
+Kernel #19 adds a temporary-boot-only `csi_trial` control. It accepts only
+settle values 20, 22, and 24, fixes CSI-2 and VC0, requires a loaded private
+stream profile, and allows at most three attempts after clean teardown. It
+does not expose arbitrary register writes. This allowed all three settle
+points to be tested in one fastboot boot.
+
+All three requested values read back in both the CSIPHY configuration and
+captured receiver registers. Each attempt identified model `0x0861`, completed
+117 profile writes, and sampled the sensor frame counter 16 times. The counter
+stayed at `0x00`; CSID packet, ECC, and CRC counts stayed at zero. Sensor stop,
+PHY/CSID release, and overall cleanup returned zero on every attempt. The
+same raw PHY IRQ bits (`status3=0x4`, `status4=0x4`, `status6=0x10`) appeared
+at all three values. Their meaning remains undecoded, so this comparison does
+not establish that MIPI HS signaling reached the receiver.
+
+Kernel #21 extended the sweep to the accepted edge values 1 and 63. Both trials
+still returned zero packets and zero sensor-counter changes. At both edges
+`status4` became `0x14`, while status3 stayed `0x4` and status6 stayed `0x10`.
+The receiver registers read back the requested settle value. This shows a
+repeatable change in a raw PHY status word at the extremes, but it does not
+identify the bit or establish valid MIPI reception. Full outputs are preserved
+in [the edge trial evidence](builds/iris-csi-settle-edges-01/phone-result.json).
+
+Kernel #19 was loaded with `fastboot boot`; no partition was flashed. The
+phone was rebooted to installed kernel #29 afterward, with all three camera
+services running. Detailed results are in
+[phone-result.json](builds/iris-csi-trials-01/phone-result.json), and build
+hashes and boot validation are in
+[manifest.json](builds/iris-csi-trials-01/manifest.json). The original boot
+backup and private profile were preserved. Publication remains local only.
 
 ## Prepare on the Mac
 
@@ -126,3 +172,21 @@ All 99 host tests pass, including 21 receiver lifecycle scenarios and nine
 sensor/receiver integration scenarios. The complete ARM64 kernel #8 build
 passed. A private repack preserved the original ramdisk, boot settings and
 partition size. The uploaded profile and compiled DTBs are unchanged.
+
+### Follow-up: Windows-derived PHY settle on kernel #17
+
+The matched mode calculation yields a 350.4 MHz DDR clock (70.08 MHz pixel
+rate, RAW10, one lane). With the measured/requested 200 MHz PHY timer, the
+Windows settle equation gives 22 ticks. Kernel #17 applied this as `0x16`;
+the PHY clock and data settle registers both read back `0x16`. The sensor
+counter remained unchanged and CSID3 packet/ECC/CRC counts stayed zero, with
+clean teardown and camera service restoration. See the [saved result](builds/iris-csi-settle-01/phone-result.json).
+This closes only the settle-count comparison; startup and physical link
+activity remain unresolved.
+
+Kernel #18 added the sensor VC field write that Windows performs dynamically.
+The register already read `0x00` after reset and mode setup; the explicit VC0
+write and both snapshots confirmed `0x00`. With CSID3 configured for CID0,
+this closes the VC mismatch lead for the tested configuration. The sensor
+counter and CSID3 packet/ECC/CRC counts still remained zero, with clean cleanup
+and restored services. See the [VC test result](builds/iris-csi-vc-01/phone-result.json).

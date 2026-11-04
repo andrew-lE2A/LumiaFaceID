@@ -1,0 +1,73 @@
+{
+  "build_id": "iris-csid3-tpg-01",
+  "kernel_build_number": 12,
+  "purpose": "CSID3 internal test-generator counter validation; no sensor, PHY2, MCLK, or IR control",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210",
+  "patches": [
+    "kernel/patches/0001-camera-restore-slave-read-state.patch",
+    "kernel/patches/0002-cityman-iris-id-integration.patch",
+    "kernel/patches/0003-cityman-iris-stream-option.patch",
+    "kernel/patches/0004-cityman-iris-csi-option.patch",
+    "kernel/patches/0005-cityman-csid-lane-irq.patch",
+    "kernel/patches/0006-cityman-csid-tpg-observation.patch"
+  ],
+  "patch_0006_sha256": "26bdba99aeca6b6aa981fe85d788608fbd4c9f5bf52baca29fbef2cfe8b468d9",
+  "driver_source_sha256": {
+    "kernel/driver/cityman_iris_id.c": "d6b7976a3aceb76232c83c9ee9a6d6e0edbeb37873c5dd4bdf003f0c7747ea38",
+    "kernel/driver/cityman_iris_csi.h": "5090663a836cbff72cffdd9ecc7ed13d05046a7be662efea703425206aedf972"
+  },
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "configuration_byte_identical_to": "iris-csi-03",
+  "dtbs_byte_identical_to": "iris-csi-03",
+  "files": {
+    "Image.gz": "b2fcedf91abf72cc86e5d183d10f0400bf4772eb5551d80b40c94efc895d39fe",
+    "boards.dtb": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24"
+  },
+  "temporary_boot_image_sha256": "1387b640032e1600061115c11c0cf1c9f67086845fc0d7a8abaed46c2cb3880c",
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "private_repack_validation": {
+    "ramdisk_unchanged": true,
+    "boot_settings_unchanged": true,
+    "partition_size_unchanged": true,
+    "boot_id_verified": true,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "build_result": "passed; CSID TPG object and full kernel linked",
+  "phone_test": {
+    "collected_at_utc": "2026-11-03T23:20:31Z",
+    "device": "Lumia 950 XL cityman",
+    "temporary_kernel": "3.10.108-perf-gcc84cab9 #12 SMP PREEMPT Tue Nov 3 18:24:54 UTC 2026",
+    "operation": "tpg-once",
+    "sensor_powered": false,
+    "mclk_enabled": false,
+    "phy2_enabled": false,
+    "ir_illumination": "disabled",
+    "csid_version": "0x30010003",
+    "packets_before": 2,
+    "packets_after": 176467,
+    "ecc_before_after": [0, 0],
+    "crc_before_after": [0, 0],
+    "tpg_control_before_after": ["0x00a06437", "0x00a06437"],
+    "tpg_vc_before_after": ["0x10100000", "0x10100000"],
+    "tpg_dt0_before_after": ["0x032001e0", "0x032001e0"],
+    "tpg_dt1_before_after": ["0x0000002b", "0x0000002b"],
+    "diagnostic_cleanup_errno": 0,
+    "iris_driver_result": "status=ready stage=idle errno=0 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0",
+    "camera_services_restored": true,
+    "return_to_installed_kernel": {
+      "verified": true,
+      "kernel_build": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running",
+      "camera_devices": 2,
+      "active_camera_clients": 0
+    }
+  },
+  "interpretation": "CSID3 internal packet generation and packet counting work. This does not test the sensor transmitter or PHY2-to-CSID3 physical link.",
+  "publication": "local only; no GitHub push or PR"
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "collected_at_local_date": "2026-11-04",
+  "build_id": "iris-csi-settle-edges-01",
+  "kernel_build_number": 21,
+  "boot_method": "existing fastboot boot; no reboot or partition flash during trials",
+  "operation": "two bounded csi-trial runs on the existing runtime kernel",
+  "starting_state": {
+    "attempts": 4,
+    "blocked": 0,
+    "cleanup_errno": 0,
+    "profile_loaded": true,
+    "camera_services": "running"
+  },
+  "trials": [
+    {
+      "settle": 1,
+      "model": "0x0861",
+      "profile_writes": 117,
+      "frame_counter_samples": 16,
+      "frame_counter_first": "0x00",
+      "frame_counter_last": "0x00",
+      "frame_counter_changes": 0,
+      "sensor_error": -110,
+      "packets": 0,
+      "ecc": 0,
+      "crc": 0,
+      "phy_settle_readback": "0x01",
+      "phy_irq_status_words": ["0x00", "0x00", "0x00", "0x04", "0x14", "0x00", "0x10", "0x00"],
+      "sensor_stop_errno": 0,
+      "receiver_release_errno": 0,
+      "cleanup_errno": 0
+    },
+    {
+      "settle": 63,
+      "model": "0x0861",
+      "profile_writes": 117,
+      "frame_counter_samples": 16,
+      "frame_counter_first": "0x00",
+      "frame_counter_last": "0x00",
+      "frame_counter_changes": 0,
+      "sensor_error": -110,
+      "packets": 0,
+      "ecc": 0,
+      "crc": 0,
+      "phy_settle_readback": "0x3f",
+      "phy_irq_status_words": ["0x00", "0x00", "0x00", "0x04", "0x14", "0x00", "0x10", "0x00"],
+      "sensor_stop_errno": 0,
+      "receiver_release_errno": 0,
+      "cleanup_errno": 0
+    }
+  ],
+  "final_state": {
+    "attempts": 6,
+    "blocked": 0,
+    "cleanup_errno": 0,
+    "camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    }
+  },
+  "interpretation": {
+    "settle_edge_change_repeatable": "PHY IRQ status word 4 was 0x14 at both edge settings; prior tested settings 20, 22, and 24 showed 0x04",
+    "bit_meaning": "unknown",
+    "incoming_mipi_activity_established": false,
+    "image_frames_delivered": false,
+    "root_cause": "unresolved"
+  },
+  "ir_illumination": "disabled",
+  "kernel_partition_flashed": false,
+  "publication": "local only"
+}

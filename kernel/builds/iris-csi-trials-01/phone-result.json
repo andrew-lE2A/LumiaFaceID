@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "device": "Lumia 950 XL cityman",
+  "adb_serial": "d7baece4",
+  "kernel": 19,
+  "boot_method": "fastboot boot; temporary RAM boot",
+  "installed_boot_partition_written": false,
+  "profile": "existing private profile, uploaded once to temporary /data/local/tmp",
+  "ir_illumination": "disabled",
+  "trials": [
+    {
+      "settle": 20,
+      "settle_readback_hex": "0x14",
+      "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+      "stream": {
+        "samples": 16,
+        "first_counter": "0x00",
+        "last_counter": "0x00",
+        "changes": 0,
+        "program_writes": 117,
+        "program_transactions": 50,
+        "readback_errno": 0,
+        "stop_errno": 0,
+        "interface_csi2_requested": 1,
+        "vc_before": "0x00"
+      },
+      "receiver": {
+        "stage": "released",
+        "errno": 0,
+        "cleanup_errno": 0,
+        "csid_version": "0x30010003",
+        "packets_before_after": [0, 0],
+        "ecc_before_after": [0, 0],
+        "crc_before_after": [0, 0],
+        "phy_irq_status_after": ["0x00000000", "0x00000000", "0x00000000", "0x00000004", "0x00000004", "0x00000000", "0x00000010", "0x00000000"]
+      },
+      "camera_services_restored": true
+    },
+    {
+      "settle": 22,
+      "settle_readback_hex": "0x16",
+      "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=2 blocked=0 rail_uv=1200000",
+      "stream": {
+        "samples": 16,
+        "first_counter": "0x00",
+        "last_counter": "0x00",
+        "changes": 0,
+        "program_writes": 117,
+        "program_transactions": 50,
+        "readback_errno": 0,
+        "stop_errno": 0,
+        "interface_csi2_requested": 1,
+        "vc_before": "0x00"
+      },
+      "receiver": {
+        "stage": "released",
+        "errno": 0,
+        "cleanup_errno": 0,
+        "csid_version": "0x30010003",
+        "packets_before_after": [0, 0],
+        "ecc_before_after": [0, 0],
+        "crc_before_after": [0, 0],
+        "phy_irq_status_after": ["0x00000000", "0x00000000", "0x00000000", "0x00000004", "0x00000004", "0x00000000", "0x00000010", "0x00000000"]
+      },
+      "camera_services_restored": true
+    },
+    {
+      "settle": 24,
+      "settle_readback_hex": "0x18",
+      "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=3 blocked=0 rail_uv=1200000",
+      "stream": {
+        "samples": 16,
+        "first_counter": "0x00",
+        "last_counter": "0x00",
+        "changes": 0,
+        "program_writes": 117,
+        "program_transactions": 50,
+        "readback_errno": 0,
+        "stop_errno": 0,
+        "interface_csi2_requested": 1,
+        "vc_before": "0x00"
+      },
+      "receiver": {
+        "stage": "released",
+        "errno": 0,
+        "cleanup_errno": 0,
+        "csid_version": "0x30010003",
+        "packets_before_after": [0, 0],
+        "ecc_before_after": [0, 0],
+        "crc_before_after": [0, 0],
+        "phy_irq_status_after": ["0x00000000", "0x00000000", "0x00000000", "0x00000004", "0x00000004", "0x00000000", "0x00000010", "0x00000000"]
+      },
+      "camera_services_restored": true
+    }
+  ],
+  "camss_top_after_each_trial": {
+    "camss_top_40_before_after": ["0x00000000", "0x00000030"],
+    "camss_top_44_before_after": ["0x00000003", "0x00000003"]
+  },
+  "final_action": "rebooted to installed kernel; confirmed all three camera services running",
+  "interpretation": "All tested settle values program and read back correctly, but none produces sensor frame-counter movement or CSID packet/error counters. The repeated PHY IRQ signature does not vary with settle. This test does not identify the root cause or establish that a physical MIPI HS clock/data signal exists."
+}

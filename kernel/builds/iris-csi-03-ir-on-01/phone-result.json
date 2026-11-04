@@ -1,0 +1,72 @@
+{
+  "test_id": "iris-csi-03-ir-on-01",
+  "operation": "single iris sensor/CSID3 diagnostic with front IR torch enabled",
+  "local_only": true,
+  "phone": {
+    "model": "Lumia 950 XL (cityman)",
+    "rom": "LineageOS 23.2 / Android 16",
+    "temporary_kernel": "3.10.108-perf-gcc84cab9 #8",
+    "installed_kernel_after_reboot": "3.10.108-perf-gcc84cab9 #29"
+  },
+  "boot_method": "fastboot boot; no partition was flashed",
+  "profile": {
+    "path": "~/Documents/cityman-iris-stream-profile.hex",
+    "decoded_bytes": 351,
+    "decoded_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+    "loaded_by_kernel": true
+  },
+  "illumination": {
+    "channel": "led:torch_0",
+    "identification": "owner observed a faint red glow from the front IR emitter",
+    "sysfs_brightness_requested": 14,
+    "driver_max_current_ma": 200,
+    "driver_torch_max_code": 15,
+    "integer_current_code": 1,
+    "actual_led_current_measured": false,
+    "timing": "enabled before the one-shot and held through sensor start/test; 30-second automatic shutoff armed",
+    "other_led_channels": "off",
+    "final_brightness_all_channels": 0
+  },
+  "sensor": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+    "profile_program_writes": 117,
+    "program_transactions": 50,
+    "frame_counter_samples": 16,
+    "frame_counter_first": "0x00",
+    "frame_counter_last": "0x00",
+    "frame_counter_changes": 0,
+    "stop_errno": 0
+  },
+  "receiver": {
+    "result": "requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=20 before_valid=1 after_valid=1 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003",
+    "csid_control0": "0x00000040",
+    "csid_control1": "0x0005000f",
+    "csid_vc0_lut": "0x0000002b",
+    "csid_cid0_config": "0x00000023",
+    "phy_clock_mux": "0x00000030",
+    "phy_power": "0x00000031",
+    "phy_mode": "0x00000010",
+    "phy_irq_status3": "0x00000004",
+    "phy_irq_status4": "0x00000004",
+    "phy_irq_status6": "0x00000010"
+  },
+  "ordinary_front_camera": {
+    "android_camera_id": 1,
+    "preview_active_during_channel_tests": true,
+    "observed_preview_change": "none clearly visible; preview was very dark",
+    "iris_sensor_accessible_as_android_camera": false
+  },
+  "recovery": {
+    "camera_services_restored": [
+      "cameraserver",
+      "vendor.camera-provider-2-4",
+      "qcamerasvr"
+    ],
+    "returned_to_installed_kernel": true,
+    "installed_kernel_partition_flash": false,
+    "all_led_channels_off": true,
+    "screen_off_timeout_ms": 2147483647,
+    "stay_on_while_plugged_in": 15
+  },
+  "interpretation": "The confirmed front IR emitter was commanded at the driver's lowest nonzero torch code before and during the iris sensor attempt. Illumination did not change the zero frame counter or zero CSID3 packet result. This does not establish the actual LED current, optical dose, or a valid sensor image."
+}

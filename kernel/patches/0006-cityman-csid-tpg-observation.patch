@@ -1,0 +1,134 @@
+Subject: [PATCH] add bounded CSID3 internal test generator observation
+
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.h
+@@ -98,2 +98,3 @@
+ 	bool cityman_lane_armed;
++	bool cityman_iris_testgen;
+ #endif
+--- a/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
++++ b/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c
+@@ -213,6 +213,32 @@
+ 		return rc;
+ 	}
+ 
++#ifdef CONFIG_CITYMAN_IRIS_CSI
++	/*
++	 * A source-backed internal CSID test pattern. It intentionally skips
++	 * lane/PHY routing and is only used by the exclusive CSID3 diagnostic.
++	 */
++	if (csid_dev->cityman_iris_testgen) {
++		struct csid_reg_parms_t *r = &csid_dev->ctrl_reg->csid_reg;
++
++		if (csid_dev->hw_version != CSID_VERSION_V31_3)
++			return -ENODEV;
++		val = (16U << 24) | (128U << 13);
++		msm_camera_io_w(val, csidbase + r->csid_tg_vc_cfg_addr);
++		val = (800U << 16) | 480U;
++		msm_camera_io_w(val, csidbase + r->csid_tg_dt_n_cfg_0_addr);
++		msm_camera_io_w(csid_params->lut_params.vc_cfg[0]->dt,
++			csidbase + r->csid_tg_dt_n_cfg_1_addr);
++		msm_camera_io_w(0, csidbase + r->csid_tg_dt_n_cfg_2_addr);
++		rc = msm_csid_cid_lut(&csid_params->lut_params, csid_dev);
++		if (rc < 0)
++			return rc;
++		msm_csid_set_debug_reg(csid_dev, csid_params);
++		msm_camera_io_w(0x00A06437, csidbase + r->csid_tg_ctrl_addr);
++		return 0;
++	}
++#endif
++
+ 	val = csid_params->lane_cnt - 1;
+ 	val |= csid_params->lane_assign <<
+ 		csid_dev->ctrl_reg->csid_reg.csid_dl_input_sel_shift;
+@@ -600,1 +600,90 @@
++static void cityman_iris_tpg_sample(struct csid_device *d,
++	struct iris_csi_counts *counts, u32 *irq, u32 regs[5])
++{
++	struct csid_reg_parms_t *r = &d->ctrl_reg->csid_reg;
++	cityman_iris_csi_counts(d, counts);
++	*irq = msm_camera_io_r(d->base + r->csid_irq_status_addr);
++	regs[0] = msm_camera_io_r(d->base + r->csid_tg_ctrl_addr);
++	regs[1] = msm_camera_io_r(d->base + r->csid_tg_vc_cfg_addr);
++	regs[2] = msm_camera_io_r(d->base + r->csid_tg_dt_n_cfg_0_addr);
++	regs[3] = msm_camera_io_r(d->base + r->csid_tg_dt_n_cfg_1_addr);
++	regs[4] = msm_camera_io_r(d->base + r->csid_tg_dt_n_cfg_2_addr);
++}
++
++int cityman_iris_csid_tpg_run(struct iris_csi_tpg *t)
++{
++	struct csid_device *d = cityman_iris_csid_device;
++	struct msm_camera_csid_vc_cfg vc = {
++		.cid = 0, .dt = 0x2b, .decode_format = CSI_DECODE_10BIT,
++	};
++	struct msm_camera_csid_params params = {
++		.lane_cnt = 1, .lane_assign = 0, .phy_sel = 2,
++		.csi_clk = 200000000,
++	};
++	int rc = 0;
++	if (!d || d->pdev->id != 3 || d->mem->start != 0xfda08c00) {
++		t->stage = "csid-missing";
++		t->error = -ENODEV;
++		return -ENODEV;
++	}
++	t->stage = "csid-lock";
++	if (!mutex_trylock(&d->mutex)) {
++		t->error = -EBUSY;
++		return -EBUSY;
++	}
++	t->csid = d;
++	if (d->csid_state != CSID_POWER_DOWN || d->base) {
++		rc = -EBUSY;
++		goto done;
++	}
++	d->cityman_iris_exclusive = true;
++	d->cityman_iris_testgen = true;
++	t->stage = "csid-init";
++	rc = msm_csid_init(d, &t->version);
++	if (d->csid_state == CSID_POWER_UP && d->base)
++		t->csid_initialized = true;
++	if (rc && !t->csid_initialized && d->base)
++		t->cleanup_error = -EIO;
++	if (rc)
++		goto done;
++	if (!t->csid_initialized) {
++		rc = -EIO;
++		goto done;
++	}
++	params.lut_params.num_cid = 1;
++	params.lut_params.vc_cfg[0] = &vc;
++	t->stage = "tpg-config";
++	rc = msm_csid_config(d, &params);
++	if (rc)
++		goto done;
++	t->stage = "tpg-running";
++	cityman_iris_tpg_sample(d, &t->before, &t->irq_before,
++		t->regs_before);
++	t->before_valid = true;
++	msleep(250);
++	cityman_iris_tpg_sample(d, &t->after, &t->irq_after,
++		t->regs_after);
++	t->after_valid = true;
++done:
++	t->error = rc;
++	if (t->csid_initialized) {
++		t->stage = "csid-release";
++		rc = msm_csid_release(d);
++		if (!rc && (d->csid_state != CSID_POWER_DOWN || d->base))
++			rc = -EIO;
++		if (rc && !t->cleanup_error)
++			t->cleanup_error = rc;
++	}
++	d->cityman_iris_testgen = false;
++	d->cityman_iris_exclusive = false;
++	t->csid_initialized = false;
++	t->csid = NULL;
++	if (d->base && !t->cleanup_error)
++		t->cleanup_error = -EIO;
++	mutex_unlock(&d->mutex);
++	if (!t->cleanup_error)
++		t->stage = "released";
++	return t->error ? t->error : t->cleanup_error;
++}
++
+ static int32_t msm_csid_cmd(struct csid_device *csid_dev, void __user *arg)

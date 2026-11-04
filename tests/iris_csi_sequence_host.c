@@ -25,7 +25,7 @@ int main(void) {
     unsigned int n, selection_write = 0, baseline_writes = 0;
     struct transaction baseline_log[256];
     assert(!stream_regression_main()); /* all previous stream tests, CSI disabled */
-    for(n=0;n<9;n++) {
+    for(n=0;n<10;n++) {
         reset_stream(); state.csi.requested=true;
         receiver_begin=receiver_end=receiver_samples=receiver_failure=receiver_cleanup_failure=0;
         if(n==1) receiver_failure=-EBUSY;
@@ -36,9 +36,10 @@ int main(void) {
         if(n==6) counter_kind=1;
         if(n==7) counter_kind=6;
         if(n==8) { assert(selection_write); fail_write=selection_write; }
+        if(n==9) { assert(selection_write); fail_write=selection_write+1; }
         assert(iris_identify(&state)==((n==0 || n==5) ? 0 : n==1 ? -EBUSY : (n==3 || n==6) ? -ETIMEDOUT : -EIO));
-        assert(receiver_begin==((n==4 || n==7 || n==8) ? 0 : 1) && receiver_end==1);
-        assert(receiver_samples==((n==1 || n==4 || n==7 || n==8) ? 0 : 1));
+        assert(receiver_begin==((n==4 || n==7 || n==8 || n==9) ? 0 : 1) && receiver_end==1);
+        assert(receiver_samples==((n==1 || n==4 || n==7 || n==8 || n==9) ? 0 : 1));
         assert(state.blocked==(n==2));
         assert(state.cleanup_error==(n==2 ? -EIO : 0));
         if(n==0) {
@@ -47,18 +48,25 @@ int main(void) {
         }
         if(n==5 || n==6) {
             unsigned int i, j=0, overrides=0;
-            assert((unsigned int)write_calls==baseline_writes+1);
+            assert((unsigned int)write_calls==baseline_writes+2);
             assert(state.stream.before[7]==2 && state.stream.after[7]==2);
+            assert(state.stream.before[25]==0 && state.stream.after[25]==0);
+            assert(state.stream.virtual_channel_before_valid &&
+                   state.stream.virtual_channel_before==0);
             assert(state.stream.before_valid==SNAPSHOT_ALL && state.stream.after_valid==SNAPSHOT_ALL);
             for(i=0;i<(unsigned int)write_calls;i++) {
                 if(write_log[i].address==0x0111 && write_log[i].data[0]==2) {
                     selection_write=i+1; overrides++; continue;
                 }
+                if(write_log[i].address==0x0110 && write_log[i].data[0]==0) {
+                    assert(selection_write==i);
+                    overrides++; continue;
+                }
                 assert(j<baseline_writes && write_log[i].address==baseline_log[j].address);
                 assert(write_log[i].length==baseline_log[j].length);
                 assert(!memcmp(write_log[i].data,baseline_log[j].data,write_log[i].length)); j++;
             }
-            assert(overrides==1 && j==baseline_writes);
+            assert(overrides==2 && j==baseline_writes);
         }
         if(n==7) assert(!strcmp(state.stream.stage,"csi2-interface"));
         if(n!=2) stopped();

@@ -43,13 +43,24 @@ elif name == 'cat':
         path.write_text('profile_loaded=1 stage=idle stop_errno=0\\n')
     triggered = (node / 'identify').read_text() == 'identify\\n'
     streaming = (node / 'stream_once').read_text() == 'stream-once\\n'
+    trial = (node / 'csi_trial').exists() and (node / 'csi_trial').read_text().startswith('settle=')
+    nvm = (node / 'nvm_once').exists() and (node / 'nvm_once').read_text() == 'nvm-once\\n'
+    tpg = (node / 'csi_tpg_once').exists() and (node / 'csi_tpg_once').read_text() == 'run\\n'
     if (node / 'csi_once').exists():
         streaming = streaming or (node / 'csi_once').read_text() == 'csi-once\\n'
         if (node / 'csi2_once').exists():
             streaming = streaming or (node / 'csi2_once').read_text() == 'csi2-once\\n'
-        if streaming and path.name == 'csi_result':
+        if (streaming or trial) and path.name == 'csi_result':
             path.write_text(state.get('csi_after', 'requested=1 stage=listening errno=0 cleanup_errno=0 packets_before=0 packets_after=100\\n'))
-    if triggered or (streaming and path.name in ('result', 'stream_result')):
+    if tpg and path.name == 'csi_tpg_result':
+        path.write_text(state.get('tpg_after', 'requested=1 stage=released errno=0 cleanup_errno=0 version=0x30010003 before_valid=1 after_valid=1 packets_before=0 packets_after=480 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 irq_before=0x00000000 irq_after=0x00000000\\n'))
+    if tpg and path.name == 'result':
+        path.write_text(state.get('tpg_main_after', 'status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0\\n'))
+    if nvm and path.name == 'nvm_result':
+        path.write_text(state.get('nvm_after', 'requested=1 valid=1 errno=0 cleanup_errno=0 size_bytes=256 pages=4 config_flags=1 sensor_config_entries_present=1 raw_payload_exported=0\\n'))
+    if nvm and path.name == 'result':
+        path.write_text(state.get('after', 'status=identified stage=nvm-test errno=0 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\\n'))
+    if triggered or (streaming and path.name in ('result', 'stream_result')) or (trial and path.name in ('result', 'stream_result')):
         if state.get('unreadable_after'):
             sys.exit(1)
         path.write_text(state.get('stream_after', '') if path.name == 'stream_result' else state['after'])
@@ -70,7 +81,10 @@ class IdentifyHelperTests(unittest.TestCase):
         node.mkdir(parents=True)
         (node / 'result').write_text(INITIAL + '\n')
         (node / 'identify').write_text('')
+        (node / 'nvm_once').write_text('')
+        (node / 'nvm_result').write_text('requested=0 valid=0 errno=0 cleanup_errno=0\n')
         (node / 'stream_once').write_text('')
+        (node / 'csi_trial').write_text('')
         (node / 'stream_profile').write_text('')
         (node / 'stream_result').write_text('profile_loaded=0 stage=idle stop_errno=0\n')
         (self.root / 'profile.hex').write_text('profile\n')
@@ -93,7 +107,7 @@ class IdentifyHelperTests(unittest.TestCase):
             'receiver_clock_root=/sys/kernel/debug/clk', f'receiver_clock_root={self.root}/rxclocks').replace(
             '/data/local/tmp/cityman-iris-rxclk.XXXXXX', str(self.root / 'rxclk-log.XXXXXX')))
 
-    def run_helper(self, fail_write=False, operation=None, option=None):
+    def run_helper(self, fail_write=False, operation=None, option=None, extra=()):
         (self.root / 'state.json').write_text(json.dumps(self.state))
         command = ['sh', str(self.helper)]
         if fail_write:
@@ -105,6 +119,7 @@ class IdentifyHelperTests(unittest.TestCase):
             command.append(operation)
         if option:
             command.append(option)
+        command.extend(extra)
         run = subprocess.run(command, capture_output=True,
                              text=True, timeout=10, env={**os.environ,
                              'FIXTURE': str(self.root),
@@ -125,6 +140,21 @@ class IdentifyHelperTests(unittest.TestCase):
         self.assertEqual((self.root / 'driver/device/identify').read_text(), 'identify\n')
         run = self.run_helper()
         self.assertNotEqual(run.returncode, 0)
+        self.assertEqual(self.state['events'], events)
+
+    def test_nvm_header_mode_restores_services_and_does_not_read_raw_payload(self):
+        self.state['after'] = ('status=identified stage=nvm-test errno=0 model=0x0861 '
+                               'cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\n')
+        self.state['nvm_after'] = ('requested=1 valid=1 errno=0 cleanup_errno=0 '
+                                   'size_bytes=256 pages=4 config_flags=1 '
+                                   'sensor_config_entries_present=1 raw_payload_exported=0\n')
+        run = self.run_helper(operation='nvm-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('sensor_config_entries_present=1', run.stdout)
+        self.assertIn('raw_payload_exported=0', run.stdout)
+        self.assertEqual((self.root / 'driver/device/nvm_once').read_text(), 'nvm-once\n')
+        events = ([['stop', service] for service in SERVICES] +
+                  [['start', service] for service in reversed(SERVICES)])
         self.assertEqual(self.state['events'], events)
 
     def test_preserves_previously_stopped_services(self):
@@ -248,6 +278,39 @@ class IdentifyHelperTests(unittest.TestCase):
         node = self.root / 'driver/device'
         (node / 'csi_once').write_text('')
         (node / 'csi_result').write_text('requested=0 stage=idle errno=0 cleanup_errno=0\n')
+        (node / 'csi_top_result').write_text('camss_top_40=0x00000000 camss_top_44=0x00000000\n')
+
+    def tpg_fixture(self):
+        node = self.root / 'driver/device'
+        (node / 'csi_tpg_once').write_text('')
+        (node / 'csi_tpg_result').write_text('requested=0 stage=idle errno=0 cleanup_errno=0\n')
+
+    def test_tpg_runs_without_sensor_profile_and_restores_services(self):
+        self.tpg_fixture()
+        run = self.run_helper(operation='tpg-once')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('CSID TPG after:', run.stdout)
+        self.assertIn('packets_after=480', run.stdout)
+        self.assertEqual((self.root / 'driver/device/csi_tpg_once').read_text(), 'run\n')
+        self.assertEqual((self.root / 'driver/device/stream_once').read_text(), '')
+        self.assertFalse((self.root / 'driver/device/csi_once').exists())
+        self.assertEqual(self.state['events'],
+                         [['stop', service] for service in SERVICES] +
+                         [['start', service] for service in reversed(SERVICES)])
+
+    def test_tpg_cleanup_failure_leaves_services_stopped(self):
+        self.tpg_fixture()
+        self.state['tpg_after'] = 'requested=1 stage=csid-release errno=0 cleanup_errno=-5\n'
+        self.state['tpg_main_after'] = INITIAL.replace('blocked=0', 'blocked=1') + '\n'
+        run = self.run_helper(operation='tpg-once')
+        self.assertEqual(run.returncode, 3)
+        self.assertIn('REBOOT_REQUIRED', run.stderr)
+        self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)
+
+    def test_tpg_requires_diagnostic_build_before_stopping_services(self):
+        run = self.run_helper(operation='tpg-once')
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(self.state['events'], [])
 
     def test_csi_mode_uses_separate_control_and_prints_packet_result(self):
         self.csi_fixture()
@@ -257,6 +320,8 @@ class IdentifyHelperTests(unittest.TestCase):
         self.assertEqual((self.root / 'driver/device/csi_once').read_text(), 'csi-once\n')
         self.assertEqual((self.root / 'driver/device/stream_once').read_text(), '')
         self.assertIn('CSI after:', run.stdout)
+        self.assertIn('CAMSS TOP before receiver test:', run.stdout)
+        self.assertIn('CAMSS TOP after receiver test:', run.stdout)
         self.assertIn('packets_after=100', run.stdout)
         self.assertIn('csid_control1 before=0x0005000f after=0x0005000f', run.stdout)
         self.assertLess(run.stdout.index('CSI after:'), run.stdout.index('Restored:'))
@@ -293,6 +358,63 @@ class IdentifyHelperTests(unittest.TestCase):
         self.assertIn('CSI after:', run.stdout)
         self.assertEqual((self.root / 'driver/device/csi2_once').read_text(), 'csi2-once\n')
         self.assertEqual((self.root / 'driver/device/csi_once').read_text(), '')
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_csi_trial_accepts_clean_timeout_and_preserves_settle(self):
+        self.csi_fixture()
+        node = self.root / 'driver/device'
+        (node / 'csi_result').write_text('requested=0 stage=idle errno=0 cleanup_errno=0\n')
+        self.state['after'] = ('status=failed stage=stream-test errno=-110 model=0x0861 '
+                              'cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\n')
+        self.state['stream_after'] = ('profile_loaded=1 stage=stream-test samples=16 '
+                                      'changes=0 stop_errno=0\n')
+        self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=0\n'
+        run = self.run_helper(operation='csi-trial', option='20')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('one CSI-2 trial at settle=20', run.stdout)
+        self.assertEqual((node / 'csi_trial').read_text(), 'settle=20\n')
+        self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
+
+    def test_csi_trial_rejects_out_of_range_settle_before_stopping_services(self):
+        self.csi_fixture()
+        run = self.run_helper(operation='csi-trial', option='64')
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(self.state['events'], [])
+
+    def test_csi_trial_passes_byte_override(self):
+        self.csi_fixture()
+        self.state['after'] = ('status=failed stage=stream-test errno=-110 model=0x0861 '
+                               'cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\n')
+        self.state['stream_after'] = 'profile_loaded=1 stage=frame-counter stop_errno=0\n'
+        self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=0\n'
+        run = self.run_helper(operation='csi-trial', option='22', extra=('0307', '92'))
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertEqual((self.root / 'driver/device/csi_trial').read_text(),
+                         'settle=22 reg=0307 value=92\n')
+
+    def test_csi_trial_retries_after_three_clean_attempts(self):
+        self.csi_fixture()
+        node = self.root / 'driver/device'
+        prior = ('status=failed stage=stream-test errno=-110 model=0x0861 '
+                 'cleanup_errno=0 attempts=3 blocked=0 rail_uv=1200000\n')
+        (node / 'result').write_text(prior)
+        (node / 'stream_result').write_text('profile_loaded=1 stage=frame-counter stop_errno=0\n')
+        (node / 'csi_result').write_text('requested=1 stage=released errno=0 cleanup_errno=0 phy=2\n')
+        self.state['after'] = prior.replace('attempts=3', 'attempts=4')
+        self.state['stream_after'] = 'profile_loaded=1 stage=frame-counter stop_errno=0\n'
+        self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=0 phy=2\n'
+        run = self.run_helper(operation='csi-trial', option='22')
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('attempts=4', run.stdout)
+
+    def test_csi_trial_write_error_is_not_masked_by_clean_result(self):
+        self.csi_fixture()
+        self.state['after'] = ('status=failed stage=stream-test errno=-110 model=0x0861 '
+                               'cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000\n')
+        self.state['stream_after'] = 'profile_loaded=1 stage=frame-counter stop_errno=0\n'
+        self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=0\n'
+        run = self.run_helper(fail_write=True, operation='csi-trial', option='22')
+        self.assertNotEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertEqual(list(self.state['services'].values()), ['running'] * 3)
 
     def clock_fixture(self):

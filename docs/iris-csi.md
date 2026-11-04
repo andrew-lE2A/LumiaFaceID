@@ -175,3 +175,26 @@ receiver/sensor cycle. It does not silently replace `csi-once` or change lane
 routing, clock requests or settle count. On kernel #8 the selection latched,
 but did not resolve the missing packets. This rules out that one write as a
 sufficient fix in this setup; the overall cause remains unresolved.
+
+## Source-derived settle comparison
+
+Windows mode setup derives a 350.4 MHz DDR clock for the active 1920x1088
+RAW10, one-lane mode from its 70.08 MHz pixel rate. The recovered settle
+formula with the 200 MHz PHY timer gives 22 ticks (`0x16`). Temporary kernel
+#17 applied that value, and both PHY settle registers read it back. The sensor
+counter and CSID3 packet/ECC/CRC counts stayed zero; cleanup returned zero and
+all camera services restarted. This comparison shows that the calculated
+settle value alone does not explain the missing frames. See the [build
+manifest](../kernel/builds/iris-csi-settle-01/manifest.json) and [phone
+result](../kernel/builds/iris-csi-settle-01/phone-result.json).
+
+The #17 sysfs summary had a hard-coded `settle=20` string. Its PHY register
+readbacks were `0x16`; the source formatter is corrected locally for a future
+build. No physical transmission or delivered image was established.
+
+Kernel #18 followed the Windows dynamic sensor configuration by recording
+`0x0110` before explicitly setting VC0. It was already zero; pre-start and
+post-start snapshots remained zero, matching CSID3's configured CID0. Packet
+and frame-counter observations stayed zero. This rules out a VC0 mismatch in
+this reset/start path but says nothing about physical data activity. See the
+[VC comparison record](../kernel/builds/iris-csi-vc-01/phone-result.json).

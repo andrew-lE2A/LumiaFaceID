@@ -130,11 +130,38 @@ mapping matches all five offsets, and whether generated packets affect the
 receiver's input statistics. A synthetic source would not test PHY wiring or
 sensor startup. No generator or phone-side test was run in this follow-up.
 
-The subsequent source search located Qualcomm test-mode setup fields but did
-not recover a complete start/stop sequence or establish that the later source
-uses this phone's exact generator layout. An attempted download of that full
-source did not complete. These missing details leave the proposed synthetic
-control unready for a phone run; no register writes or phone tests were made.
+The initial source search located Qualcomm test-mode setup fields but did not
+recover a complete sequence or establish that the later source uses this
+phone's exact generator layout. A later source search recovered the relevant
+configuration path; see the local cross-check below. This remains a possible
+internal diagnostic, not a test of the sensor's MIPI link.
+
+### Local pinned-source cross-check
+
+The complete pinned kernel archive is available in the local build workspace.
+In its `msm_csid_3_1_hwreg.h`, the version-3.1 table assigns the five existing
+test-generator fields to offsets `0xa0` (control), `0xa4` (VC), and `0xac`,
+`0xb0`, `0xb4` (DT configuration). Those offsets are inside the CSID3 `0x100`-byte
+resource. The pinned `msm_csid.c` and its CSID headers contain no TPG setup,
+start, or stop path; the fields are register addresses only.
+
+Qualcomm's later `camera_v2` source has a concrete `is_testmode` path for the
+same v3.1 register-table family: it configures blanking, line/byte counts, data
+type and payload mode, then writes `0x00a06437` to the TPG control register.
+[That implementation](https://android.googlesource.com/kernel/msm/+/fdfa87a6100a6d82c8ab3de9d1b694073bc148a7/drivers/media/platform/msm/camera_v2/sensor/csid/msm_csid.c)
+is a useful source reference, not proof that its mode value or lifecycle is
+correct on the Lumia's exact CSID3 silicon. Its test pattern is generated
+inside CSID and bypasses the iris sensor, MCLK pin, PHY2 lanes and physical
+MIPI link. A positive result could qualify CSID3's internal test path only;
+it cannot resolve the observed absence of lane events. A test would also need
+an understood ISPIF/VFE route and explicit TPG shutdown/reset recovery.
+
+The next work is to compare that start/stop lifecycle and register table
+against the pinned tree, then determine whether a bounded internal diagnostic
+can observe a useful downstream event. No TPG code, register write, build, or
+phone test has been added from this comparison. At the latest local check,
+both `adb devices -l` and `fastboot devices` returned no device, so there is
+no current handset connection for a controlled comparison.
 
 ## Clock state during a repeated front-camera control
 
@@ -242,3 +269,165 @@ causes. The test did not exercise iris transmission. See the
 After returning to installed kernel #29, the front and rear cameras delivered
 205 and 93 frames respectively at their snapshots. All camera services were
 running after closing Aperture.
+
+## CSID3 internal TPG positive control: kernel #12
+
+The local `0006-cityman-csid-tpg-observation.patch` adds a bounded internal
+test-pattern run for CSID3. It initializes only CSID3, programs the source-backed
+V3.1.3 test generator, samples packet/error counters for 250 ms, and releases
+the block. The one-shot does not power the iris sensor, MCLK, CSIPHY/PHY2, or
+the IR emitter.
+
+On a temporary fastboot boot, the CSID3 packet count rose from 2 to 176467;
+ECC and CRC stayed at zero. The test-generator configuration read back as
+`CTRL=0x00a06437`, VC/blanking `0x10100000`, dimensions `0x032001e0`, and data
+type `0x2b`. CSID3 released cleanly, the iris diagnostic remained untouched,
+and all camera services restarted. Rebooting returned to installed kernel #29;
+both camera devices were present and no client was active.
+
+This positive control confirms CSID3 internal packet generation and its
+counter path. It says nothing about the external PHY2-to-CSID3 link or whether
+the iris sensor transmits. See the
+[build manifest](builds/iris-csid3-tpg-01/manifest.json) and
+[phone result](builds/iris-csid3-tpg-01/phone-result.json).
+
+## New CAMSS TOP mux lead from `lumia-iris-notes`
+
+The linked [static reverse-engineering notes](https://github.com/leojukic03/lumia-iris-notes)
+report that Windows sets `0xfda00040[5:4] = 3` and `0xfda00044[1] = 1` for
+CSID3's PHY2 upper/combo path. The Linux PHY mux mapping covers `0xfda00040`
+but not the companion select word `0xfda00044`. The earlier front-camera
+CSID3 control used PHY2's lower field, so its zero lane events do not test the
+upper route used by iris.
+
+The notes are static analysis of Windows drivers, not a phone measurement.
+Read-only `devmem` access was unavailable on the installed Android kernel
+(`/dev/mem` is absent). The first kernel #13 observer tried to map and read
+CAMSS TOP while idle. That caused a synchronous external abort at
+`csi_top_result_show+0x30`; pstore captured the panic, and the phone rebooted
+to installed #29. No sensor or PHY test ran. See the
+[failed read result](builds/iris-csi-top-01/phone-result.json).
+
+The retired observer is replaced by a powered-only read through the CSIPHY
+driver's own mapping. Its DT window is expanded from four to eight bytes to
+include `0xfda00044`; the diagnostic caches values before release, and idle
+reads return unavailable without touching MMIO. This version booted
+temporarily, ran the default `csi-once`, and then ran `csi2-once`. Both
+released the sensor and receiver cleanly and restored all camera services.
+
+During both runs, `0xfda00040` changed from `0x00000000` to `0x00000030`,
+which sets the Windows-noted `[5:4] = 3` field. `0xfda00044` was already
+`0x00000003` and remained there, so `[1] = 1` was present before and during
+the iris attempt. The suspected missing CAMSS TOP select bit is therefore
+not the explanation for the zero-packet result. With `csi2-once`, sensor
+`0x0111=2` also read back before and after stream-on, yet CSID3 still saw
+zero packets and the sensor counter remained zero. PHY2 status words 3, 4,
+and 6 ended at `0x4`, `0x4`, and `0x10`; their bit meanings are not decoded by
+the pinned driver and remain raw evidence. See the
+[temporary boot manifest](builds/iris-csi-top-02/manifest.json),
+[default interface result](builds/iris-csi-top-02/phone-result.json), and
+[explicit CSI-2 result](builds/iris-csi-top-02/csi2-phone-result.json).
+
+The external notes' status-register analysis says each of these eight words
+is per-lane and each enabled lane is cleared/masked with `0x3f`; it does not
+name the individual status bits. Under that layout, words 3 and 4 both
+latched bit 2, matching the PHY2 combo clock/data lane indices used by iris.
+That is evidence of a lane-level PHY event, not proof of a valid CSI packet
+or a delivered image. Word 6 also latched bit 4 and remains unexplained. The
+recommended control is the same snapshot during a working front-camera stream
+on lanes 0–2, then compare its lane words with the iris result.
+
+The front-camera control is now recorded in
+[front-camera-result.json](builds/iris-csi-top-02/front-camera-result.json).
+With Aperture camera ID 1 active, the live values were `0xfda00040=0x02` and
+`0xfda00044=0x03`; the driver logged PHY2 lane mask `0x7`, two lanes, CSID2,
+combo off, settle `0x0e`. This matches the expected lower-field front route
+and contrasts with the iris upper-field value `0x30`. No CSIPHY2 IRQ status
+lines appeared in dmesg during the preview interval, so this check verified
+the mux but did not compare the eight lane status words. The preview visibly
+produced a magenta/pink image, consistent with the owner's earlier report.
+
+Kernel #14 adds a read-only `csi_phy_result` attribute that returns all eight
+PHY2 status words only while the owning CSIPHY driver reports POWER_UP. Idle
+reads return unavailable; the reader takes no power votes and performs no
+acknowledgement writes. During Aperture front-camera ID 1 preview, 20 samples
+were identical: words 0–5 and 7 were zero, word 6 was `0x1`. This differs from
+the iris snapshot (words 3 and 4 `0x4`, word 6 `0x10`), but the bits remain
+unnamed and the difference does not establish which values indicate valid
+lane activity. See the [kernel #14 manifest](builds/iris-csi-phy-irq-01/manifest.json)
+and [front-control result](builds/iris-csi-phy-irq-01/phone-result.json).
+
+The front preview again showed a magenta/pink image. Its mux remained on the
+expected lower route (`0x40=0x02`, `0x44=0x03`), while the iris snapshot showed
+the upper combo value (`0x40=0x30`, `0x44=0x03`). The phone is back on installed
+#29 with all camera services running. Next, compare the original Windows
+mode/NVM configuration writes against Linux. Do not try a new settle count or
+sensor-register value before that source-backed comparison.
+
+The notes also identify two follow-up data checks: read and decode the sensor's
+OTP NVM configuration entries before inventing additional startup writes, and
+derive PHY settle from the iris mode's DDR clock (`100 ns + 4 DDR periods`).
+Both remain unmeasured on this handset.
+
+### Windows NVM transaction recovered
+
+The earlier notes misdescribed a 16-byte page and `0x0a00=4` as a finish
+command. I downloaded the original driver at the pinned Lumia-Drivers commit,
+verified SHA-256 `0ea99897a1623afd7f165aa2943f2f69687c31dc42a123d6d21c2339ca8e78e5`,
+and disassembled `cam_drv_SMIApp_cache_nvm` at VA `0x4140b0`. The routine
+first selects page 0, enables read with `0x0a00=1`, and conditionally polls
+status bit 0 for up to 50 one-millisecond intervals. If RD_READY stays low,
+the routine still proceeds when status error bits 2/3 are clear. It issues
+`0x0a00=4` on an error path. It then reads five bytes at `0x0a04`, derives a
+bounded page count from the
+metadata length field, and reads each 64-byte page as four 16-byte bursts at
+`0x0a04`, `0x0a14`, `0x0a24` and `0x0a34`. It selects successive page numbers,
+repeats the enable/status/read sequence, and issues `0x0a00=4` after the final
+page. The generic Linux SMIA++ reader independently uses 64-byte pages, but
+the Windows disassembly is the sensor-specific evidence; the Linux reader is
+only a comparison ([source](https://android.googlesource.com/kernel/common/+/a00cecdaef2e83258821321419609189bde08342/drivers/media/i2c/smiapp/smiapp-core.c),
+[page-size definition](https://android.googlesource.com/kernel/common/+/a00cecdaef2e83258821321419609189bde08342/drivers/media/i2c/smiapp/smiapp.h)).
+
+The source trace supports implementing a bounded metadata/config-presence
+diagnostic. It must cap the parsed page count, check every CCI return and status
+error, and perform the error-clear control during cleanup after any started
+transfer. It should retain no raw OTP in the repository or expose calibration
+bytes through sysfs.
+
+Kernel #16 ran this five-byte probe once on a fresh temporary boot. Model
+`0x0861` was confirmed. Status remained `0x00` with RD_READY low after the
+bounded wait, but no status error bits were set and the header read succeeded,
+matching the Windows path. The header reports 51 bytes / one 64-byte page and
+the parser's two required NVM-config flags do not jointly enable sensor config
+entries. The transfer clear and overall sensor/CCI cleanup returned zero; all
+three camera services restored. No calibration payload was retained or
+exported. The phone is back on installed #29. See the
+[phone result](builds/iris-nvm-meta-02/phone-result.json) and
+[build manifest](builds/iris-nvm-meta-02/manifest.json).
+
+This closes the missing per-module NVM-config-write lead for this sensor.
+
+### Source-derived settle comparison on kernel #17
+
+The Windows `ConfigResolution` path was traced through the matched 1920x1088
+RAW10 mode. It selects 10 bits per pixel and one lane, then computes the DDR
+clock from the 70.08 MHz pixel rate as 350.4 MHz. With the 200 MHz PHY timer,
+the recovered formula `round((100 ns + 4 / DDR clock) * timer clock)` yields
+22 ticks (`0x16`), compared with the prior diagnostic's 20 (`0x14`).
+
+Kernel #17 changed only this settle value and ran once with `fastboot boot`.
+Both the PHY clock and data lane settle registers read back `0x16`, confirming
+the setting latched. The sensor remained at model `0x0861`, interface
+`0x0111=2`, and its frame counter stayed at zero across 16 reads. CSID3 packet,
+ECC and CRC counts remained zero. The test timed out at the sensor-counter
+criterion; sensor stop, receiver release and overall cleanup returned zero.
+All three camera services were running afterward, and the phone was rebooted
+back to installed kernel #29. IR illumination remained disabled. See the
+[phone result](builds/iris-csi-settle-01/phone-result.json) and
+[build manifest](builds/iris-csi-settle-01/manifest.json).
+
+The sysfs summary in #17 printed a stale hard-coded `settle=20` field even
+though the direct PHY readbacks were `0x16`. The local source formatter now
+prints the configured constant; that reporting fix was not included in the
+tested image. The source-derived timing comparison did not create packets, so
+mode startup and the physical MIPI link remain unresolved.

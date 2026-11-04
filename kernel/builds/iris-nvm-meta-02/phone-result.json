@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-04T00:54:01Z",
+  "build_id": "iris-nvm-meta-02",
+  "operation": "bounded SMIA++ NVM metadata read",
+  "device": "Lumia 950 XL cityman",
+  "boot_method": "fastboot boot; temporary only",
+  "kernel": "3.10.108-perf-gcc84cab9 #16 SMP PREEMPT Wed Nov 4 00:44:14 UTC 2026",
+  "sensor_model": "0x0861",
+  "read_scope": "NVM page 0 status plus first five metadata bytes only",
+  "nvm_result": {
+    "valid": true,
+    "errno": 0,
+    "cleanup_errno": 0,
+    "rd_ready": false,
+    "status": "0x00",
+    "size_bytes": 51,
+    "pages_at_64_bytes": 1,
+    "config_flags": 0,
+    "sensor_config_entries_present": false,
+    "raw_payload_exported": false
+  },
+  "interpretation": "The Windows routine continues to read metadata after its bounded RD_READY wait when status error bits are clear. This module reports no sensor NVM config entries, so the missing per-module NVM writes are not the cause of the zero-frame result. No calibration payload was collected.",
+  "cleanup": {
+    "sensor_and_cci_cleanup_errno": 0,
+    "camera_services_restored": true,
+    "returned_to_installed_kernel": "#29",
+    "post_reboot_camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    },
+    "ordinary_camera_preview_tested_after_this_run": false
+  },
+  "ir_illumination": "disabled",
+  "installed_boot_partition_modified": false,
+  "publication": "local only"
+}

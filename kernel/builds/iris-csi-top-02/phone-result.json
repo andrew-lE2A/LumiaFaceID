@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-11-03T23:46:00Z",
+  "build_id": "iris-csi-top-02",
+  "operation": "csi-once",
+  "boot_method": "fastboot boot; temporary only",
+  "kernel": "3.10.108-perf-gcc84cab9 #13 SMP PREEMPT Tue Nov 3 23:23:45 UTC 2026",
+  "sensor": {
+    "model": "0x0861",
+    "stream": "timed out at frame-counter stage (-110)",
+    "program_writes": 117,
+    "program_transactions": 50,
+    "frame_counter_first": "0x00",
+    "frame_counter_last": "0x00",
+    "frame_counter_changes": 0,
+    "samples": 16,
+    "stop_errno": 0,
+    "register_readback_errno": 0,
+    "profile_loaded": true,
+    "interface_csi2_requested": false,
+    "readback": {
+      "0x0100_mode_before_after": "0x00 -> 0x01",
+      "0x0111_signal_before_after": "0x00 -> 0x00",
+      "0x0112_format_before_after": "0x0a0a -> 0x0a0a",
+      "0x0114_lanes_before_after": "0x00 -> 0x00",
+      "0x0136_extclk_before_after": "0x099a -> 0x099a",
+      "0x0138_ctrl_before_after": "0x00 -> 0x00",
+      "0x0304_predivider_before_after": "0x0001 -> 0x0001",
+      "0x0306_multiplier_before_after": "0x0092 -> 0x0092"
+    }
+  },
+  "receiver": {
+    "cleanup_errno": 0,
+    "phy": 2,
+    "csid": 3,
+    "combo": 1,
+    "lane_mask": "0x18",
+    "lane_assign": "0x0004",
+    "settle": 20,
+    "csid_version": "0x30010003",
+    "packets_before_after": "0 -> 0",
+    "ecc_before_after": "0 -> 0",
+    "crc_before_after": "0 -> 0",
+    "camss_top_0x40_before_after": "0x00000000 -> 0x00000030",
+    "camss_top_0x44_before_after": "0x00000003 -> 0x00000003",
+    "camss_top_capture": "snapshotted through CSIPHY2-owned mapping only while PHY2 was powered",
+    "csid_configuration_readback": {
+      "control0": "0x00000040 -> 0x00000040",
+      "control1": "0x0005000f -> 0x0005000f",
+      "vc0_lut": "0x0000002b -> 0x0000002b",
+      "cid0_config": "0x00000023 -> 0x00000023",
+      "irq_status": "0x00000000 -> 0x00000000"
+    },
+    "phy_readback": {
+      "clock_mux": "0x00000030 -> 0x00000030",
+      "power": "0x00000031 -> 0x00000031",
+      "mode": "0x00000010 -> 0x00000010",
+      "clock_cfg2": "0x00000010 -> 0x00000010",
+      "clock_settle": "0x00000014 -> 0x00000014",
+      "clock_misc": "0x00000004 -> 0x00000004",
+      "data_cfg2": "0x00000010 -> 0x00000010",
+      "data_settle": "0x00000014 -> 0x00000014",
+      "data_misc": "0x00000008 -> 0x00000008",
+      "irq_status3": "0x00000000 -> 0x00000004",
+      "irq_status4": "0x00000000 -> 0x00000004",
+      "irq_status6": "0x00000000 -> 0x00000010"
+    }
+  },
+  "observer_idle_check": "source=unavailable errno=-11; confirmed no CAMSS TOP read while PHY2 is off",
+  "ir_illumination": "disabled",
+  "cleanup": {
+    "sensor_stop_and_receiver_release": "clean",
+    "camera_services_restored": true,
+    "after_reboot_installed_kernel": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    }
+  },
+  "result": "Expected sensor frame-counter timeout; powered snapshot confirms the CAMSS TOP target fields are set, while the default sensor mode leaves 0x0111=0. The separate csi2-once result confirms 0x0111=2 also fails to produce frame-counter changes or CSID packets.",
+  "flashed": false,
+  "publication": "local only"
+}

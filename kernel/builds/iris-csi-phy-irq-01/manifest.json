@@ -1,0 +1,50 @@
+{
+  "build_id": "iris-csi-phy-irq-01",
+  "kernel_build_number": 14,
+  "purpose": "read-only repeated snapshot of PHY2 lane IRQ status while an ordinary front-camera session has the CSIPHY powered",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus local diagnostic changes",
+  "compiled_kernel_version": "#14 SMP PREEMPT Wed Nov 4 00:07:18 UTC 2026",
+  "kernel_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "driver_source_sha256": {
+    "cityman_iris_id.c": "8512da3a5f7a42726c348ae49a587932b92b250e562671104650579d2abc43f1",
+    "cityman_iris_csi.h": "ebe8effb5c0a93a4de685cc043de9760e0fded0b8c5c196a27aaf8a972fae188",
+    "cityman_iris_csiphy.h": "d3ec2aa5eccb2c8c4caa216929d50c8839ec0e2fbe811f82b91cbe0cbde2c211"
+  },
+  "patch_sha256": {
+    "0007-cityman-csiphy-mux-window.patch": "232258baecb67ae2bd8dc78229b0949ff57cce09d0653aa5cc64bb7d444561dd"
+  },
+  "build_validation": {
+    "changed_objects_compiled": [
+      "cityman_iris_id.o",
+      "msm_csiphy.o"
+    ],
+    "full_arm64_image_build": "passed",
+    "dtbs_identical_to": "iris-csi-top-02"
+  },
+  "files": {
+    "Image.gz": "ae02a0b7438d7825c10948209885a960c7a56dc20d9d9bd7e589b378145787b9",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5"
+  },
+  "temporary_boot_image": {
+    "path": "/private/tmp/lumia-local-build/cityman-iris-csi-phy-irq-01.img",
+    "sha256": "ff6c593fe25030cfd227448f01067dc2e3ee69c5ef1276e7339b6edb21651930",
+    "ramdisk_sha256_matches_original": true,
+    "boot_settings_preserved": true,
+    "partition_size_unchanged": true,
+    "boot_id_verified": true,
+    "flashed": false
+  },
+  "observer": {
+    "sysfs_attribute": "csi_phy_result",
+    "source": "CSIPHY driver's own PHY2 mapping and register offset table",
+    "reads": "eight status words, only while PHY2 reports POWER_UP and mapping is live",
+    "writes_or_acknowledgements": false,
+    "ir_illumination": "disabled"
+  },
+  "phone_test": "Kernel #14 booted temporarily; both observer attributes safely returned unavailable at idle; Aperture front camera ID 1 produced an active preview; 20 identical read-only PHY2 samples returned irq6=1 with all other words zero; device rebooted to installed #29 and all three camera services are running.",
+  "publication": "local only",
+  "phone_result": "phone-result.json"
+}

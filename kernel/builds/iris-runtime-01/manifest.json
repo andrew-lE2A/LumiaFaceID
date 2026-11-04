@@ -1,0 +1,20 @@
+{
+  "build_id": "iris-runtime-01",
+  "kernel_build_number": 21,
+  "purpose": "Runtime PHY settle and profile sensor-byte trials",
+  "source_sha256": {
+    "cityman_iris_id.c": "f2fa62212a9435299d14becca5148ad41b54fa44b607057e935efef7f485e119",
+    "cityman_iris_stream.h": "dac1ca426e3c395dd2c58b6a3d311b80dda60ef3a447dfab020c85565205c045",
+    "cityman_iris_csi.h": "4ba82da97509228f2a724211fb59eed82c904e7615ff0f7f07257d85b99a9ea3",
+    "cityman_iris_csiphy.h": "6ee08b1ab2666e72a13a12bee54b04d707b78057461ce6735a924a58dd32c2a3"
+  },
+  "kernel_sha256": "1b44f838011d50a4757c675eb956a3500ebca04bdfa39bc488e5efedc49dff76",
+  "dtb_sha256": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+  "boot_sha256": "9ac7082ac729b6940e306676463589750ff4bde866c1643c9aaee9c855da1318",
+  "boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+  "boot_method": "fastboot boot",
+  "partition_flashed": false,
+  "ir_enabled": false,
+  "max_trials": 64
+}

@@ -1,5 +1,9 @@
 # Startup and MIPI audit after the receiver-clock measurement
 
+## Physical measurement lead
+
+The published RM-1085/RM-1116 [service schematic](https://pdfcoffee.com/lumia-950xl-rm-1085-1116-schematics-pdf-pdf-free.html), sheet 6, labels the iris camera flex as board 4QK_05a and the sensor H1001. Its extracted text associates sensor pins 4 with EXTCLK, 5 with shutdown, 13/12 with clock +/− and 10/9 with data +/−. Confirm these against the actual schematic drawing and connector orientation before probing; text extraction does not establish accessible test points or safe probe placement. The internal MCLK measurement is not a voltage or waveform measurement at H1001. A physical oscilloscope and probe are needed to establish that signal; MIPI pairs require suitable differential high-bandwidth measurement equipment.
+
 The [kernel #8 receiver-clock result](../kernel/builds/iris-csi-03/rxclk-result.json)
 now includes the raw clock log and saved snapshots recovered directly over ADB
 without retriggering the completed one-shot. Internal MCLK1 is near
@@ -38,6 +42,20 @@ llvm-objdump -d --triple=thumbv7-windows \
 ```
 
 ## Sensor startup: confirmed matches and unresolved branches
+
+### Immediate EXTCLK read on kernel #20
+
+The private idle/mode profile contains no writes to `0x0136` or `0x0137`.
+Kernel #20 read those two bytes immediately after the existing successful
+`0x0136=0x099a` write, before applying the profile. The read succeeded and
+returned `0x0000`; the later pre-start and post-start snapshots also returned
+zero. This excludes a later profile write as the reason for the zero readback.
+It does not establish whether this sensor supports reading the setting or
+whether the write affected its operation. The frame counter and CSID packet
+counts remained zero; stop, release and cleanup succeeded. The phone returned
+to installed kernel #29 with all three camera services running. No IR was
+enabled. See the [phone result](../kernel/builds/iris-extclk-immediate-01/phone-result.json)
+and [build manifest](../kernel/builds/iris-extclk-immediate-01/manifest.json).
 
 | Operation | Rechecked original code | Current diagnostic / remaining uncertainty |
 | --- | --- | --- |
@@ -119,6 +137,32 @@ The name/consumer trace is stronger than treating a nearby conditional branch
 as a required Siiri initialization step; exact runtime applicability remains
 unmeasured.
 
+### Dynamic CSI sensor fields compared with the Linux stream path
+
+The Windows `cam_drv_SMIApp_sensor_config` path writes the sensor's CSI
+interface selector (`0x0111=2`), selected virtual channel (`0x0110=VC`) and
+lane count (`0x0114=lanes-1`) before applying any parsed per-module NVM config
+entries. The NVM probe on this handset found no such sensor config entries.
+The extracted static DCC mode already writes `0x0114=0` for its one data lane.
+
+The Linux `csi2-once` path originally wrote `0x0111=2`, but did not write or
+read back `0x0110`. Its CSID3 configuration accepts CID0 with RAW10 data type
+`0x2b`. Windows' concrete VC argument was not recovered from the static trace,
+so kernel #18 explicitly selected sensor VC0 to match the Linux receiver
+configuration. It read the sensor value immediately before the write and in
+the pre-start and post-start snapshots.
+
+The previous kernel #17 settle comparison used `0x0111=2` but left `0x0110`
+untouched. Its counter and packet counts stayed at zero despite correct settle
+readback. Kernel #18 read `0x0110=0` before the added write, then confirmed zero
+in both snapshots after it. The sensor counter still stayed at zero and CSID3
+packet/ECC/CRC counts remained zero. Thus VC0 was already selected after reset,
+and the explicit matching write did not resolve reception. Cleanup returned
+zero, all camera services were restored, and the phone returned to installed
+kernel #29. IR remained disabled. See the
+[phone result](../kernel/builds/iris-csi-vc-01/phone-result.json) and
+[build manifest](../kernel/builds/iris-csi-vc-01/manifest.json).
+
 ## Read-only local collection
 
 From the project directory, with an authorized ADB connection:
@@ -170,25 +214,21 @@ PHY and cannot establish an incoming signal.
 
 ## Next discriminating work
 
-1. Check the remaining mode/PLL programming and original Siiri dynamic settings
-   against the exact calibration. The resolved logging hook and conditional
-   mechanical-shutter path supply no evidence-backed new startup write. Record
-   each operation, condition and order before proposing a comparison.
-2. Recover matching PHY status definitions and timer/settle encoding. If adding
+1. Recover matching PHY status definitions and timer/settle encoding. If adding
    instrumentation, collect events through the owning driver's existing IRQ
    handler and preserve cleanup; avoid competing MMIO reads/clears or enabling
    new interrupts merely to obtain activity.
-3. If source tracing leaves sensor-pin MCLK or MIPI lane activity unresolved,
-   an electrical observation is needed to distinguish pin delivery, absent HS
-   output and receiver acquisition. Internal debug clocks cannot substitute for
-   this. Keep any observation independent of IR illumination.
+2. The remaining decisive split is whether MCLK reaches the sensor pin and
+   whether it emits MIPI HS traffic. Internal clock counters do not answer
+   either question; a suitably high-bandwidth electrical observation or
+   source-supported hardware status is needed. Keep any observation independent
+   of IR illumination.
 
-No new phone run or kernel build is requested by this audit. Repeating the
-completed clock/interface test would not resolve these branches. Any eventual
-comparison remains one-shot on a fresh `fastboot boot`, with camera services
-stopped, explicit sensor/receiver cleanup and both normal cameras checked after
-restoration. Preserve the original boot backup and private profile. IR remains
-disabled; authentication and ISPIF/VFE image delivery remain future work.
+The #18 comparison was one-shot on a fresh `fastboot boot`; the phone is now
+back on kernel #29 with all three camera services running. Repeating the same
+clock/interface/VC test would not resolve the remaining branches. Preserve the
+original boot backup and private profile. IR remains disabled; authentication
+and ISPIF/VFE image delivery remain future work.
 
 ## Local validation
 

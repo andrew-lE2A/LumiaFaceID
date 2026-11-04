@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-vc-01",
+  "kernel_build_number": 18,
+  "purpose": "Single-field sensor virtual-channel alignment comparison for CSI-2 bring-up",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus local changes",
+  "compiled_source_sha256": {
+    "cityman_iris_id.c": "d78ea1b3c0a5fc3338edc94fae30faebd4b89deee9a5e65885acb64fd132963d",
+    "cityman_iris_stream.h": "5f94eea8c7dfdeb04985297b706568cdca030de7238ba7f7be4c79ebd4fb03cf",
+    "cityman_iris_csi.h": "4ad9aaac416480c4a82e76c48f67241ef868f5a79140c86bb8497d7a86b254ba",
+    "cityman_iris_csiphy.h": "d3ec2aa5eccb2c8c4caa216929d50c8839ec0e2fbe811f82b91cbe0cbde2c211"
+  },
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "compile_header_sha256": "03b9e35b3fa2c18376a5ca038986acd29ccd298cb690bdd859dbc4177ac20ec6",
+  "build_result": "passed; ARM64 kernel linked",
+  "files": {
+    "Image.gz": "79d1e4f866c380befe5c1a6e978516c5e3f934ffde94a2710823ffcadb27a640",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+    "temporary_boot_image": "ea9ef8a8cd4afa534867c73c2509e15b635a2e076e973bc8f7abc7f076254c5c"
+  },
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "repack_validation": {
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "partition_size_bytes": 35651584,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "phone_test": {
+    "device": "Lumia 950 XL cityman",
+    "kernel": "#18",
+    "operation": "csi2-once",
+    "changed_sensor_value": "0x0110=0",
+    "before_write_vc": "0x00",
+    "ir_illumination": "disabled",
+    "result": "no frame-counter change; no CSID packets",
+    "cleanup_errno": 0,
+    "camera_services_restored": true,
+    "returned_to_installed_kernel": "#29"
+  },
+  "publication": "local only; no push or PR"
+}

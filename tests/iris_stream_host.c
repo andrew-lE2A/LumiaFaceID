@@ -29,6 +29,7 @@ static const struct {
     {0x0340, 2}, {0x0342, 2}, {0x034c, 2}, {0x034e, 2},
     {0x0202, 2}, {0x0204, 2}, {0x0a06, 1}, {0x0a0a, 1},
     {0x0130, 2}, {0x0300, 2}, {0x0302, 2}, {0x0308, 2}, {0x030a, 2},
+    {0x0110, 1},
 };
 
 static int stream_write(void *context, u16 address, const u8 *data,
@@ -189,6 +190,7 @@ static void check_snapshot_transactions(void)
     assert(state.stream.before[22] == 0x3456 && state.stream.after[22] == 0x3456);
     assert(state.stream.before[23] == 0x4567 && state.stream.after[23] == 0x4567);
     assert(state.stream.before[24] == 0x5678 && state.stream.after[24] == 0x5678);
+    assert(state.stream.before[25] == 0 && state.stream.after[25] == 0);
     assert(!state.stream.readback_error);
 }
 #ifndef IRIS_STREAM_MAIN
@@ -303,6 +305,14 @@ int IRIS_STREAM_MAIN(void)
     assert(iris_stream_accept(&state.stream, state.stream.program,
            IRIS_PROGRAM_BYTES - 1, iris_program_sha256) == -EINVAL);
     count++;
+    reset_stream();
+    state.stream.override_requested = true;
+    state.stream.override_address = 0x3000;
+    state.stream.override_value = 0x5a;
+    assert(!iris_identify(&state));
+    assert(sensor_registers[0x3000] == 0x5a);
+    assert(state.stream.override_readback_valid && state.stream.override_readback == 0x5a);
+    stopped(); count++;
     printf("Baseline: %d startup transactions, %u profile bursts, %d read transactions\n",
            startup_writes, baseline_bursts, baseline_reads);
     printf("%d actual integrated stream scenarios passed\n", count);

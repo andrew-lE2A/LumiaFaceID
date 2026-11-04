@@ -151,8 +151,10 @@ change, then `adb reboot` to finish the temporary boot test.
 
 Reset and EXTCLK follow the original Siiri startup branch at
 `0x40bf70`–`0x40bfd6`: software reset `0x0103=1`, then the rounded 8.8 MHz clock
-value at `0x0136`. The test waits 20 ms after reset; the original waits 10 ms.
-The model is rechecked after reset/EXTCLK, matching `0x40bff6`–`0x40bffa`.
+value at `0x0136`. Kernel #21 used a 20 ms wait; kernel #22 changed it to the
+Windows 10 ms wait for a controlled comparison. That trial still returned
+`-110` with no frame-counter changes or CSID packets. The model is rechecked
+after reset/EXTCLK, matching `0x40bff6`–`0x40bffa`.
 A mismatch aborts before profile programming. In that early failure, the
 ordinary result's model remains the pre-reset value; no snapshots are valid.
 

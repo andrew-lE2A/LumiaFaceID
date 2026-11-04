@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-reset-10ms-01",
+  "kernel_build_number": 22,
+  "purpose": "Compare Windows Siiri's 10 ms post-reset delay with Android's previous 20 ms delay",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "source_change": "cityman_iris_stream.h changes only the post-software-reset wait from 20 ms to 10 ms, matching the Windows Siiri startup path",
+  "source_sha256": {
+    "cityman_iris_id.c": "f2fa62212a9435299d14becca5148ad41b54fa44b607057e935efef7f485e119",
+    "cityman_iris_stream.h": "b5a1c10920f46f9191d63f7f0f493a8640e2c827168c81b16e6525e053886e5b",
+    "cityman_iris_csi.h": "4ba82da97509228f2a724211fb59eed82c904e7615ff0f7f07257d85b99a9ea3",
+    "cityman_iris_csid.h": "6a7b51fdc3556c42fb9cb8850baed15866294eb643367ca1ec225e1ac89a335f",
+    "cityman_iris_csiphy.h": "6ee08b1ab2666e72a13a12bee54b04d707b78057461ce6735a924a58dd32c2a3"
+  },
+  "config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "compile_header_sha256": "fbed821c83fb472d7e2cea6e76c0c7a08641723415abb26cfdfad039a57e9629",
+  "compile_header_version": "#22 SMP PREEMPT Wed Nov 4 11:23:53 UTC 2026",
+  "build_result": "passed; ARM64 kernel linked",
+  "files": {
+    "Image.gz": "6903ce2d60f002c47292eb59975c707249f268d47269961f12888af889b3481e",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+    "boards_dtb_byte_identical_to": "iris-runtime-01 kernel #21",
+    "temporary_boot_image_sha256": "b7a35180dff1f8524da57e7c618731f6919fb7c2e9aa1c5f19575f4287f33205"
+  },
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "repack_validation": {
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "partition_size_bytes": 35651584,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "test_plan": {
+    "operation": "csi-trial",
+    "settle": 22,
+    "interface": "CSI-2",
+    "virtual_channel": 0,
+    "profile": "existing private, hash-verified profile; unmodified",
+    "ir_illumination": "disabled"
+  },
+  "phone_result_path": "kernel/builds/iris-reset-10ms-01/phone-result.json",
+  "phone_result": "Temporary fastboot boot succeeded. One 10 ms trial returned -110 with zero sensor frame changes and zero CSID packets/ECC/CRC; cleanup and service restoration succeeded. Phone rebooted to installed kernel #29.",
+  "publication": "local only; no push or PR"
+}

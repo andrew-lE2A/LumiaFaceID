@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "collected_at_local_date": "2026-11-04",
+  "build_id": "iris-reset-10ms-01",
+  "kernel_build_number": 22,
+  "operation": "one csi-trial at settle 22 after software reset wait changed from 20 ms to 10 ms",
+  "boot_method": "fastboot boot; temporary only",
+  "before": {
+    "kernel": "3.10.108-perf-gcc84cab9 #22 SMP PREEMPT Wed Nov 4 11:23:53 UTC 2026",
+    "status": "ready",
+    "attempts": 0,
+    "blocked": 0,
+    "profile_loaded": false,
+    "camera_services": "running"
+  },
+  "sensor": {
+    "model": "0x0861",
+    "profile_loaded": true,
+    "profile_writes": 117,
+    "program_transactions": 50,
+    "readback_errno": 0,
+    "frame_counter_samples": 16,
+    "frame_counter_first": "0x00",
+    "frame_counter_last": "0x00",
+    "frame_counter_changes": 0,
+    "interface_0111": "0x02",
+    "virtual_channel_0110": "0x00",
+    "external_clock_register_0136": "0x0000",
+    "control_register_0130": "0x099a"
+  },
+  "receiver": {
+    "settle_requested": 22,
+    "settle_readback": "0x16",
+    "phy": 2,
+    "csid": 3,
+    "combo_mode": true,
+    "lane_mask": "0x18",
+    "lane_assignment": "0x0004",
+    "packets": 0,
+    "ecc": 0,
+    "crc": 0,
+    "phy_irq_status_words": ["0x00", "0x00", "0x00", "0x04", "0x04", "0x00", "0x10", "0x00"]
+  },
+  "result": {
+    "status": "failed",
+    "stage": "stream-test",
+    "errno": -110,
+    "attempts": 1,
+    "blocked": 0,
+    "sensor_stop_errno": 0,
+    "receiver_release_errno": 0,
+    "cleanup_errno": 0
+  },
+  "comparison_to_kernel_21": {
+    "kernel_21_reset_wait_ms": 20,
+    "kernel_22_reset_wait_ms": 10,
+    "settle": 22,
+    "sensor_counter_changes": "0 in both",
+    "csid_packets_ecc_crc": "0 in both",
+    "phy_irq_status_words": "identical: status3=0x04, status4=0x04, status6=0x10; other words zero",
+    "conclusion": "Matching the Windows reset wait did not change the observed startup or receiver result."
+  },
+  "cleanup": {
+    "camera_services_after_trial": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    },
+    "rebooted_to_installed_kernel": "3.10.108-perf-gcc84cab9 #29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "camera_services_after_reboot": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    }
+  },
+  "boost_rail": "not enabled",
+  "ir_illumination": "disabled",
+  "installed_boot_partition_modified": false,
+  "publication": "local only"
+}

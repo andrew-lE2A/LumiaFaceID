@@ -63,12 +63,12 @@ static int msm_csiphy_init(struct csiphy_device *p) {
 }
 static int msm_csiphy_lane_config(struct csiphy_device *p, struct msm_camera_csiphy_params *v) {
     assert(p->mutex.locked && p->ref_count==1);
-    assert(v->lane_cnt==1 && v->settle_cnt==20 && v->lane_mask==0x18);
+    assert(v->lane_cnt==1 && v->settle_cnt==22 && v->lane_mask==0x18);
     assert(v->combo_mode==1 && v->csid_core==3 && v->csiphy_clk==200000000);
     p->lane_mask[2]=v->lane_mask; mux=(mux & ~0xf0U) | 0x30;
     phy_regs[0x144/4]=0x31; phy_regs[0x140/4]=0x10;
     phy_regs[(0x40*3+4)/4]=phy_regs[(0x40*4+4)/4]=0x10;
-    phy_regs[(0x40*3+8)/4]=phy_regs[(0x40*4+8)/4]=20;
+    phy_regs[(0x40*3+8)/4]=phy_regs[(0x40*4+8)/4]=v->settle_cnt;
     phy_regs[(0x40*3+0x28)/4]=4; phy_regs[(0x40*4+0x28)/4]=8;
     return step(4);
 }
@@ -140,8 +140,8 @@ int main(void) {
             assert(s.csid_before[0]==0x40 && s.csid_before[1]==0x5000f);
             assert(s.csid_before[2]==0x2b && s.csid_before[3]==0x23);
             assert(s.phy_before[0]==0x35 && s.phy_before[1]==0x31 && s.phy_before[2]==0x10);
-            assert(s.phy_before[3]==0x10 && s.phy_before[4]==20 && s.phy_before[5]==4);
-            assert(s.phy_before[6]==0x10 && s.phy_before[7]==20 && s.phy_before[8]==8);
+            assert(s.phy_before[3]==0x10 && s.phy_before[4]==22 && s.phy_before[5]==4);
+            assert(s.phy_before[6]==0x10 && s.phy_before[7]==22 && s.phy_before[8]==8);
             stats[0]=120; stats[1]=0xabcd0002; stats[2]=3;
             phy_regs[0x18c/4]=0x12; phy_regs[(0x18c+7*4)/4]=0x34;
             if(n==0) {

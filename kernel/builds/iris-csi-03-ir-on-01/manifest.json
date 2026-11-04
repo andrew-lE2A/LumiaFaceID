@@ -1,0 +1,29 @@
+{
+  "build_id": "iris-csi-03-ir-on-01",
+  "purpose": "single CSI receiver/sensor stream comparison with the confirmed front IR torch enabled",
+  "kernel_build_reused": "iris-csi-03",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #8",
+  "boot_method": "fastboot boot; no partition write",
+  "temporary_boot_image_sha256": "621aab7c03a7be3a5f38aa34a1ba81ed5be1420f963f344ca1d8b595f8ef5a4e",
+  "private_profile": {
+    "decoded_bytes": 351,
+    "decoded_sha256": "75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5",
+    "embedded_in_kernel": false
+  },
+  "illumination": {
+    "channel": "led:torch_0",
+    "sysfs_brightness": 14,
+    "driver_max_current_ma": 200,
+    "torch_levels": 15,
+    "quantized_level": 1,
+    "held_during_sensor_start_and_stream_test": true,
+    "actual_output_current_measured": false
+  },
+  "phone_result": "kernel/builds/iris-csi-03-ir-on-01/phone-result.json",
+  "capture_status": "no iris frames or CSID3 packets; cleanup clean; phone returned to installed kernel #29",
+  "limits": [
+    "The temporary kernel did not expose the later CAMSS TOP observation interface; the matching kernel #8 helper was used.",
+    "The IR torch register code and owner observation establish channel activity but not measured current or optical dose.",
+    "The ordinary front-camera preview is not the iris camera and delivered no calibrated image comparison."
+  ]
+}

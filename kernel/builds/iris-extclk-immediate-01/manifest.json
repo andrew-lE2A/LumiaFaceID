@@ -1,0 +1,19 @@
+{
+  "build_id": "iris-extclk-immediate-01",
+  "kernel_build_number": 20,
+  "purpose": "Read EXTCLK register immediately after the existing write",
+  "source_sha256": {
+    "cityman_iris_id.c": "68d2f6d1e4e08f0d4353e0a8471f1e5b15fd0115bdb6bccb2fe61d5e6f0ea7b1",
+    "cityman_iris_stream.h": "687a2b322e3aacc93334b7947dddccf7533900af3ac0f3dac9f354f98989a766",
+    "cityman_iris_csi.h": "631fa25bb5be7d86e5386f396f809aed73a183aacbbf23844c716a3378c0088a",
+    "cityman_iris_csiphy.h": "6ee08b1ab2666e72a13a12bee54b04d707b78057461ce6735a924a58dd32c2a3"
+  },
+  "kernel_sha256": "794e70a0dfa2924d653663c652f4b970627c88c72fc3f5873bffd157dd60c6a7",
+  "dtb_sha256": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+  "boot_sha256": "5209040fe9c8ec7585a87116948105eb8dbf1eaa8e70237d5d5202da1ae6f786",
+  "boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+  "boot_method": "fastboot boot only",
+  "partition_flashed": false,
+  "ir_enabled": false
+}

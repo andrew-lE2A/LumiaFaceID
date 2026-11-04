@@ -23,12 +23,12 @@ class IrisStreamTests(unittest.TestCase):
             startup, bursts, reads = map(int, baseline.groups())
             self.assertGreater(startup, bursts)
             self.assertEqual(bursts, (87 + 7) // 8 + (30 + 7) // 8)
-            self.assertEqual(reads, 1 + 25 + 16 + 25)
+            self.assertEqual(reads, 1 + 26 + 16 + 26)
             # Baseline plus all startup/read failures, three stalled counters,
-            # twenty-five stalled-counter/post-snapshot failures, two mismatches,
+            # twenty-six stalled-counter/post-snapshot failures, two mismatches,
             # four stop failures, a wrong post-reset identity, and four
             # no-stream/profile-gate scenarios.
-            expected = 1 + startup + reads + 3 + 25 + 2 + 4 + 1 + 4
+            expected = 1 + startup + reads + 3 + 26 + 2 + 4 + 1 + 4 + 1
             self.assertIn(f'{expected} actual integrated stream scenarios passed', run.stdout)
 
 

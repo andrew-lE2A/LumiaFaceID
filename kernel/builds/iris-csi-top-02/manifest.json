@@ -1,0 +1,46 @@
+{
+  "build_id": "iris-csi-top-02",
+  "kernel_build_number": 13,
+  "purpose": "safe CSIPHY-powered-only observation of CAMSS TOP mux words and one bounded iris receiver startup diagnostic",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus uncommitted local changes",
+  "kernel_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "compiled_kernel_version": "#13 SMP PREEMPT Tue Nov 3 23:23:45 UTC 2026",
+  "driver_source_sha256": {
+    "cityman_iris_id.c": "007d2f42a8250bfd8adce422b258edddbf90a0920f6f954ae7f97f00c1b1aaef",
+    "cityman_iris_csi.h": "488aa71f21d9c566f99b21c8772c075c567648a8c076d75a79df2b9eed4242ef",
+    "cityman_iris_csiphy.h": "80080ede434edcbab9d305e29b8a2f6d128333281ef75b1d409ebb33debf7ba5"
+  },
+  "patch_sha256": {
+    "0006-cityman-csid-tpg-observation.patch": "26bdba99aeca6b6aa981fe85d788608fbd4c9f5bf52baca29fbef2cfe8b468d9",
+    "0007-cityman-csiphy-mux-window.patch": "232258baecb67ae2bd8dc78229b0949ff57cce09d0653aa5cc64bb7d444561dd"
+  },
+  "helper_tests": "32 passed",
+  "files": {
+    "Image.gz": "94ee48e4b30c1f011af0061fa956fc86b428cb9bcce6ed6e88284c8cefeeceea",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5"
+  },
+  "temporary_boot_image": {
+    "path": "/private/tmp/lumia-local-build/cityman-iris-csi-top-02.img",
+    "sha256": "4e4297d6a8fa36ec9d4f76f1803e2edf9cb24ae08fd9fa2a74556f7493037308",
+    "repack_preserved_ramdisk": true,
+    "repack_preserved_boot_settings": true,
+    "partition_size_unchanged": true,
+    "boot_id_verified": true,
+    "flashed": false
+  },
+  "diagnostic_design": {
+    "sysfs_attribute": "csi_top_result",
+    "resource": "CSIPHY driver's clk_mux_base for PHY2; DT window expanded to include 0xfda00040 and 0xfda00044",
+    "reads": "only while PHY2 reports POWER_UP and mapping is live, otherwise cached powered-time snapshot or unavailable",
+    "writes": false,
+    "sensor_profile": "private profile remains outside repository",
+    "ir_illumination": "disabled"
+  },
+  "phone_test": "csi-once and csi2-once both completed with clean release and service restoration; csi2-once confirmed sensor 0x0111=2 but still no frame-counter changes or CSID packets; CAMSS TOP 0x40=0x30 and 0x44=0x03 while PHY2 powered; device returned to installed #29",
+  "additional_phone_result": "csi2-phone-result.json",
+  "front_camera_control": "Aperture camera ID 1 preview read live CAMSS TOP 0x40=0x2 and 0x44=0x3; matching CSIPHY2 lane config logged mask 0x7, 2 lanes, CSID2, combo off. No CSIPHY2 IRQ lines observed in dmesg during the sampled interval.",
+  "front_camera_result": "front-camera-result.json"
+}

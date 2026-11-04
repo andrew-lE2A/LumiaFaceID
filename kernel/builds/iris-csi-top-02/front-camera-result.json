@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-11-04T00:04:49Z",
+  "build_id": "iris-csi-top-02",
+  "operation": "read-only front-camera mux control",
+  "boot_method": "fastboot boot; temporary only",
+  "kernel": "3.10.108-perf-gcc84cab9 #13 SMP PREEMPT Tue Nov 3 23:23:45 UTC 2026",
+  "camera_app": "org.lineageos.aperture",
+  "active_camera_id": "1 (front)",
+  "preview": "active and visibly producing a magenta/pink image; no image file saved to the repository",
+  "camss_top_live": {
+    "source": "live during front-camera preview while PHY2 was powered",
+    "0xfda00040": "0x00000002",
+    "0xfda00044": "0x00000003"
+  },
+  "kernel_log": {
+    "csiphy2_lane_config": "lane_mask=0x7 lane_cnt=2 settle=0x0e csid=2 combo=0",
+    "csiphy2_irq_status_lines": "none observed in dmesg during this preview interval"
+  },
+  "clock_enable_state": {
+    "camss_csi3_clk": "0",
+    "camss_phy2_csi2phytimer_clk": "1"
+  },
+  "interpretation": "Front preview confirms the observer reads the lower PHY2 mux field live (0x2) with select word 0x3. The iris run read the upper field 0x30 with the same select word. The mux routing thus changes as expected for the two active camera paths. This control does not yet compare per-lane PHY IRQ status because no CSIPHY2 IRQ lines were emitted during the sampled front preview interval.",
+  "cleanup": {
+    "camera_app_closed": true,
+    "active_camera_clients_after_close": 0,
+    "device_rebooted_to_installed_kernel": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    }
+  },
+  "ir_illumination": "disabled",
+  "flashed": false,
+  "publication": "local only"
+}

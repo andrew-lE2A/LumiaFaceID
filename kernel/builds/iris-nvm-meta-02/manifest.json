@@ -1,0 +1,37 @@
+{
+  "build_id": "iris-nvm-meta-02",
+  "kernel_build_number": 16,
+  "purpose": "One-shot, five-byte iris SMIA++ NVM metadata read; no payload or register configuration writes",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus local changes",
+  "driver_source_sha256": "5d72783609b57b5145b2dbb0cf2e04083c5abba83edbe463d69e7c345da21d85",
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "build_result": "passed; ARM64 kernel linked",
+  "files": {
+    "Image.gz": "fb341e3433e10e1df216f05eb1dcd689b58335fecf1f174e934771f18fe47afb",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+    "temporary_boot_image": "25adc730d349ee2344d9cfd91ed917b2dfdf3ce9f7e4cf5b1cef166a5d82067c"
+  },
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "repack_validation": {
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "partition_size_bytes": 35651584,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "phone_test": {
+    "kernel": "#16",
+    "model": "0x0861",
+    "nvm_metadata_valid": true,
+    "nvm_size_bytes": 51,
+    "nvm_pages": 1,
+    "rd_ready": false,
+    "status": "0x00",
+    "sensor_config_entries_present": false,
+    "cleanup_errno": 0,
+    "camera_services_restored": true,
+    "ir_illumination": "disabled"
+  },
+  "publication": "local only; no push or PR"
+}

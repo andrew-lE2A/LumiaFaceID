@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "build_id": "iris-csi-trials-01",
+  "kernel_build_number": 19,
+  "purpose": "Three bounded runtime CSIPHY settle comparisons in one temporary boot",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210 plus local changes",
+  "compiled_source_sha256": {
+    "cityman_iris_id.c": "7fefdfadc12cb8763228a505edd2a0683af42e2c8853d64ea78b7ece9af9741d",
+    "cityman_iris_stream.h": "5f94eea8c7dfdeb04985297b706568cdca030de7238ba7f7be4c79ebd4fb03cf",
+    "cityman_iris_csi.h": "631fa25bb5be7d86e5386f396f809aed73a183aacbbf23844c716a3378c0088a",
+    "cityman_iris_csiphy.h": "6ee08b1ab2666e72a13a12bee54b04d707b78057461ce6735a924a58dd32c2a3"
+  },
+  "generated_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "compile_header_sha256": "071951eae43f8aead6c752c039a6fc4a7307fe06c229bc2406774a6daec1035c",
+  "build_result": "passed; ARM64 kernel linked",
+  "files": {
+    "Image.gz": "1a843491cbfffd5f7f88373d76fb27a8de312493d7da5b461efff3ed023ad707",
+    "boards.dtb": "c5707198ec735e96a5cb093a1480d9d1e2643f742726647fe5b50584f3949da5",
+    "temporary_boot_image": "aecb5de29125aedfb700391d81bd55e35ecc2ec5a31bdaf1463b9b51f6d3a008"
+  },
+  "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+  "repack_validation": {
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "partition_size_bytes": 35651584,
+    "fastboot_boot_only": true,
+    "partition_flashed": false
+  },
+  "test_plan": {
+    "control": "csi_trial",
+    "settle_values": [20, 22, 24],
+    "interface": "CSI-2",
+    "virtual_channel": 0,
+    "attempt_limit": 3,
+    "raw_register_control": false,
+    "ir_illumination": "disabled"
+  },
+  "publication": "local only; no push or PR"
+}

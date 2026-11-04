@@ -1,0 +1,7 @@
+Subject: [PATCH] map the adjacent CAMSS TOP upper mux select word
+
+--- a/arch/arm64/boot/dts/qcom/msm8994-camera.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8994-camera.dtsi
+@@ -75,1 +75,1 @@
+-                      <0xfda00040 0x4>;
++                      <0xfda00040 0x8>;

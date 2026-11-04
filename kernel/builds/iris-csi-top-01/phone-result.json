@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-11-03T23:34:00Z",
+  "build_id": "iris-csi-top-01",
+  "operation": "read-only csi_top_result at idle",
+  "boot_method": "fastboot boot; temporary only",
+  "kernel": "3.10.108-perf-gcc84cab9 #13 SMP PREEMPT Tue Nov 3 23:23:45 UTC 2026",
+  "outcome": "kernel panicked during first live MMIO read before any register value was returned",
+  "pstore": {
+    "fault": "Unhandled fault: synchronous external abort (0x96000010) at 0xffffff8003f2c030",
+    "pc": "csi_top_result_show+0x30/0xac",
+    "process": "cat",
+    "panic": "Kernel panic - not syncing: Fatal exception"
+  },
+  "sensor_or_phy_tested": false,
+  "ir_illumination": "disabled",
+  "recovery": {
+    "method": "automatic reboot to installed boot",
+    "installed_kernel": "#29 SMP PREEMPT Mon Nov 2 13:22:38 UTC 2026",
+    "camera_services": {
+      "cameraserver": "running",
+      "vendor.camera-provider-2-4": "running",
+      "qcamerasvr": "running"
+    },
+    "camera_devices": 2,
+    "active_camera_clients": 0
+  },
+  "interpretation": "The CAMSS TOP block cannot be read at idle. The failing observer bypassed the CSIPHY driver's powered-resource lifecycle. The image is unsafe for further boot testing; it has been superseded by a powered-only observer using the CSIPHY-owned mapping.",
+  "publication": "local only"
+}

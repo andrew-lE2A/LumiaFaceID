@@ -22,6 +22,8 @@ struct cityman_iris;
 #ifdef CONFIG_CITYMAN_IRIS_STREAM
 struct iris_stream_io;
 static struct iris_stream_io iris_stream_io(struct cityman_iris *);
+static int iris_nvm_finish(struct cityman_iris *);
+static int iris_nvm_probe(struct cityman_iris *);
 #endif
 static int iris_cci_command(struct cityman_iris *, enum msm_cci_cmd_type);
 static int iris_read_model(struct cityman_iris *, u16 *);
@@ -90,6 +92,12 @@ static void *v4l2_get_subdevdata(void *p) { return p; }
 #define dev_info(dev, ...) ((void)(dev))
 #define CITYMAN_IRIS_HOST_TEST
 #include "../kernel/driver/cityman_iris_id.c"
+
+#ifdef CONFIG_CITYMAN_IRIS_STREAM
+/* The host harness excludes production CCI helpers; these are not exercised. */
+static int iris_nvm_finish(struct cityman_iris *iris) { (void)iris; return 0; }
+static int iris_nvm_probe(struct cityman_iris *iris) { (void)iris; return 0; }
+#endif
 
 static int iris_cci_command(struct cityman_iris *iris, enum msm_cci_cmd_type cmd)
 {

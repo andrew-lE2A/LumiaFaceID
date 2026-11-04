@@ -8,6 +8,52 @@
  * The pinned driver has no remove callback and does not free this object. */
 static struct csiphy_device *cityman_iris_phy_device;
 
+int cityman_iris_phy_mux_read_live(u32 *mux40, u32 *mux44)
+{
+	struct csiphy_device *p = cityman_iris_phy_device;
+	int rc = 0;
+	if (!p || !mux40 || !mux44)
+		return -ENODEV;
+	if (!mutex_trylock(&p->mutex))
+		return -EBUSY;
+	if (p->pdev->id != 2 || p->csiphy_state != CSIPHY_POWER_UP ||
+	    !p->base || !p->clk_mux_base) {
+		rc = -EAGAIN;
+		goto out;
+	}
+	*mux40 = msm_camera_io_r(p->clk_mux_base);
+	*mux44 = msm_camera_io_r(p->clk_mux_base + 4);
+out:
+	mutex_unlock(&p->mutex);
+	return rc;
+}
+
+/* Read the driver's eight per-lane IRQ status words without acknowledging
+ * them. Only sample through the owned mapping while PHY2 is powered. */
+int cityman_iris_phy_irq_read_live(u32 *status, unsigned int count)
+{
+	struct csiphy_device *p = cityman_iris_phy_device;
+	struct csiphy_reg_parms_t *r;
+	unsigned int i;
+	int rc = 0;
+	if (!p || !status || count < IRIS_CSI_PHY_IRQ_WORDS)
+		return -EINVAL;
+	if (!mutex_trylock(&p->mutex))
+		return -EBUSY;
+	if (p->pdev->id != 2 || p->csiphy_state != CSIPHY_POWER_UP ||
+	    !p->base || !p->ctrl_reg) {
+		rc = -EAGAIN;
+		goto out;
+	}
+	r = &p->ctrl_reg->csiphy_reg;
+	for (i = 0; i < IRIS_CSI_PHY_IRQ_WORDS; i++)
+		status[i] = msm_camera_io_r(p->base +
+			r->mipi_csiphy_interrupt_status0_addr + i * 4);
+out:
+	mutex_unlock(&p->mutex);
+	return rc;
+}
+
 int cityman_iris_phy_lock(struct iris_csi *s)
 {
 	struct csiphy_device *p = cityman_iris_phy_device;
@@ -39,6 +85,9 @@ int cityman_iris_phy_init(struct iris_csi *s)
 		s->phy_initialized = true;
 		if (p->clk_mux_base) {
 			s->phy_mux_before = msm_camera_io_r(p->clk_mux_base);
+			s->top40_before = msm_camera_io_r(p->clk_mux_base);
+			s->top44_before = msm_camera_io_r(p->clk_mux_base + 4);
+			s->top_before_valid = true;
 			s->phy_mux_valid = true;
 		}
 	}
@@ -54,7 +103,8 @@ int cityman_iris_phy_init(struct iris_csi *s)
 int cityman_iris_phy_config(struct iris_csi *s)
 {
 	struct msm_camera_csiphy_params params = {
-		.lane_cnt = 1, .settle_cnt = IRIS_CSI_SETTLE,
+		.lane_cnt = 1,
+		.settle_cnt = s->settle ? s->settle : IRIS_CSI_SETTLE,
 		.lane_mask = IRIS_CSI_LANE_MASK, .combo_mode = 1,
 		.csid_core = 3, .csiphy_clk = 200000000,
 	};
@@ -81,6 +131,11 @@ void cityman_iris_phy_sample(struct iris_csi *s, bool after)
 	for (i = 0; i < 8; i++)
 		values[9 + i] = msm_camera_io_r(p->base +
 			r->mipi_csiphy_interrupt_status0_addr + i * 4);
+	if (after) {
+		s->top40_after = msm_camera_io_r(p->clk_mux_base);
+		s->top44_after = msm_camera_io_r(p->clk_mux_base + 4);
+		s->top_after_valid = true;
+	}
 }
 
 int cityman_iris_phy_end(struct iris_csi *s)

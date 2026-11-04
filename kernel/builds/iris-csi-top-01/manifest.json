@@ -1,0 +1,35 @@
+{
+  "build_id": "iris-csi-top-01",
+  "kernel_build_number": 13,
+  "purpose": "read-only observation of CAMSS TOP mux words during front-camera and iris receiver diagnostics",
+  "source_repository": "https://github.com/giannoccarol/android_kernel_mmo_msm8994",
+  "source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "toolchain_commit": "5e030eafe024784a73cdf47e6936ac0dbfc763dc",
+  "local_source_revision": "e7e62a3b720164db1aad674afed1c6349c429210",
+  "kernel_config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+  "device_trees_byte_identical_to": "iris-csi-03",
+  "driver_source_sha256": "dda1eae629d671dbfa6202179bc6a26b239060e7bfc736031711a4c62a01a514",
+  "helper_sha256": "a3ca0613e90eb4670aa9152502e914495c7f79e4710c47651ef803013f5e5e71",
+  "host_helper_tests": "32 passed",
+  "files": {
+    "Image.gz": "65346bfb62622934a9af0c62aa1cc3018caf154d43aec3e4a8e86ae30f16a8af",
+    "boards.dtb": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24"
+  },
+  "temporary_boot_image": {
+    "path": "/private/tmp/lumia-local-build/cityman-iris-csi-13-top.img",
+    "sha256": "316dde7fc786e025a9362d606204b8b7a0d12dac9b26e6a599dddd3ce54f1bf6",
+    "repack_preserved_ramdisk": true,
+    "repack_preserved_boot_settings": true,
+    "partition_size_unchanged": true,
+    "boot_id_verified": true,
+    "flashed": false
+  },
+  "diagnostic_design": {
+    "sysfs_attribute": "csi_top_result",
+    "registers_read_only": ["0xfda00030", "0xfda00038", "0xfda00040", "0xfda00044"],
+    "write_operations": false,
+    "sensor_or_phy_powered_by_observation": false,
+    "ir_illumination": "disabled"
+  },
+  "phone_test": "failed during first CAMSS TOP read; pstore captured a synchronous external abort and kernel panic; phone rebooted to installed #29"
+}

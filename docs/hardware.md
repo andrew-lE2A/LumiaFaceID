@@ -43,6 +43,50 @@ The comment that `led:torch_0/1` **"most likely"** drive the iris illuminator
 is an inference. It does not verify IR wiring, current, polarity, or exposure.
 Do not reuse Hill's rear-flash current tables for iris illumination.
 
+## Connected-phone flash-channel inventory
+
+On installed kernel #29, a read-only inspection found QPNP LED class nodes
+`led:flash_0`, `led:flash_1`, `led:torch_0`, and `led:torch_1`. All four
+reported brightness `0`; flash nodes reported `max_brightness=1000` and torch
+nodes `max_brightness=200`. The separate `flash-torch` node also reported
+brightness `0` and is described by the device tree as the rear Hill flash
+path. No persistent LED setting was made.
+
+This confirms the PMIC LED controller registered channels, but does not map a
+particular channel to the iris emitters. In the pinned `leds-qpnp-flash`
+driver, `max_brightness` is populated from the channel's `qcom,max-current`
+property and brightness is treated as programmed current. The current device
+tree does not declare those four channel properties, so the live values do not
+reveal their actual hardware configuration. The Windows tertiary-flash
+driver's decoded current codes have unknown units, and its guard rails are not
+validated optical or eye-safety limits.
+
+With the phone reported isolated in another room, each QPNP channel was first
+activated once at brightness 13. The driver clamps nonzero requests below
+13 mA, but then quantizes torch current to 15 hardware steps; 13 maps to code
+zero for a 200 mA channel. Those first torch requests therefore did not
+establish that the torch outputs emitted light. Flash channels mapped the same
+request to code 1. Each channel read back its requested value during the short
+test and zero immediately afterward.
+
+A follow-up set `torch_0` to brightness 14, which maps to code 1 by the pinned
+driver's integer scaling (`14 * 15 / 200`). The owner observed a faint red glow
+from the front IR emitter. This identifies `torch_0` as the active front IR
+channel. Its actual current and optical output were not instrumented. `torch_1`
+and both flash channels were off after the checks.
+
+Kernel #8 was then temporarily booted and the existing profile was hash-checked
+after decoding (351 bytes, SHA-256
+`75478697398abf8b21796d408844249af54e05ae7a399afffc33d51dd83e8eb5`). With
+`torch_0` held at brightness 14 from before sensor start through the one-shot,
+the sensor still timed out at `stream-test`: all 16 frame-counter reads were
+zero. CSID3 packets, ECC and CRC also remained zero. Sensor and receiver cleanup
+returned zero, and all camera services restarted. The ordinary front camera
+preview was dark and showed no clear change during illumination. This first
+illuminated attempt is recorded in
+[`phone result`](../kernel/builds/iris-csi-03-ir-on-01/phone-result.json). The phone
+was returned to installed kernel #29 and every LED channel read zero.
+
 ## Original firmware descriptions
 
 [`WOA-Project/Lumia950XLPkg` DSDT](https://github.com/WOA-Project/Lumia950XLPkg/blob/cfc68a4d19fc7e8645bff6d8fce7308ad8494a76/AcpiTables/8994/src/DSDT.asl)

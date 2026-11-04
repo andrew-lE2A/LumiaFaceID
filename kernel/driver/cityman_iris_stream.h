@@ -9,6 +9,7 @@
 #define IRIS_STREAM_SAMPLES 16
 #define IRIS_STREAM_POLL_MS 20
 #define IRIS_STREAM_MAX_BURST 8
+#define IRIS_STREAM_CSI_VIRTUAL_CHANNEL 0
 
 struct iris_stream_register {
 	const char *name;
@@ -33,6 +34,7 @@ static const struct iris_stream_register iris_stream_registers[] = {
 	{ "clk0130", 0x0130, 2 },
 	{ "vt_pix", 0x0300, 2 }, { "vt_sys", 0x0302, 2 },
 	{ "op_pix", 0x0308, 2 }, { "op_sys", 0x030a, 2 },
+	{ "virtual_channel", 0x0110, 1 },
 };
 #define IRIS_READBACK_COUNT (sizeof(iris_stream_registers) / sizeof(iris_stream_registers[0]))
 
@@ -48,6 +50,17 @@ static const u8 iris_program_sha256[32] = {
 struct iris_stream {
 	u8 program[IRIS_PROGRAM_BYTES];
 	bool loaded, requested, entered, select_csi2;
+	bool override_requested;
+	u16 override_address;
+	u8 override_value, override_readback;
+	bool override_readback_valid;
+	u8 virtual_channel_before;
+	bool virtual_channel_before_valid;
+	u16 extclk_immediate;
+	int extclk_immediate_errno;
+	bool extclk_immediate_valid;
+	u16 extclk_single, control_single, control_pair;
+	int extclk_single_errno, control_single_errno, control_pair_errno;
 	u8 first, last;
 	unsigned int samples, changes, writes, transactions;
 	u16 before[IRIS_READBACK_COUNT], after[IRIS_READBACK_COUNT];
@@ -118,6 +131,14 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 	s->samples = s->changes = s->writes = s->transactions = 0;
 	s->before_valid = s->after_valid = 0;
 	s->readback_error = 0;
+	s->virtual_channel_before = 0xff;
+	s->virtual_channel_before_valid = false;
+	s->extclk_immediate = 0;
+	s->extclk_immediate_errno = 0;
+	s->extclk_immediate_valid = false;
+	s->extclk_single = s->control_single = s->control_pair = 0;
+	s->extclk_single_errno = s->control_single_errno = s->control_pair_errno = -ENODATA;
+	s->override_readback_valid = false;
 	memset(s->before, 0xff, sizeof(s->before));
 	memset(s->after, 0xff, sizeof(s->after));
 	s->first = s->last = 0xff;
@@ -128,7 +149,8 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 	rc = iris_stream_byte(io, 0x0103, 1);
 	if (rc)
 		return rc;
-	io->delay_ms(20);
+	/* Match the Windows Siiri startup delay after software reset. */
+	io->delay_ms(10);
 	s->stage = "external-clock";
 	/* 9.6 MHz in rounded 8.8 MHz units, matching the original conversion. */
 	rc = iris_stream_word(io, 0x0136, 0x099a);
@@ -181,18 +203,42 @@ static int iris_stream_program(struct iris_stream *s, const struct iris_stream_i
 	/* Optional comparison only: the original sensor_config path explicitly
 	 * selects CSI-2. Its order relative to the mode's 0111=0 is unresolved. */
 	if (s->select_csi2) {
+		u8 virtual_channel = 0xff;
 		s->stage = "csi2-interface";
 		rc = iris_stream_byte(io, 0x0111, 2);
 		if (rc)
 			return rc;
+		/* Windows sensor_config supplies the VC to match its CSID route.
+		 * This bring-up configures CID/VC 0, so set the sensor to VC 0 too. */
+		rc = io->read_bytes(io->context, 0x0110, &virtual_channel, 1);
+		if (rc)
+			return rc;
+		s->virtual_channel_before = virtual_channel;
+		s->virtual_channel_before_valid = true;
+		rc = iris_stream_byte(io, 0x0110, IRIS_STREAM_CSI_VIRTUAL_CHANNEL);
+		if (rc)
+			return rc;
 	}
 #endif
+	if (s->override_requested) {
+		s->stage = "runtime-override";
+		rc = iris_stream_byte(io, s->override_address, s->override_value);
+		if (rc)
+			return rc;
+		rc = io->read_bytes(io->context, s->override_address,
+			&s->override_readback, 1);
+		if (rc)
+			return rc;
+		s->override_readback_valid = true;
+	}
 	s->stage = "config-readback";
 	rc = iris_stream_snapshot(s, io, false);
 	if (rc)
 		return rc;
 #ifdef CONFIG_CITYMAN_IRIS_CSI
-	if (s->select_csi2 && s->before[7] != 2) {
+	if (s->select_csi2 &&
+	    (s->before[7] != 2 ||
+	     s->before[IRIS_READBACK_COUNT - 1] != IRIS_STREAM_CSI_VIRTUAL_CHANNEL)) {
 		s->stage = "csi2-interface";
 		return -EIO;
 	}
