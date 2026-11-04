@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-05",
+  "package": "com.lumia.irisprobe.quality",
+  "apk_sha256": "ce2adfa1486b7b7d2a8c614ed9d5e9d21b8fbe573feb2250ce0b7fdb42e59943",
+  "camera": {
+    "id": "2",
+    "sensor": "IR0861 iris",
+    "stream": "1920x1080 YUV_420_888",
+    "opened_alone": true,
+    "preview_and_capture_callbacks": "continuous; at least 420 reported before summary"
+  },
+  "illumination": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "scene_conditions": {
+    "user_report": "Dark room with pink/magenta visible lighting.",
+    "capture_ir_illumination": "Off",
+    "near_ir_irradiance_measured": false,
+    "note": "Visible pink lighting does not establish near-infrared irradiance. This is an uncontrolled-light baseline, not comparable to a Windows Hello capture with active IR assistance."
+  },
+  "frame": {
+    "format": "I420",
+    "dimensions": "1920x1080",
+    "storage": "app-private internal files on phone",
+    "transferred_to_host": false,
+    "aggregate_only": true,
+    "Y": {
+      "mean": 72.28,
+      "standard_deviation": 22.46,
+      "range": [9, 161],
+      "p05": 39,
+      "p50": 73,
+      "p95": 106,
+      "mean_absolute_horizontal_gradient": 1.74,
+      "mean_absolute_vertical_gradient": 1.74,
+      "pixels_at_or_below_16_percent": 0.23,
+      "pixels_at_or_above_240_percent": 0.0,
+      "8x6_tile_standard_deviation_min": 6.04,
+      "8x6_tile_standard_deviation_max": 15.60
+    },
+    "U": {
+      "mean": 127.55,
+      "standard_deviation": 0.85,
+      "range": [118, 128]
+    },
+    "V": {
+      "mean": 124.12,
+      "standard_deviation": 1.55,
+      "range": [112, 136]
+    }
+  },
+  "interpretation": "The luma stream is not spatially uniform and contains measurable local contrast, but global and tile statistics cannot establish that iris texture is resolved, identify a pupil/iris ROI, or evaluate matcher quality. This single uncontrolled-light capture is diagnostic only.",
+  "cleanup": {
+    "active_camera_clients": 0,
+    "camera_services_running": true,
+    "all_illumination_channels_off": true,
+    "raw_frame_left_on_phone": true,
+    "test_app_left_installed_separately": true
+  },
+  "android_unlock": "Not implemented. No matcher, enrollment flow, or registered biometric sensor is present."
+}

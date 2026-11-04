@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-04",
+  "apk_sha256": "d6a76a5af420fadff5fff136a240fca212ae502cbde6a908b666f9010eb330de",
+  "camera_ids": [
+    {
+      "id": "0",
+      "facing": "back",
+      "pixel_array": "5344x3744"
+    },
+    {
+      "id": "1",
+      "facing": "front",
+      "pixel_array": "2600x1952",
+      "identity": "VS6955 regular selfie camera"
+    },
+    {
+      "id": "2",
+      "facing": "front",
+      "pixel_array": "1920x1088",
+      "identity": "IR0861 iris"
+    }
+  ],
+  "iris_preview": {
+    "stream_size": "1920x1080",
+    "capture_result_callbacks": 3642,
+    "closed_cleanly": true,
+    "orientation_feedback": "User reported the probe preview is now okay.",
+    "front_camera_opened_concurrently": false
+  },
+  "torch_0": {
+    "requested_brightness": 14,
+    "requested_duration_seconds": 1,
+    "helper_response": "OK",
+    "final_brightness": 0,
+    "other_led_channels_final_brightness": 0,
+    "temporary_localhost_helper_stopped": true
+  },
+  "stock_camera_front_selection": {
+    "status": "fixed locally on phone",
+    "aperture_default_camera_id": "1",
+    "aperture_default_sensor": "VS6955 regular selfie camera, 2600x1952",
+    "live_preview": "stream opened; user explained magenta cast is room lighting",
+    "saved_photo_note": "user reports green overlay; separate issue not changed here",
+    "source_patch": "../patches/0001-cityman-camera-hal-put-iris-after-selfie.patch",
+    "installed_library_sha256": "47ce649d89c2baa9c73f8e91f42bbcdc0900624d6a0cf3d8f83fda6e3f5a7b95",
+    "property": "persist.camera.cityman.iris_last=1"
+  },
+  "notes": "Local only. Original app com.lumia.irisprobe remains installed separately. Development package was installed for this test; no raw frame was exported to host; no Git push or PR.",
+  "unlock_work_started": {
+    "test_package": "com.lumia.irisprobe.dev",
+    "apk_sha256": "1abf141db759c6947d1a87583c47ce8f04e84d1094ccf905d75b67e1177faefb",
+    "test": "Camera2 session opened only iris camera ID 2; preview plus YUV_420_888 output configured; repeating callbacks continued; one manual frame saved.",
+    "frame": {
+      "format": "I420 converted from YUV_420_888",
+      "size": "1920x1080",
+      "bytes": 3110400,
+      "storage": "app-private internal files on phone only",
+      "transferred_to_host": false,
+      "on_device_summary": {
+        "Y": {
+          "mean": 79.79,
+          "stddev": 24.0,
+          "min": 9,
+          "max": 168
+        },
+        "U": {
+          "mean": 127.46,
+          "stddev": 0.96,
+          "min": 115,
+          "max": 128
+        },
+        "V": {
+          "mean": 124.22,
+          "stddev": 1.54,
+          "min": 110,
+          "max": 141
+        }
+      }
+    },
+    "illumination": "All LED channels remained 0.",
+    "initial_app_fault": "First development run hit a UI-thread exception in the new button enablement callback; moved view update onto the main thread and second run succeeded.",
+    "cleanup": "Development app force-stopped; zero active camera clients; cameraserver, vendor camera provider, and qcamerasvr running; all four LED brightness values 0.",
+    "windows_comparison": "Lumia-specific static analysis establishes capture and per-frame flash controls only; no matcher/template format/enrollment sequence recovered. One-frame YUV is a diagnostic acquisition step, not the original full Windows Hello path.",
+    "android_unlock": "Not implemented; no Face HAL is declared in vendor VINTF."
+  }
+}

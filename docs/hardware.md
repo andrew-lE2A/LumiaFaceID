@@ -190,13 +190,16 @@ an absent sensor's register program or prove optical safety.
 In inspected LineageOS 23.2 sources:
 
 - [`hardware/interfaces/biometrics`](https://github.com/LineageOS/android_hardware_interfaces/tree/13d687a84c834af855bfb314b853b8372a7aa6d9/biometrics)
-  provides face/fingerprint interfaces, not a standard iris HAL.
+  provides face/fingerprint interfaces, not an Iris AIDL HAL. Android 16
+  framework code retains legacy iris registration, but its biometric auth
+  dispatcher currently logs `Iris unsupported`.
 - [`IrisService`](https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java)
   and [`IrisAuthenticator`](https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java)
   have vendor implementation placeholders. Hardware detection and enrollment
   checks do not provide a working implementation.
 - [`FaceSensorType.IR`](https://github.com/LineageOS/android_hardware_interfaces/blob/13d687a84c834af855bfb314b853b8372a7aa6d9/biometrics/face/aidl/android/hardware/biometrics/face/FaceSensorType.aidl)
-  describes infrared face hardware; it does not supply an iris matcher.
+  describes infrared face hardware; it does not supply an iris matcher or
+  define iris as face authentication.
 
 After capture works, choose iris framework integration or a deliberately
 designed face-framework integration. Both require enrollment, per-user template

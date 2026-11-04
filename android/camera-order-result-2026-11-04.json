@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-04",
+  "device": "Lumia 950 XL (cityman)",
+  "os": "LineageOS 23.2 / Android 16 (SDK 36)",
+  "device_tree": {
+    "repository": "https://github.com/giannoccarol/android_device_msft_cityman",
+    "branch": "lineage-23-cityman",
+    "base_commit": "8f14e90b277db58394513b50a50d5799da138ff2",
+    "local_change": "reverse front-camera order behind persist.camera.cityman.iris_last"
+  },
+  "phone_update": {
+    "method": "adb remount + copy to /vendor/lib; no boot image flash",
+    "library": "/vendor/lib/libmmcamera_interface.so",
+    "new_sha256": "47ce649d89c2baa9c73f8e91f42bbcdc0900624d6a0cf3d8f83fda6e3f5a7b95",
+    "original_sha256": "d95b3b4e0ae45c1711218dc9a6f84d76c0031d2472c27528c992c5b539033707",
+    "device_backup": "/data/local/tmp/libmmcamera_interface-cityman-backup.so",
+    "host_backup": "/private/tmp/libmmcamera_interface-pre-update.so",
+    "ordering_property": "persist.camera.cityman.iris_last=1"
+  },
+  "observations": {
+    "camera_count": 3,
+    "camera_0": {"array": "5344x3744", "facing": "back"},
+    "camera_1": {"array": "2600x1952", "facing": "front", "sensor": "VS6955 regular selfie camera"},
+    "camera_2": {"array": "1920x1088", "facing": "front", "sensor": "IR0861 iris camera"},
+    "aperture_default_front_id": 1,
+    "regular_front_live_preview": true,
+    "live_preview_color_note": "Magenta room lighting is expected; no color tuning was attempted.",
+    "captured_image_note": "User reports a green overlay on saved images; not investigated in this update.",
+    "active_camera_clients_after_test": 0,
+    "camera_services_after_test": "running",
+    "led_brightness": {"torch_0": 0, "torch_1": 0, "flash_0": 0, "flash_1": 0}
+  },
+  "publication": "local only; no commit, push, or PR",
+  "reboot_validation": "not performed"
+}

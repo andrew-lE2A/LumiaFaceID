@@ -1,0 +1,58 @@
+diff --git a/camera/QCamera2/stack/mm-camera-interface/src/mm_camera_interface.c b/camera/QCamera2/stack/mm-camera-interface/src/mm_camera_interface.c
+index 2fbf1e5..2c1351b 100644
+--- a/camera/QCamera2/stack/mm-camera-interface/src/mm_camera_interface.c
++++ b/camera/QCamera2/stack/mm-camera-interface/src/mm_camera_interface.c
+@@ -1463,6 +1463,8 @@ void get_sensor_info()
+ void sort_camera_info(int num_cam)
+ {
+     int idx = 0, i;
++    char iris_order_prop[PROPERTY_VALUE_MAX];
++    int iris_last;
+     struct camera_info temp_info[MM_CAMERA_MAX_NUM_SENSORS];
+     char temp_dev_name[MM_CAMERA_MAX_NUM_SENSORS][MM_CAMERA_DEV_NAME_LEN];
+     memset(temp_info, 0, sizeof(temp_info));
+@@ -1477,12 +1479,25 @@ void sort_camera_info(int num_cam)
+         }
+     }
+
+-    /* then save the front cameras info*/
+-    for (i = 0; i < num_cam; i++) {
+-        if (g_cam_ctrl.info[i].facing == CAMERA_FACING_FRONT) {
+-            temp_info[idx] = g_cam_ctrl.info[i];
+-            memcpy(temp_dev_name[idx++],g_cam_ctrl.video_dev_name[i],
+-                MM_CAMERA_DEV_NAME_LEN);
++    /* Keep the regular Cityman selfie camera ahead of the optional iris camera.
++     * Their current media enumeration order is iris, then VS6955. */
++    property_get("persist.camera.cityman.iris_last", iris_order_prop, "0");
++    iris_last = atoi(iris_order_prop) == 1;
++    if (iris_last) {
++        for (i = num_cam - 1; i >= 0; i--) {
++            if (g_cam_ctrl.info[i].facing == CAMERA_FACING_FRONT) {
++                temp_info[idx] = g_cam_ctrl.info[i];
++                memcpy(temp_dev_name[idx++], g_cam_ctrl.video_dev_name[i],
++                    MM_CAMERA_DEV_NAME_LEN);
++            }
++        }
++    } else {
++        for (i = 0; i < num_cam; i++) {
++            if (g_cam_ctrl.info[i].facing == CAMERA_FACING_FRONT) {
++                temp_info[idx] = g_cam_ctrl.info[i];
++                memcpy(temp_dev_name[idx++], g_cam_ctrl.video_dev_name[i],
++                    MM_CAMERA_DEV_NAME_LEN);
++            }
+         }
+     }
+
+diff --git a/lineage_cityman.mk b/lineage_cityman.mk
+index 3d0ccf3..67606b3 100644
+--- a/lineage_cityman.mk
++++ b/lineage_cityman.mk
+@@ -36,7 +36,8 @@ PRODUCT_RESTRICT_VENDOR_FILES := false
+
+ # Vendor security patch level
+ PRODUCT_PROPERTY_OVERRIDES += \
+-    ro.lineage.build.vendor_security_patch=2018-11-01
++    ro.lineage.build.vendor_security_patch=2018-11-01 \
++    persist.camera.cityman.iris_last=1
+
+ #PRODUCT_COPY_FILES += device/msft/cityman/fstab.aosp_cityman:root/fstab.cityman

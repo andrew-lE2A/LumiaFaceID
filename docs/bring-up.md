@@ -58,11 +58,41 @@ Validate suspend/resume, timeout, cancellation, process death and power-down.
 
 ## 4. Enrollment and Android biometrics — not implemented
 
+The staged implementation plan and current Windows illumination findings are
+in [iris-authentication.md](iris-authentication.md).
+
 Choose and validate an iris matching implementation and the Android integration
 route documented in hardware.md. Implement enrollment, per-user templates,
 challenge handling, cancellation, lockout and session lifecycle. Evaluate spoof
 resistance and Android requirements before advertising authentication strength.
 Do not ship a mock authenticator or report success for a camera-only test.
+
+## 5. Keep the normal selfie camera first — locally applied
+
+The LineageOS 23.2 Cityman device tree was fetched locally and its camera HAL
+was changed to place the normal VS6955 front camera before the optional IR0861
+iris camera. The change is in
+[`android/patches/0001-cityman-camera-hal-put-iris-after-selfie.patch`](../android/patches/0001-cityman-camera-hal-put-iris-after-selfie.patch).
+The property `persist.camera.cityman.iris_last=1` enables the new ordering.
+The rebuilt 32-bit ARM `libmmcamera_interface.so` was installed on the connected
+phone through a writable vendor remount; the original library is saved on the
+phone at `/data/local/tmp/libmmcamera_interface-cityman-backup.so` and on the
+host at `/private/tmp/libmmcamera_interface-pre-update.so`.
+
+After restarting the camera provider, `dumpsys media.camera` reports camera 0
+as the 5344×3744 rear camera, camera 1 as the 2600×1952 VS6955 selfie camera,
+and camera 2 as the 1920×1088 IR0861. Aperture opened camera 1 and delivered a
+live preview. The user confirmed the room lighting is magenta, so the preview
+color is expected; a captured photo still has a reported green overlay and
+needs separate image-pipeline investigation. No iris and regular-front streams
+were active together. Camera clients were closed afterward, all camera
+services returned to `running`, and all four LED brightness channels read zero.
+
+This update was applied directly to the connected phone, without flashing a
+boot image or pushing changes to GitHub. It has not yet been validated across a
+full reboot; the persistent property is set and the writable vendor filesystem
+contains the updated library. The patch mirror and build-result record remain
+local in this workspace.
 
 ## Build scope
 

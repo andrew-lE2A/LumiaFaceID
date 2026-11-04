@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-04",
+  "notes_commit": "3a407632d9b2a1c83e9a67370cda0daba934959a",
+  "kernel_image": "/private/tmp/cityman-iris-android-03.img",
+  "kernel_image_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+  "boot_method": "fastboot boot only",
+  "temporary_kernel": "#18",
+  "installed_kernel_after_cleanup": "#29",
+  "camera_test_app": "com.lumia.irisprobe, installed on device and left installed",
+  "camera_test_apk_sha256": "7bd4b0967d5abe89f967c0f893841c2aa714d83e51ef6f5bb976b69d76e12d80",
+  "camera_test_installed_apk_sha256": "7bd4b0967d5abe89f967c0f893841c2aa714d83e51ef6f5bb976b69d76e12d80",
+  "test": {
+    "target_camera": "ID 2 only; CameraService showed client com.lumia.irisprobe, no other camera client",
+    "sensor_probe": "PASS: ir0861 probe succeeded; sensor ID 0x0861 at slave 0x6c",
+    "camera_enumeration": "3 devices: ID 0 back, ID 1 front, ID 2 front (iris)",
+    "camera2_open": "PASS: OPENED camera ID 2; preview capture session configured and repeating request submitted",
+    "capture_callbacks": "554 CameraCaptureSession onCaptureCompleted callbacks in approximately 44 seconds; final frame number 553; observed about 13 fps",
+    "preview": "Visible noisy gray/purple image; image quality/color tuning unresolved",
+    "csid3": {
+      "irq_status": "0x200",
+      "packets": 609014,
+      "ecc": 0,
+      "crc": 0,
+      "lane_config_log": "lane_cnt 1 lane_assign 0x4 phy_sel 2; CID 0, DT 0x2b"
+    },
+    "vfe": "No explicit SOF line found in dmesg. App received continuous capture-result callbacks. msm_isp_check_for_output_error logged axi_updating_mask for stream IDs 1 and 2 at frame_id 10 during startup.",
+    "patch_0004": "Not applied; standard path produced CSID3 packets with clean ECC/CRC",
+    "ir_illumination": "Not used; torch channels stayed off"
+  },
+  "cleanup": {
+    "temporary_vendor_mounts": "Removed; /vendor restored read-only; temporary iris vendor file removed",
+    "camera_services": "Running after reboot",
+    "installed_kernel": "#29",
+    "stock_camera_enumeration": 2,
+    "active_camera_clients": 0,
+    "leds": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "probe_app": "Installed and CAMERA permission granted; ID 2 is not present on the stock kernel without the temporary plugin setup",
+    "boot_backup_and_private_profile": "Preserved"
+  }
+}

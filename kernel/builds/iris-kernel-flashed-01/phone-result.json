@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-04",
+  "kernel_image": "/private/tmp/cityman-iris-android-03.img",
+  "kernel_image_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+  "flash": {
+    "command": "fastboot flash boot /private/tmp/cityman-iris-android-03.img",
+    "result": "PASS",
+    "partition": "/dev/block/mmcblk0p39 (boot), raw, 0x2200000 bytes",
+    "bootloader_unlocked": true,
+    "boot_after_flash": "PASS: kernel #18",
+    "recovery_backup": "/private/tmp/cityman-installed-boot-29.img",
+    "recovery_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+    "backup_matches_preserved_cityman_current_boot": true
+  },
+  "persistent_vendor": {
+    "plugin": "/vendor/lib/libmmcamera_ir0861.so",
+    "plugin_sha256": "f14b92e8373be6b74570e803b1e912a796f6ff7043d53185a9871d5460f888b0",
+    "sensor_list": "/vendor/lib/libmmcamera2_sensor_modules.so",
+    "patched_sensor_list_sha256": "925042257481e08a371a06efc9013a77e485fa43ec548a9ed6e2ed9aa0e9a86b",
+    "original_sensor_list_backup": "/private/tmp/cityman-sensor-list-original-before-install.so",
+    "original_sensor_list_sha256": "2d14928f825d21dc3c0f1d7fd4ad3610cdfb56de34b0122eca213da1064bec1b",
+    "vendor_state": "Read-only after install; original back and front sensor-list entries unchanged, unused ov4688 entry renamed to ir0861"
+  },
+  "camera_id_mapping_after_boot": {
+    "id_0": "Back, 5344x3744",
+    "id_1": "Iris, front-facing, GRBG, 1920x1088",
+    "id_2": "VS6955 regular front, front-facing, 2600x1952",
+    "finding": "Numeric IDs changed across the temporary and flashed boots; app now identifies the iris by its unique pixel-array size and opens only that match"
+  },
+  "iris_test": {
+    "app_package": "com.lumia.irisprobe",
+    "app_apk_sha256": "d80feff9886a46780e3c5ab3e5ea3360340ce2bfb025c64048c5a994c2035b69",
+    "selected_camera_id": "1",
+    "open": "PASS: CameraService showed only ID 1 active for com.lumia.irisprobe; ID 2 was not opened concurrently",
+    "sensor_probe": "PASS: ir0861 read 0x0861 at slave 0x6c; probe succeeded",
+    "stream": "1920x1080 output displayed as 1080x1920 portrait; preview view centered at matching portrait aspect ratio",
+    "capture_result_callbacks": "335 in approximately 26 seconds; final logged callback #330 at frame 329",
+    "csid3": {
+      "irq_status": "0x200",
+      "packets": 371690,
+      "ecc": 0,
+      "crc": 0,
+      "configuration": "PHY2 combo lane mask 0x18; CSID3 lane count 1; lane_assign 0x4; settle 22; VC0 RAW10 DT 0x2b"
+    },
+    "vfe": "No explicit SOF line found in dmesg; app received continuous capture-result callbacks. Startup logged axi_updating_mask for stream IDs 1 and 2 at frame_id 10.",
+    "image": "Visible gray/noisy iris stream; image is not yet suitable for recognition",
+    "illumination": "All LED channels remained off; no sensor strobe"
+  },
+  "ordinary_front_camera_check": {
+    "camera_id": "2",
+    "sensor": "VS6955; dmesg read ID 0x3bb",
+    "result": "Visible room scene; CSID2 IRQ 0x55, packets 554936, ECC 0, CRC 0",
+    "concurrency": "Front stream was closed before the iris stream was opened"
+  },
+  "current_state": {
+    "kernel": "#18 flashed to boot and active",
+    "camera_services": "Running",
+    "active_camera_clients": 0,
+    "vendor_mount": "Read-only",
+    "leds": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "boot_backup_and_private_profile": "Preserved"
+  },
+  "latest_readback": {
+    "date": "2026-11-04",
+    "method": "adb pull /dev/block/mmcblk0p39 before any new write",
+    "partition_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+    "matches_tested_kernel_image": true,
+    "running_kernel_release": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026",
+    "result": "The tested #18 image is already installed and running; no redundant flash performed."
+  }
+}
