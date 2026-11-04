@@ -1,0 +1,38 @@
+{
+  "build_id": "iris-regulator-load-01",
+  "purpose": "Paired csi-trial 22 comparison of baseline regulator requests against explicit regulator_set_optimum_mode load votes, with the CSID3/CSI3PHY path enabled and read-only regulator sampling.",
+  "source_revision": "3ea51c15cc8c982f972f532c0c8f692d4bcbe7d6",
+  "source_tree_state": "Local working tree; no commit, push, or PR created.",
+  "kernel_base": "cc84cab9900ee4e7a3046b3756858e9832caee72 with integration patches 0001-0007 and local iris diagnostic changes.",
+  "temporary_kernel_version": "3.10.108-perf-gcc84cab9 #13",
+  "build": {
+    "kernel_archive_sha256": "8f9154389e28e51b4ad5c2f7dd9bcc0fdf6a3adf4c99665c4c733ea35e5433af",
+    "toolchain_archive_sha256": "ac0b90a52207fd3aa7a414be51c181fc0e4e6dd29c2cd05d9cca82cbcb4e7402",
+    "compile_header": "#13 SMP PREEMPT Wed Nov 4 14:16:12 UTC 2026; GCC 4.9.x 20150123",
+    "Image.gz_sha256": "085d1fb0eea2420d3335e275fa21d1f1c2d74b8924ff0980005beef9b6a7625d",
+    "boards.dtb_sha256": "624065909990e8ff44d7fe4e043091f2f21553ae4bfbfed90b1ca508b08d4b01",
+    "config_sha256": "853e5e58bd8cb35b62a1d6275543bc3fe5c8dd2ad3b21b1bcb232455d362c24e",
+    "config_options": [
+      "CONFIG_CITYMAN_IRIS_ID=y",
+      "CONFIG_CITYMAN_IRIS_STREAM=y",
+      "CONFIG_CITYMAN_IRIS_CSI=y"
+    ]
+  },
+  "boot": {
+    "method": "fastboot boot only; no partition write",
+    "paired_trials_same_boot": true,
+    "ram_boot_image_sha256": "55cfa6cf6df80ccaac99fd0e8d68844791506680218f82325887fde4563e5670",
+    "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "dtbs": "Explicitly updated from this build's boards.dtb; repacker verified original board identities and order."
+  },
+  "private_profile_sha256": "6884c497a0ca43800278bc9f844c77eab16feca73daf768b66e6380a2b25a838",
+  "artifacts": {
+    "phone_result": "kernel/builds/iris-regulator-load-01/phone-result.json",
+    "baseline_log": "kernel/builds/iris-regulator-load-01/baseline.log",
+    "load_log": "kernel/builds/iris-regulator-load-01/load.log",
+    "regulator_api_log": "kernel/builds/iris-regulator-load-01/regulator-api.log",
+    "repack_metadata": "kernel/builds/iris-regulator-load-01/repack.json"
+  },
+  "publication": "Local only; no Git push or PR."
+}

@@ -1,0 +1,25 @@
+{
+  "header_version": 0,
+  "page_size": 4096,
+  "partition_size": 35651584,
+  "kernel_size": 10243804,
+  "ramdisk_size": 1572947,
+  "kernel_address": 32768,
+  "ramdisk_address": 33554432,
+  "tags_address": 31457280,
+  "os_version_word": 536871338,
+  "boot_sha256": "55cfa6cf6df80ccaac99fd0e8d68844791506680218f82325887fde4563e5670",
+  "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+  "dtbs": [
+    {
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "size": 276067,
+      "sha256": "a4f3ec5a9ebbcf565119e3341bf9defe8ceda6dba56e52400a7b107408066bf3"
+    }
+  ],
+  "id_style": "legacy_empty_dt",
+  "explicit_dtb_update": true
+}

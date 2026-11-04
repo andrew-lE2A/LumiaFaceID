@@ -1,0 +1,8 @@
+[   52.222688] cityman-iris-id cityman-iris-id.181: load vote rail=vana load_ua=300000 rc=2
+[   52.224417] cityman-iris-id cityman-iris-id.181: load vote rail=vio load_ua=0 rc=0
+[   52.226386] cityman-iris-id cityman-iris-id.181: load vote rail=core load_ua=300000 rc=2
+[   52.228485] cityman-iris-id cityman-iris-id.181: load vote rail=vdig load_ua=80000 rc=2
+[   52.768996] cityman-iris-id cityman-iris-id.181: load reset rail=vdig load_ua=0 rc=4
+[   52.769385] cityman-iris-id cityman-iris-id.181: load reset rail=core load_ua=0 rc=4
+[   52.769395] cityman-iris-id cityman-iris-id.181: load reset rail=vio load_ua=0 rc=0
+[   52.769628] cityman-iris-id cityman-iris-id.181: load reset rail=vana load_ua=0 rc=4

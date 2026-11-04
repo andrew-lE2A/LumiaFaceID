@@ -14,6 +14,11 @@ trial_settle=
 trial_register=
 trial_value=
 trial_clock=
+load_option=0
+regulator_option=
+regulator_log_template=/data/local/tmp/cityman-iris-regulators.XXXXXX
+regulator_pid=
+regulator_log=
 if [ "$operation" = csi-trial ]; then
     trial_settle=${2:-}
     arg3=${3:-}
@@ -24,6 +29,17 @@ if [ "$operation" = csi-trial ]; then
             clock_option=$arg3
             trial_register=
             trial_value=
+            ;;
+        --observe-regulators)
+            regulator_option=$arg3
+            ;;
+        load)
+            load_option=1
+            clock_option=$arg4
+            if [ "$clock_option" = --observe-regulators ]; then
+                regulator_option=$clock_option
+                clock_option=
+            fi
             ;;
         clock=csi2|clock=csi0)
             trial_clock=${arg3#clock=}
@@ -68,6 +84,21 @@ fail() {
     exit 1
 }
 
+observe_regulators() {
+    # Read-only debugfs snapshots. Poll quickly during the bounded active window.
+    for sample in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do
+        for rail in pm8994_l17 pm8994_l3 pm8994_s3; do
+            root=/sys/kernel/debug/regulator/$rail
+            mode=$(cat "$root/mode" 2>/dev/null) || mode=unavailable
+            optimum=$(cat "$root/optimum_mode" 2>/dev/null) || optimum=unavailable
+            enable=$(cat "$root/enable" 2>/dev/null) || enable=unavailable
+            use=$(cat "$root/use_count" 2>/dev/null) || use=unavailable
+            echo "sample=$sample rail=$rail mode=$mode optimum_mode=$optimum enable=$enable use_count=$use"
+        done
+        sleep 0.01
+    done
+}
+
 wait_service() {
     for poll in 1 2 3 4 5; do
         [ "$(getprop "init.svc.$1")" = "$2" ] && return 0
@@ -88,8 +119,9 @@ clean_result() {
 retryable_trial_state() {
     case "$1" in
         'status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0') return 0 ;;
-        'status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts='*' blocked=0 rail_uv=1200000'|\
-        'status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts='*' blocked=0 rail_uv=1200000')
+        'status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0 load_trial=0 '*) return 0 ;;
+        'status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts='*' blocked=0 rail_uv=1200000 '*|\
+        'status=sensor-streamed stage=stream-test errno=0 model=0x0861 cleanup_errno=0 attempts='*' blocked=0 rail_uv=1200000 '*)
             trial_attempts=${1#* attempts=}; trial_attempts=${trial_attempts%% *}
             case "$trial_attempts" in ''|*[!0-9]*) return 1 ;; esac
             [ "$trial_attempts" -ge 1 ] && [ "$trial_attempts" -lt 64 ]; return $? ;;
@@ -128,6 +160,17 @@ finish() {
         echo "Saved $clock_label observations: $clock_log"
         cat "$clock_log" || {
             echo "$clock_label observations could not be read." >&2
+            [ "$code" -ne 0 ] || code=5
+        }
+    fi
+    if [ -n "$regulator_pid" ]; then
+        if ! wait "$regulator_pid"; then
+            echo 'REGULATOR_OBSERVATION_INCOMPLETE: the debugfs sampler failed.' >&2
+            [ "$code" -ne 0 ] || code=5
+        fi
+        echo "Saved regulator observations: $regulator_log"
+        cat "$regulator_log" || {
+            echo 'Regulator observations could not be read.' >&2
             [ "$code" -ne 0 ] || code=5
         }
     fi
@@ -229,6 +272,14 @@ if [ -n "$clock_option" ]; then
         done
     done
 fi
+if [ -n "$regulator_option" ]; then
+    for regulator in pm8994_l17 pm8994_l3 pm8994_s3; do
+        for regulator_file in mode optimum_mode enable use_count; do
+            [ -r "/sys/kernel/debug/regulator/$regulator/$regulator_file" ] ||
+                fail "Regulator observation unavailable: /sys/kernel/debug/regulator/$regulator/$regulator_file; no hardware action performed."
+        done
+    done
+fi
 set -- "$driver"/*/result
 [ "$#" = 1 ] && [ -r "$1" ] || fail 'Expected exactly one bound iris-ID device.'
 result=$1
@@ -271,7 +322,7 @@ if [ "$tpg_test" = 1 ]; then
     case "$tpg_before" in requested=0\ stage=idle\ *) ;; *) fail 'Expected untouched CSID TPG state.' ;; esac
 fi
 [ -w "$control" ] || fail 'The requested diagnostic control is not writable.'
-initial='status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0'
+initial='status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0 load_trial=0 load_vote=0,0,0,0 load_reset=0,0,0,0'
 before=$(cat "$result") || fail 'Cannot read the diagnostic result.'
 echo "Before: $before"
 if [ "$operation" = csi-trial ]; then
@@ -331,6 +382,11 @@ if [ -n "$clock_option" ]; then
     observe_clocks > "$clock_log" 2>&1 &
     clock_pid=$!
 fi
+if [ -n "$regulator_option" ]; then
+    regulator_log=$(mktemp "$regulator_log_template") || fail 'Cannot create regulator observation log; no sensor test performed.'
+    observe_regulators > "$regulator_log" 2>&1 &
+    regulator_pid=$!
+fi
 if [ "$operation" = csi-trial ]; then
     if [ -n "$trial_clock" ]; then
         echo "Performing one CSI-2 trial at settle=$trial_settle (VC0) with extra gate $trial_clock."
@@ -344,6 +400,7 @@ attempted=1
 write_value=$operation
 [ "$tpg_test" != 1 ] || write_value=run
 [ "$operation" != csi-trial ] || write_value="settle=$trial_settle"
+[ "$operation" != csi-trial ] || [ "$load_option" != 1 ] || write_value="$write_value load"
 if [ "$operation" = csi-trial ] && [ -n "$trial_register" ]; then
     write_value="$write_value reg=$trial_register value=$trial_value"
 fi

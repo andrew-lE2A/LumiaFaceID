@@ -64,6 +64,9 @@ struct iris_stream {
 	u8 first, last, counter_before;
 	bool counter_before_valid;
 	int counter_before_errno;
+	u8 counter_after_stop;
+	bool counter_after_stop_valid;
+	int counter_after_stop_errno;
 	unsigned int samples, changes, writes, transactions;
 	u16 before[IRIS_READBACK_COUNT], after[IRIS_READBACK_COUNT];
 	unsigned int before_valid, after_valid;
@@ -318,6 +321,11 @@ static int iris_stream_stop(struct iris_stream *s, const struct iris_stream_io *
 			s->stop_error = rc;
 	}
 	io->delay_ms(40);
+	/* Ancillary evidence only: the original driver's idle sentinel is 0xff,
+	 * and this counter has already read 0 in standby on this hardware. */
+	s->counter_after_stop_errno = io->read_bytes(io->context, 0x0005,
+		&s->counter_after_stop, 1);
+	s->counter_after_stop_valid = !s->counter_after_stop_errno;
 	if (!s->stop_error)
 		s->entered = false;
 	return s->stop_error;

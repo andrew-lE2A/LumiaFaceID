@@ -39,12 +39,15 @@ static const char * const rail_names[IRIS_RAILS] = {
 	"vana", "vio", "core", "vdig",
 };
 static const int rail_uv[IRIS_RAILS] = { 2800000, 0, 1300000, 1200000 };
+static const int rail_load_ua[IRIS_RAILS] = { 300000, 0, 300000, 80000 };
 
 struct cityman_iris {
 	struct device *dev;
 	struct mutex lock;
 	struct regulator *rails[IRIS_RAILS];
 	bool enabled[IRIS_RAILS];
+	bool load_trial, load_voted[IRIS_RAILS];
+	int load_vote_rc[IRIS_RAILS], load_reset_rc[IRIS_RAILS];
 	struct clk *source, *clock;
 #ifdef CONFIG_CITYMAN_IRIS_CSI
 	struct clk *csi3phy_clock;
@@ -372,13 +375,23 @@ static void iris_cleanup(struct cityman_iris *iris)
 			iris->cleanup_error = rc;
 	}
 	for (i = IRIS_RAILS - 1; i >= 0; i--) {
-		if (!iris->enabled[i])
-			continue;
-		rc = regulator_disable(iris->rails[i]);
-		if (rc < 0)
-			iris->cleanup_error = rc;
-		else
-			iris->enabled[i] = false;
+		if (iris->enabled[i]) {
+			rc = regulator_disable(iris->rails[i]);
+			if (rc < 0)
+				iris->cleanup_error = rc;
+			else
+				iris->enabled[i] = false;
+		}
+		if (iris->load_voted[i] && !iris->enabled[i]) {
+			rc = regulator_set_optimum_mode(iris->rails[i], 0);
+			iris->load_reset_rc[i] = rc;
+			dev_info(iris->dev, "load reset rail=%s load_ua=0 rc=%d\n",
+				rail_names[i], rc);
+			if (rc < 0 && !iris->cleanup_error)
+				iris->cleanup_error = rc;
+			else
+				iris->load_voted[i] = false;
+		}
 	}
 	if (iris->old_rate) {
 		rc = clk_set_rate(iris->source, iris->old_rate);
@@ -433,6 +446,15 @@ static int iris_identify(struct cityman_iris *iris)
 		goto done;
 	for (i = 0; i < IRIS_RAILS; i++) {
 		iris->stage = rail_names[i];
+		if (iris->load_trial) {
+			rc = regulator_set_optimum_mode(iris->rails[i], rail_load_ua[i]);
+			iris->load_vote_rc[i] = rc;
+			dev_info(iris->dev, "load vote rail=%s load_ua=%d rc=%d\n",
+				rail_names[i], rail_load_ua[i], rc);
+			if (rc < 0)
+				goto done;
+			iris->load_voted[i] = true;
+		}
 		rc = regulator_enable(iris->rails[i]);
 		if (rc)
 			goto done;
@@ -570,9 +592,12 @@ static ssize_t result_show(struct device *dev, struct device_attribute *attr, ch
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"status=%s stage=%s errno=%d model=0x%04x cleanup_errno=%d attempts=%u blocked=%u rail_uv=%d\n",
+		"status=%s stage=%s errno=%d model=0x%04x cleanup_errno=%d attempts=%u blocked=%u rail_uv=%d load_trial=%u load_vote=%d,%d,%d,%d load_reset=%d,%d,%d,%d\n",
 		iris->status, iris->stage, iris->error, iris->model,
-		iris->cleanup_error, iris->attempts, iris->blocked, iris->measured_uv);
+		iris->cleanup_error, iris->attempts, iris->blocked, iris->measured_uv,
+		iris->load_trial, iris->load_vote_rc[0], iris->load_vote_rc[1],
+		iris->load_vote_rc[2], iris->load_vote_rc[3], iris->load_reset_rc[0],
+		iris->load_reset_rc[1], iris->load_reset_rc[2], iris->load_reset_rc[3]);
 	mutex_unlock(&iris->lock);
 	return size;
 }
@@ -609,10 +634,11 @@ static ssize_t stream_result_show(struct device *dev, struct device_attribute *a
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"profile_loaded=%u stage=%s extra_csi_clock=%u counter_before=0x%02x counter_before_valid=%u counter_before_errno=%d first=0x%02x last=0x%02x changes=%u samples=%u program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d interface_csi2_requested=%u vc_before=0x%02x vc_before_valid=%u extclk_immediate=0x%04x extclk_immediate_valid=%u extclk_immediate_errno=%d extclk_single=0x%04x extclk_single_errno=%d control_pair=0x%04x control_pair_errno=%d control_single=0x%04x control_single_errno=%d override_requested=%u override_address=0x%04x override_value=0x%02x override_readback=0x%02x override_readback_valid=%u\n",
+		"profile_loaded=%u stage=%s extra_csi_clock=%u counter_before=0x%02x counter_before_valid=%u counter_before_errno=%d first=0x%02x last=0x%02x changes=%u samples=%u counter_after_stop=0x%02x counter_after_stop_valid=%u counter_after_stop_errno=%d program_writes=%u stop_errno=%d program_transactions=%u readback_errno=%d interface_csi2_requested=%u vc_before=0x%02x vc_before_valid=%u extclk_immediate=0x%04x extclk_immediate_valid=%u extclk_immediate_errno=%d extclk_single=0x%04x extclk_single_errno=%d control_pair=0x%04x control_pair_errno=%d control_single=0x%04x control_single_errno=%d override_requested=%u override_address=0x%04x override_value=0x%02x override_readback=0x%02x override_readback_valid=%u\n",
 		s->loaded, s->stage, iris->extra_csi_clock, s->counter_before, s->counter_before_valid,
 		s->counter_before_errno, s->first, s->last, s->changes,
-		s->samples, s->writes, s->stop_error, s->transactions,
+		s->samples, s->counter_after_stop, s->counter_after_stop_valid,
+		s->counter_after_stop_errno, s->writes, s->stop_error, s->transactions,
 		s->readback_error, s->select_csi2, s->virtual_channel_before,
 		s->virtual_channel_before_valid, s->extclk_immediate,
 		s->extclk_immediate_valid, s->extclk_immediate_errno,
@@ -924,8 +950,8 @@ static ssize_t csi_trial_store(struct device *dev,
 {
 	struct cityman_iris *iris = dev_get_drvdata(dev);
 	unsigned int settle, address = 0, value = 0, i;
-	bool override = false, found = false;
-	char extra, clock_name[8];
+	bool override = false, found = false, load_trial = false;
+	char extra, clock_name[8], selector[8];
 	unsigned int extra_clock = IRIS_EXTRA_CSI_NONE;
 	int rc;
 	if (!capable(CAP_SYS_RAWIO))
@@ -941,6 +967,9 @@ static ssize_t csi_trial_store(struct device *dev,
 				extra_clock = IRIS_EXTRA_CSI0;
 			else
 				return -EINVAL;
+		} else if (sscanf(buf, "settle=%u %7s %c", &settle,
+			  selector, &extra) == 2 && !strcmp(selector, "load")) {
+			load_trial = true;
 		} else if (sscanf(buf, "settle=%u reg=%x value=%x %c", &settle,
 				  &address, &value, &extra) == 3 &&
 			   address <= 0xffff && value <= 0xff) {
@@ -986,6 +1015,10 @@ static ssize_t csi_trial_store(struct device *dev,
 		goto out;
 	}
 	memset(&iris->csi, 0, sizeof(iris->csi));
+	memset(iris->load_voted, 0, sizeof(iris->load_voted));
+	memset(iris->load_vote_rc, 0, sizeof(iris->load_vote_rc));
+	memset(iris->load_reset_rc, 0, sizeof(iris->load_reset_rc));
+	 iris->load_trial = load_trial;
 	iris->csi.requested = true;
 	iris->csi.settle = settle;
 	iris->extra_csi_clock = extra_clock;
@@ -995,6 +1028,7 @@ static ssize_t csi_trial_store(struct device *dev,
 	iris->stream.override_address = address;
 	iris->stream.override_value = value;
 	rc = iris_identify(iris);
+	iris->load_trial = false;
 	/* A clean counter stall is a completed observation, not a retry trigger. */
 	if (rc == -ETIMEDOUT && iris->stream.samples == IRIS_STREAM_SAMPLES &&
 	    !iris->stream.changes && !iris->stream.stop_error &&

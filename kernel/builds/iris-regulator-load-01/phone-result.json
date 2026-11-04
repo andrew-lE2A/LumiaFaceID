@@ -1,0 +1,123 @@
+{
+  "build_id": "iris-regulator-load-01",
+  "device": "Lumia 950 XL cityman running unofficial LineageOS 23.2 / Android 16",
+  "serial": "d7baece4",
+  "boot_method": "fastboot boot; temporary RAM boot; no partition writes",
+  "temporary_kernel": "3.10.108-perf-gcc84cab9 #13",
+  "test_design": {
+    "paired_trials_same_boot": true,
+    "settle": 22,
+    "receiver": "PHY2 -> CSID3, upper combo lanes 0x18, VC0",
+    "receiver_clock": "The driver enabled camss_csi3phy_clk before receiver setup and disabled it during teardown for both trials.",
+    "success_criterion": "CSID3 packet delta; ECC and CRC counts are supporting receiver evidence. The sensor counter is ancillary only.",
+    "regulator_samples": "Read-only debugfs samples of mode, optimum_mode, enable, and use_count for pm8994_l17, pm8994_l3, and pm8994_s3 during the active window."
+  },
+  "mode_interpretation": {
+    "4": "REGULATOR_MODE_IDLE; rpm-smd-regulator LPM",
+    "2": "REGULATOR_MODE_NORMAL; rpm-smd-regulator LDO HPM mode when requested load meets qcom,hpm-min-load"
+  },
+  "baseline": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000",
+    "active_debugfs_samples": {
+      "pm8994_l17": "mode=4 optimum_mode=4; active use_count=2 then 1",
+      "pm8994_l3": "mode=4 optimum_mode=4; active use_count=1",
+      "pm8994_s3": "mode=4 optimum_mode=4; active use_count=1"
+    },
+    "csid3": {
+      "packets_before": 0,
+      "packets_after": 0,
+      "ecc_before": 0,
+      "ecc_after": 0,
+      "crc_before": 0,
+      "crc_after": 0
+    },
+    "sensor_counter": {
+      "before_stream": "0x00",
+      "after_stop_40ms": "0x00",
+      "after_stop_valid": true,
+      "after_stop_errno": 0
+    },
+    "cleanup": {
+      "sensor_stop_errno": 0,
+      "receiver_release_errno": 0,
+      "overall_cleanup_errno": 0,
+      "blocked": false
+    }
+  },
+  "load_trial": {
+    "result": "status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=2 blocked=0 rail_uv=1200000",
+    "requested_load_ua": {
+      "vana_pm8994_l17": 300000,
+      "vio_pm8994_lvs1": 0,
+      "core_pm8994_s3": 300000,
+      "vdig_pm8994_l3": 80000
+    },
+    "regulator_set_optimum_mode_return_values": {
+      "before_enable": {
+        "vana": 2,
+        "vio": 0,
+        "core": 2,
+        "vdig": 2
+      },
+      "after_disable_load_zero": {
+        "vana": 4,
+        "vio": 0,
+        "core": 4,
+        "vdig": 4
+      },
+      "interpretation": "Nonnegative values are selected regulator mode enums in this pinned tree, not errno. Vana/core/vdig selected NORMAL/HPM for the requested loads and returned to IDLE/LPM after zero-load reset."
+    },
+    "active_debugfs_samples": {
+      "sample_1": {
+        "pm8994_l17": "mode=4 optimum_mode=2 use_count=2",
+        "pm8994_l3": "mode=2 optimum_mode=2 use_count=1",
+        "pm8994_s3": "mode=2 optimum_mode=2 use_count=1"
+      },
+      "sample_2": {
+        "pm8994_l17": "mode=2 optimum_mode=2 use_count=2",
+        "pm8994_l3": "mode=2 optimum_mode=2 use_count=1",
+        "pm8994_s3": "mode=2 optimum_mode=2 use_count=1"
+      }
+    },
+    "csid3": {
+      "packets_before": 0,
+      "packets_after": 0,
+      "ecc_before": 0,
+      "ecc_after": 0,
+      "crc_before": 0,
+      "crc_after": 0
+    },
+    "sensor_counter": {
+      "before_stream": "0x00",
+      "after_stop_40ms": "0x00",
+      "after_stop_valid": true,
+      "after_stop_errno": 0
+    },
+    "cleanup": {
+      "sensor_stop_errno": 0,
+      "receiver_release_errno": 0,
+      "overall_cleanup_errno": 0,
+      "blocked": false
+    }
+  },
+  "service_restoration": {
+    "cameraserver": "running",
+    "vendor.camera-provider-2-4": "running",
+    "qcamerasvr": "running",
+    "flash_0_brightness": 0,
+    "flash_1_brightness": 0,
+    "torch_0_brightness": 0,
+    "torch_1_brightness": 0,
+    "wled_brightness": 0
+  },
+  "conclusion": "The baseline had all three shared rails in LPM. The opt-in load votes changed L3 and S3 to HPM and L17 to HPM during the second active sample; the sensor still timed out and CSID3 received zero packets, ECC, and CRC. Missing consumer-load votes were real but are not sufficient to explain the absent MIPI traffic. The 0x0005 counter read 0x00 both before stream and 40 ms after stop, so it remains an unreliable idle/frame success indicator.",
+  "next_separately_justified_test": "If continuing, test BOOST_BYPASS1_B as its own bounded experiment. Do not combine it with regulator-load votes; keep the same fixed profile, receiver, clock vote, settle, cleanup and service checks.",
+  "phone_final_state": "Still on temporary kernel #13; no reboot to installed kernel was needed because all cleanup checks passed and camera services were restored.",
+  "illumination": "This test did not enable IR illumination or boost rails.",
+  "android_authentication": "Not implemented; no iris images delivered.",
+  "limitations": [
+    "A temporary #12 image initially reused the older backup DTBs and therefore had no bound iris device; no sensor test ran on that image. The corrected #13 image included the build DTBs and passed the identity/order checks.",
+    "A #12 selector attempt was rejected before sensor access due to a trailing-newline parser edge case. The test helper restored services, then the parser was corrected and the paired baseline/load comparison was completed on #13.",
+    "No Git push or PR was created."
+  ]
+}
