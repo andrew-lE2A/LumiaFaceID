@@ -15,6 +15,9 @@ trial_register=
 trial_value=
 trial_clock=
 load_option=0
+boost_option=0
+misc_option=0
+miscfull_option=0
 regulator_option=
 regulator_log_template=/data/local/tmp/cityman-iris-regulators.XXXXXX
 regulator_pid=
@@ -36,9 +39,35 @@ if [ "$operation" = csi-trial ]; then
         load)
             load_option=1
             clock_option=$arg4
+            case "$clock_option" in
+                misc) misc_option=1; clock_option=$arg5 ;;
+                miscfull) miscfull_option=1; clock_option=$arg5 ;;
+            esac
             if [ "$clock_option" = --observe-regulators ]; then
                 regulator_option=$clock_option
                 clock_option=
+            fi
+            ;;
+        boost)
+            boost_option=1
+            clock_option=$arg4
+            if [ "$clock_option" = --observe-regulators ]; then
+                regulator_option=$clock_option
+                clock_option=
+            fi
+            ;;
+        misc|miscfull|load)
+            case "$arg3" in load) load_option=1 ;; misc) misc_option=1 ;; miscfull) miscfull_option=1 ;; esac
+            next_arg=$arg4
+            case "$next_arg" in
+                load) load_option=1; next_arg=$arg5 ;;
+                misc) misc_option=1; next_arg=$arg5 ;;
+                miscfull) miscfull_option=1; next_arg=$arg5 ;;
+            esac
+            if [ "$next_arg" = --observe-regulators ]; then
+                regulator_option=$next_arg
+            elif [ "$next_arg" = --observe-mclk ] || [ "$next_arg" = --observe-receiver-clocks ]; then
+                clock_option=$next_arg
             fi
             ;;
         clock=csi2|clock=csi0)
@@ -87,7 +116,7 @@ fail() {
 observe_regulators() {
     # Read-only debugfs snapshots. Poll quickly during the bounded active window.
     for sample in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do
-        for rail in pm8994_l17 pm8994_l3 pm8994_s3; do
+        for rail in pm8994_l17 pm8994_l3 pm8994_s3 pmi8994_boostbypass; do
             root=/sys/kernel/debug/regulator/$rail
             mode=$(cat "$root/mode" 2>/dev/null) || mode=unavailable
             optimum=$(cat "$root/optimum_mode" 2>/dev/null) || optimum=unavailable
@@ -244,6 +273,7 @@ if [ "$operation" = csi-trial ]; then
     [ "$#" -le 5 ] || fail 'Unexpected extra arguments.'
     case "$trial_settle" in ''|*[!0-9]*|0*) fail 'csi-trial requires a decimal settle value from 1 to 63.' ;; esac
     [ "$trial_settle" -ge 1 ] && [ "$trial_settle" -le 63 ] || fail 'csi-trial settle must be from 1 to 63.'
+    [ "$load_option" != 1 ] || [ "$boost_option" != 1 ] || fail 'Load and boost selectors must be run as separate trials.'
     if [ -n "$trial_register$trial_value" ]; then
         case "$trial_register" in [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) ;; *) fail 'Register must be four hex digits.' ;; esac
         case "$trial_value" in [0-9a-fA-F][0-9a-fA-F]) ;; *) fail 'Value must be two hex digits.' ;; esac
@@ -273,7 +303,7 @@ if [ -n "$clock_option" ]; then
     done
 fi
 if [ -n "$regulator_option" ]; then
-    for regulator in pm8994_l17 pm8994_l3 pm8994_s3; do
+    for regulator in pm8994_l17 pm8994_l3 pm8994_s3 pmi8994_boostbypass; do
         for regulator_file in mode optimum_mode enable use_count; do
             [ -r "/sys/kernel/debug/regulator/$regulator/$regulator_file" ] ||
                 fail "Regulator observation unavailable: /sys/kernel/debug/regulator/$regulator/$regulator_file; no hardware action performed."
@@ -322,7 +352,7 @@ if [ "$tpg_test" = 1 ]; then
     case "$tpg_before" in requested=0\ stage=idle\ *) ;; *) fail 'Expected untouched CSID TPG state.' ;; esac
 fi
 [ -w "$control" ] || fail 'The requested diagnostic control is not writable.'
-initial='status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0 load_trial=0 load_vote=0,0,0,0 load_reset=0,0,0,0'
+initial='status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0 load_trial=0 load_vote=0,0,0,0 load_reset=0,0,0,0 boost_trial=0 boost_enable=0 boost_disable=0 boost_uv_before=0 boost_uv_active=0 boost_uv_after=0'
 before=$(cat "$result") || fail 'Cannot read the diagnostic result.'
 echo "Before: $before"
 if [ "$operation" = csi-trial ]; then
@@ -388,7 +418,9 @@ if [ -n "$regulator_option" ]; then
     regulator_pid=$!
 fi
 if [ "$operation" = csi-trial ]; then
-    if [ -n "$trial_clock" ]; then
+    if [ "$boost_option" = 1 ]; then
+        echo "Performing one CSI-2 trial at settle=$trial_settle (VC0) with boost-bypass enable at the existing board voltage."
+    elif [ -n "$trial_clock" ]; then
         echo "Performing one CSI-2 trial at settle=$trial_settle (VC0) with extra gate $trial_clock."
     else
         echo "Performing one CSI-2 trial at settle=$trial_settle (VC0)."
@@ -401,6 +433,9 @@ write_value=$operation
 [ "$tpg_test" != 1 ] || write_value=run
 [ "$operation" != csi-trial ] || write_value="settle=$trial_settle"
 [ "$operation" != csi-trial ] || [ "$load_option" != 1 ] || write_value="$write_value load"
+[ "$operation" != csi-trial ] || [ "$boost_option" != 1 ] || write_value="$write_value boost"
+[ "$operation" != csi-trial ] || [ "$misc_option" != 1 ] || write_value="$write_value misc"
+[ "$operation" != csi-trial ] || [ "$miscfull_option" != 1 ] || write_value="$write_value miscfull"
 if [ "$operation" = csi-trial ] && [ -n "$trial_register" ]; then
     write_value="$write_value reg=$trial_register value=$trial_value"
 fi

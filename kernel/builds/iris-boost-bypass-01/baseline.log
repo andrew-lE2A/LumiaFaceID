@@ -1,0 +1,226 @@
+CSI before: requested=0 stage=idle errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=22 before_valid=0 after_valid=0 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x00000000
+CAMSS TOP before receiver test: source=unavailable errno=-11; read only while PHY2 is powered
+Before: status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 attempts=0 blocked=0 rail_uv=0 load_trial=0 load_vote=0,0,0,0 load_reset=0,0,0,0 boost_trial=0 boost_enable=0 boost_disable=0 boost_uv_before=0 boost_uv_active=0 boost_uv_after=0
+Stream before: profile_loaded=0 stage=idle extra_csi_clock=0 counter_before=0x00 counter_before_valid=0 counter_before_errno=0 first=0xff last=0xff changes=0 samples=0 counter_after_stop=0x00 counter_after_stop_valid=0 counter_after_stop_errno=0 program_writes=0 stop_errno=0 program_transactions=0 readback_errno=0 interface_csi2_requested=0 vc_before=0x00 vc_before_valid=0 extclk_immediate=0x0000 extclk_immediate_valid=0 extclk_immediate_errno=0 extclk_single=0x0000 extclk_single_errno=0 control_pair=0x0000 control_pair_errno=0 control_single=0x0000 control_single_errno=0 override_requested=0 override_address=0x0000 override_value=0x00 override_readback=0x00 override_readback_valid=0
+Stopped: cameraserver
+Stopped: vendor.camera-provider-2-4
+Stopped: qcamerasvr
+Performing one CSI-2 trial at settle=22 (VC0).
+Saved regulator observations: /data/local/tmp/cityman-iris-regulators.emvk4x
+sample=1 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=2
+sample=1 rail=pm8994_l3 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=1 rail=pm8994_s3 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=1 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=2 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=2
+sample=2 rail=pm8994_l3 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=2 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=2 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=3 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=3 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=3 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=3 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=4 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=4 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=4 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=4 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=5 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=5 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=5 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=5 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=6 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=6 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=6 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=6 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=7 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=7 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=7 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=7 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=8 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=8 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=8 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=8 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=9 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=9 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=9 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=9 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=10 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=10 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=10 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=10 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=11 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=11 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=11 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=11 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=12 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=12 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=12 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=12 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=13 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=13 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=13 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=13 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=14 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=14 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=14 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=14 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=15 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=15 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=15 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=15 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=16 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=16 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=16 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=16 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=17 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=17 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=17 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=17 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=18 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=18 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=18 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=18 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=19 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=19 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=19 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=19 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=20 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=20 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=20 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=20 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=21 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=21 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=21 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=21 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=22 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=22 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=22 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=22 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=23 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=23 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=23 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=23 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=24 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=24 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=24 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=24 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=25 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=25 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=25 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=25 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=26 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=26 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=26 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=26 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=27 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=27 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=27 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=27 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=28 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=28 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=28 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=28 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=29 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=29 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=29 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=29 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=30 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=30 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=30 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=30 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=31 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=31 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=31 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=31 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=32 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=32 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=32 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=32 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=33 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=33 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=33 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=33 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=34 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=34 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=34 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=34 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=35 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=35 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=35 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=35 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=36 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=36 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=36 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=36 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=37 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=37 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=37 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=37 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=38 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=38 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=38 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=38 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=39 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=39 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=39 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=39 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+sample=40 rail=pm8994_l17 mode=4 optimum_mode=4 enable=1 use_count=1
+sample=40 rail=pm8994_l3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=40 rail=pm8994_s3 mode=4 optimum_mode=4 enable=0 use_count=0
+sample=40 rail=pmi8994_boostbypass mode=2 optimum_mode=2 enable=0 use_count=0
+After: status=failed stage=stream-test errno=-110 model=0x0861 cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000 load_trial=0 load_vote=0,0,0,0 load_reset=0,0,0,0 boost_trial=0 boost_enable=0 boost_disable=0 boost_uv_before=0 boost_uv_active=0 boost_uv_after=0
+Stream after: profile_loaded=1 stage=frame-counter extra_csi_clock=0 counter_before=0x00 counter_before_valid=1 counter_before_errno=0 first=0x00 last=0x00 changes=0 samples=16 counter_after_stop=0x00 counter_after_stop_valid=1 counter_after_stop_errno=0 program_writes=117 stop_errno=0 program_transactions=50 readback_errno=0 interface_csi2_requested=1 vc_before=0x00 vc_before_valid=1 extclk_immediate=0x0000 extclk_immediate_valid=1 extclk_immediate_errno=0 extclk_single=0x0000 extclk_single_errno=0 control_pair=0x099a control_pair_errno=0 control_single=0x099a control_single_errno=0 override_requested=0 override_address=0x0000 override_value=0x00 override_readback=0x00 override_readback_valid=0
+Saved register readback (before and after stream-on):
+model addr=0x0000 width=2 before=0x0861 before_valid=1 after=0x0861 after_valid=1
+mode addr=0x0100 width=1 before=0x0000 before_valid=1 after=0x0001 after_valid=1
+reset addr=0x0103 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+hold addr=0x0104 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+fast addr=0x0106 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+ctrl addr=0x0138 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+ext addr=0x0136 width=2 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+signal addr=0x0111 width=1 before=0x0002 before_valid=1 after=0x0002 after_valid=1
+format addr=0x0112 width=2 before=0x0a0a before_valid=1 after=0x0a0a after_valid=1
+lanes addr=0x0114 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+pre addr=0x0304 width=2 before=0x0001 before_valid=1 after=0x0001 after_valid=1
+mult addr=0x0306 width=2 before=0x0092 before_valid=1 after=0x0092 after_valid=1
+frame addr=0x0340 width=2 before=0x045c before_valid=1 after=0x045c after_valid=1
+line addr=0x0342 width=2 before=0x0834 before_valid=1 after=0x0834 after_valid=1
+width addr=0x034c width=2 before=0x0780 before_valid=1 after=0x0780 after_valid=1
+height addr=0x034e width=2 before=0x0440 before_valid=1 after=0x0440 after_valid=1
+coarse addr=0x0202 width=2 before=0x000c before_valid=1 after=0x000c after_valid=1
+gain addr=0x0204 width=2 before=0x0038 before_valid=1 after=0x0038 after_valid=1
+a06 addr=0x0a06 width=1 before=0x0001 before_valid=1 after=0x0001 after_valid=1
+a0a addr=0x0a0a width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+clk0130 addr=0x0130 width=2 before=0x099a before_valid=1 after=0x099a after_valid=1
+vt_pix addr=0x0300 width=2 before=0x0002 before_valid=1 after=0x0002 after_valid=1
+vt_sys addr=0x0302 width=2 before=0x000a before_valid=1 after=0x000a after_valid=1
+op_pix addr=0x0308 width=2 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+op_sys addr=0x030a width=2 before=0x0001 before_valid=1 after=0x0001 after_valid=1
+virtual_channel addr=0x0110 width=1 before=0x0000 before_valid=1 after=0x0000 after_valid=1
+CSI after: requested=1 stage=released errno=0 cleanup_errno=0 phy=2 csid=3 combo=1 lane_mask=0x18 lane_assign=0x0004 settle=22 before_valid=1 after_valid=1 packets_before=0 packets_after=0 ecc_before=0 ecc_after=0 crc_before=0 crc_after=0 version=0x30010003
+CAMSS TOP after receiver test: source=iris-snapshot camss_top_40_before=0x00000000 camss_top_40_after=0x00000030 camss_top_44_before=0x00000003 camss_top_44_after=0x00000003
+Saved receiver configuration/status (before and after start):
+csid_control0 before=0x00000040 before_valid=1 after=0x00000040 after_valid=1
+csid_control1 before=0x0005000f before_valid=1 after=0x0005000f after_valid=1
+csid_vc0_lut before=0x0000002b before_valid=1 after=0x0000002b after_valid=1
+csid_cid0_config before=0x00000023 before_valid=1 after=0x00000023 after_valid=1
+csid_irq_status before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+phy_clock_mux before=0x00000030 before_valid=1 after=0x00000030 after_valid=1
+phy_power before=0x00000031 before_valid=1 after=0x00000031 after_valid=1
+phy_mode before=0x00000010 before_valid=1 after=0x00000010 after_valid=1
+phy_clock_cfg2 before=0x00000010 before_valid=1 after=0x00000010 after_valid=1
+phy_clock_settle before=0x00000016 before_valid=1 after=0x00000016 after_valid=1
+phy_clock_misc before=0x00000004 before_valid=1 after=0x00000004 after_valid=1
+phy_data_cfg2 before=0x00000010 before_valid=1 after=0x00000010 after_valid=1
+phy_data_settle before=0x00000016 before_valid=1 after=0x00000016 after_valid=1
+phy_data_misc before=0x00000008 before_valid=1 after=0x00000008 after_valid=1
+phy_irq_status0 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+phy_irq_status1 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+phy_irq_status2 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+phy_irq_status3 before=0x00000000 before_valid=1 after=0x00000004 after_valid=1
+phy_irq_status4 before=0x00000000 before_valid=1 after=0x00000004 after_valid=1
+phy_irq_status5 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+phy_irq_status6 before=0x00000000 before_valid=1 after=0x00000010 after_valid=1
+phy_irq_status7 before=0x00000000 before_valid=1 after=0x00000000 after_valid=1
+Restored: qcamerasvr
+Restored: vendor.camera-provider-2-4
+Restored: cameraserver

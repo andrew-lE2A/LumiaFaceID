@@ -1,0 +1,30 @@
+{
+  "build_id": "iris-csi-combo-misc-01",
+  "purpose": "Test the Windows combo-mode MISC1 values for iris upper PHY2 lanes 3/4 while keeping regulator load votes and the CSID3 PHY clock gate active.",
+  "analysis_source": "FINDINGS.md section 14 static disassembly analysis supplied by the user; not treated as a phone measurement.",
+  "temporary_kernel": "3.10.108-perf-gcc84cab9 #15",
+  "boot_method": "fastboot boot; no partition write",
+  "boot_image": {
+    "path": "/private/tmp/cityman-iris-csi-misc-01.img",
+    "sha256": "5663f150f88f57d12bcc9662e886b8b191c278b9253a2ccf19b4ebc29c4183f7",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "explicit_dtb_update": true
+  },
+  "build_artifacts": {
+    "Image.gz_sha256": "e59d44741ef749fe12d7c67d1f55ad4ef4fe2279616c46ae1563fb6e0bdf8e16",
+    "boards.dtb_sha256": "4198353f65c06a8b41960238a6a332afeeaf62536ceb19f08c94d7363bd52b01"
+  },
+  "test_plan": [
+    "Baseline: csi-trial settle=22 with regulator load votes enabled.",
+    "Variant: after msm_csiphy_lane_config(), set PHY2 base+0xE8 to 0x06 and base+0x128 to 0x0A; verify both readbacks.",
+    "Because the variant produced clean packets, repeat it once. Do not run the additional CFG1/2/4/5 variant or any boost-bypass vote."
+  ],
+  "records": {
+    "phone_result": "phone-result.json",
+    "baseline_log": "baseline-load.log",
+    "first_variant_log": "misc-load.log",
+    "repeat_log": "misc-load-repeat.log"
+  },
+  "conclusion": "The baseline produced zero CSID3 packets. The MISC1-only variant produced 12677 packets on the first run and 12720 on repeat, each with zero ECC and CRC. The per-lane MISC1 readbacks were 0x06 and 0x0A. This establishes repeatable CSID3 packet reception on the iris upper combo lanes. It does not yet establish Android frame delivery, a visible iris image, or authentication.",
+  "publication": "local only; no Git push or PR"
+}

@@ -1,0 +1,18 @@
+Subject: [PATCH] media: expose shared boost-bypass rail to opt-in iris diagnostic
+Base-commit: cc84cab9900ee4e7a3046b3756858e9832caee72
+
+Expose the existing PMI8994 boost-bypass regulator to the dormant Cityman iris
+diagnostic. The consumer only enables it in an explicit CSI trial selector;
+this patch does not change the board voltage constraints or request a voltage.
+The bounded test therefore uses the existing 3.6 V board setting.
+
+diff --git a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
+--- a/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
++++ b/arch/arm64/boot/dts/mmo/common/camera-cityman.dtsi
+@@ -62,5 +62,6 @@
+ 	cityman-iris-id {
+ 		compatible = "microsoft,cityman-iris-id";
++		boost-supply = <&pmi8994_boostbypass>;
+ 		vana-supply = <&pm8994_l17>;
+ 		vio-supply = <&pm8994_lvs1>;
+ 		core-supply = <&pm8994_s3>;

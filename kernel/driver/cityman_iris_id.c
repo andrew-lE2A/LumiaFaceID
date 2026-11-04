@@ -45,9 +45,13 @@ struct cityman_iris {
 	struct device *dev;
 	struct mutex lock;
 	struct regulator *rails[IRIS_RAILS];
+	struct regulator *boost;
 	bool enabled[IRIS_RAILS];
 	bool load_trial, load_voted[IRIS_RAILS];
 	int load_vote_rc[IRIS_RAILS], load_reset_rc[IRIS_RAILS];
+	bool boost_trial, boost_enabled, last_boost_trial;
+	int boost_enable_rc, boost_disable_rc;
+	int boost_uv_before, boost_uv_active, boost_uv_after;
 	struct clk *source, *clock;
 #ifdef CONFIG_CITYMAN_IRIS_CSI
 	struct clk *csi3phy_clock;
@@ -393,6 +397,17 @@ static void iris_cleanup(struct cityman_iris *iris)
 				iris->load_voted[i] = false;
 		}
 	}
+	if (iris->boost_enabled) {
+		rc = regulator_disable(iris->boost);
+		iris->boost_disable_rc = rc;
+		dev_info(iris->dev, "boost disable rc=%d\n", rc);
+		if (rc < 0)
+			iris->cleanup_error = rc;
+		else
+			iris->boost_enabled = false;
+	}
+	if (!iris->boost_enabled && iris->last_boost_trial)
+		iris->boost_uv_after = regulator_get_voltage(iris->boost);
 	if (iris->old_rate) {
 		rc = clk_set_rate(iris->source, iris->old_rate);
 		if (rc < 0)
@@ -440,6 +455,35 @@ static int iris_identify(struct cityman_iris *iris)
 	rc = gpio_direction_output(iris->reset, 0);
 	if (rc)
 		goto done;
+	if (iris->boost_trial) {
+		iris->stage = "boost";
+		iris->boost_uv_before = regulator_get_voltage(iris->boost);
+		if (iris->boost_uv_before < 0) {
+			rc = iris->boost_uv_before;
+			goto done;
+		}
+		/* Keep the board's existing shared-rail voltage; this test only
+		 * votes enable at 3.6 V and does not request a voltage change. */
+		if (iris->boost_uv_before != 3600000) {
+			rc = -ERANGE;
+			goto done;
+		}
+		rc = regulator_enable(iris->boost);
+		iris->boost_enable_rc = rc;
+		dev_info(iris->dev, "boost enable rc=%d voltage_before_uv=%d\n",
+			rc, iris->boost_uv_before);
+		if (rc)
+			goto done;
+		iris->boost_enabled = true;
+		iris->boost_uv_active = regulator_get_voltage(iris->boost);
+		dev_info(iris->dev, "boost enabled voltage_active_uv=%d\n",
+			iris->boost_uv_active);
+		if (iris->boost_uv_active != 3600000) {
+			rc = iris->boost_uv_active < 0 ? iris->boost_uv_active : -ERANGE;
+			goto done;
+		}
+		usleep_range(1000, 1500);
+	}
 	iris->stage = "pinctrl";
 	rc = pinctrl_select_state(iris->pins, iris->active);
 	if (rc)
@@ -592,12 +636,14 @@ static ssize_t result_show(struct device *dev, struct device_attribute *attr, ch
 	ssize_t size;
 	mutex_lock(&iris->lock);
 	size = scnprintf(buf, PAGE_SIZE,
-		"status=%s stage=%s errno=%d model=0x%04x cleanup_errno=%d attempts=%u blocked=%u rail_uv=%d load_trial=%u load_vote=%d,%d,%d,%d load_reset=%d,%d,%d,%d\n",
+		"status=%s stage=%s errno=%d model=0x%04x cleanup_errno=%d attempts=%u blocked=%u rail_uv=%d load_trial=%u load_vote=%d,%d,%d,%d load_reset=%d,%d,%d,%d boost_trial=%u boost_enable=%d boost_disable=%d boost_uv_before=%d boost_uv_active=%d boost_uv_after=%d\n",
 		iris->status, iris->stage, iris->error, iris->model,
 		iris->cleanup_error, iris->attempts, iris->blocked, iris->measured_uv,
 		iris->load_trial, iris->load_vote_rc[0], iris->load_vote_rc[1],
 		iris->load_vote_rc[2], iris->load_vote_rc[3], iris->load_reset_rc[0],
-		iris->load_reset_rc[1], iris->load_reset_rc[2], iris->load_reset_rc[3]);
+		iris->load_reset_rc[1], iris->load_reset_rc[2], iris->load_reset_rc[3],
+		iris->last_boost_trial, iris->boost_enable_rc, iris->boost_disable_rc,
+		iris->boost_uv_before, iris->boost_uv_active, iris->boost_uv_after);
 	mutex_unlock(&iris->lock);
 	return size;
 }
@@ -923,6 +969,7 @@ static ssize_t csi_readback_show(struct device *dev, struct device_attribute *at
 		"clock_mux", "power", "mode", "clock_cfg2", "clock_settle", "clock_misc",
 		"data_cfg2", "data_settle", "data_misc", "irq_status0", "irq_status1",
 		"irq_status2", "irq_status3", "irq_status4", "irq_status5", "irq_status6", "irq_status7",
+		"clock_cfg1", "clock_cfg4", "clock_cfg5", "data_cfg1", "data_cfg4", "data_cfg5",
 	};
 	struct cityman_iris *iris = dev_get_drvdata(dev);
 	struct iris_csi *s = &iris->csi;
@@ -950,8 +997,9 @@ static ssize_t csi_trial_store(struct device *dev,
 {
 	struct cityman_iris *iris = dev_get_drvdata(dev);
 	unsigned int settle, address = 0, value = 0, i;
-	bool override = false, found = false, load_trial = false;
-	char extra, clock_name[8], selector[8];
+	bool override = false, found = false, load_trial = false, boost_trial = false;
+	bool misc_trial = false, misc_full_trial = false;
+	char extra, clock_name[9], selector[9], selector2[9];
 	unsigned int extra_clock = IRIS_EXTRA_CSI_NONE;
 	int rc;
 	if (!capable(CAP_SYS_RAWIO))
@@ -959,7 +1007,7 @@ static ssize_t csi_trial_store(struct device *dev,
 	if (strncmp(buf, "settle=", 7))
 		return -EINVAL;
 	if (kstrtouint(buf + 7, 10, &settle)) {
-		if (sscanf(buf, "settle=%u clock=%7s %c", &settle,
+		if (sscanf(buf, "settle=%u clock=%8s %c", &settle,
 			   clock_name, &extra) == 2) {
 			if (!strcmp(clock_name, "csi2"))
 				extra_clock = IRIS_EXTRA_CSI2;
@@ -967,9 +1015,28 @@ static ssize_t csi_trial_store(struct device *dev,
 				extra_clock = IRIS_EXTRA_CSI0;
 			else
 				return -EINVAL;
-		} else if (sscanf(buf, "settle=%u %7s %c", &settle,
-			  selector, &extra) == 2 && !strcmp(selector, "load")) {
-			load_trial = true;
+		} else if (sscanf(buf, "settle=%u %8s %8s %c", &settle,
+			  selector, selector2, &extra) >= 2) {
+			char *tokens[2] = { selector, selector2 };
+			unsigned int token_count = sscanf(buf, "settle=%u %8s %8s %c",
+				&settle, selector, selector2, &extra);
+			unsigned int t;
+			for (t = 0; t < token_count - 1; t++) {
+				if (!strcmp(tokens[t], "load"))
+					load_trial = true;
+				else if (!strcmp(tokens[t], "boost"))
+					boost_trial = true;
+				else if (!strcmp(tokens[t], "misc"))
+					misc_trial = true;
+				else if (!strcmp(tokens[t], "miscfull")) {
+					misc_trial = true;
+					misc_full_trial = true;
+				} else
+					return -EINVAL;
+			}
+			if (token_count > 3 || (misc_trial && misc_full_trial) ||
+			    (boost_trial && (load_trial || misc_trial)))
+				return -EINVAL;
 		} else if (sscanf(buf, "settle=%u reg=%x value=%x %c", &settle,
 				  &address, &value, &extra) == 3 &&
 			   address <= 0xffff && value <= 0xff) {
@@ -1018,7 +1085,13 @@ static ssize_t csi_trial_store(struct device *dev,
 	memset(iris->load_voted, 0, sizeof(iris->load_voted));
 	memset(iris->load_vote_rc, 0, sizeof(iris->load_vote_rc));
 	memset(iris->load_reset_rc, 0, sizeof(iris->load_reset_rc));
-	 iris->load_trial = load_trial;
+	iris->load_trial = load_trial;
+	iris->boost_trial = boost_trial;
+	iris->csi.misc_trial = misc_trial;
+	iris->csi.misc_full_trial = misc_full_trial;
+	iris->last_boost_trial = boost_trial;
+	iris->boost_enable_rc = iris->boost_disable_rc = 0;
+	iris->boost_uv_before = iris->boost_uv_active = iris->boost_uv_after = 0;
 	iris->csi.requested = true;
 	iris->csi.settle = settle;
 	iris->extra_csi_clock = extra_clock;
@@ -1029,6 +1102,7 @@ static ssize_t csi_trial_store(struct device *dev,
 	iris->stream.override_value = value;
 	rc = iris_identify(iris);
 	iris->load_trial = false;
+	iris->boost_trial = false;
 	/* A clean counter stall is a completed observation, not a retry trigger. */
 	if (rc == -ETIMEDOUT && iris->stream.samples == IRIS_STREAM_SAMPLES &&
 	    !iris->stream.changes && !iris->stream.stop_error &&
@@ -1099,6 +1173,9 @@ static int cityman_iris_probe(struct platform_device *pdev)
 			return iris_probe_report(dev, stage, PTR_ERR(iris->rails[i]));
 		}
 	}
+	iris->boost = devm_regulator_get(dev, "boost");
+	if (IS_ERR(iris->boost))
+		return iris_probe_report(dev, "boost-regulator", PTR_ERR(iris->boost));
 	iris->source = devm_clk_get(dev, "cam_src_clk");
 	if (IS_ERR(iris->source))
 		return iris_probe_report(dev, "mclk-source", PTR_ERR(iris->source));

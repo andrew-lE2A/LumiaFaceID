@@ -13,7 +13,7 @@
  * Its exact statistics semantics remain unverified; save the readback. */
 #define IRIS_CSI_ORIGINAL_CTRL1_FLAG (1U << 16)
 #define IRIS_CSI_CSID_REGS 5
-#define IRIS_CSI_PHY_REGS 17
+#define IRIS_CSI_PHY_REGS 23
 #define IRIS_CSI_PHY_IRQ_WORDS 8
 
 /* Legacy release helpers otherwise discard clock/regulator errors. Keep the
@@ -41,6 +41,9 @@ struct iris_csi_tpg {
 
 struct iris_csi {
 	bool requested, phy_initialized, csid_initialized, before_valid, after_valid;
+	bool misc_trial, misc_full_trial;
+	bool lane_orig_valid;
+	u32 lane_orig[10];
 	void *phy, *csid;
 	u32 settle;
 	struct iris_csi_counts before, after;

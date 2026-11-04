@@ -1,0 +1,14 @@
+{
+  "build_id": "iris-boost-bypass-01",
+  "purpose": "Bounded boost-bypass presence trial at the existing Linux board voltage, compared with csi-trial settle=22 baseline.",
+  "temporary_kernel": "3.10.108-perf-gcc84cab9 #14",
+  "boot_method": "fastboot boot; no partition write",
+  "board_limit": "3.6 V maximum; Windows CAMT requests 4.0 V, which this trial did not reproduce",
+  "records": {
+    "baseline": "baseline.log",
+    "boost_trial": "boost-3v6.log"
+  },
+  "conclusion": "Baseline and boost-enabled trials both ended with zero CSID3 packets, ECC, and CRC. During the boost variant, pmi8994_boostbypass showed enable=1/use_count=1 at 3.6 V. After cleanup it returned to disabled. Since the Windows 4.0 V condition was not tested, this does not exclude a 4.0 V-specific effect.",
+  "cleanup": "Sensor stop and receiver release returned zero; camera services were restored; boost, torch, and flash channels were left off.",
+  "publication": "local only; no Git push or PR"
+}

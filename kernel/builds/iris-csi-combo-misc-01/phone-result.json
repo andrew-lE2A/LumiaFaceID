@@ -1,0 +1,90 @@
+{
+  "build_id": "iris-csi-combo-misc-01",
+  "phone": "Lumia 950 XL cityman, LineageOS 23.2 Android 16",
+  "boot_method": "fastboot boot; no partition write",
+  "temporary_kernel": "3.10.108-perf-gcc84cab9 #15",
+  "protected_files": {
+    "original_boot_backup_sha256": "8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e",
+    "private_stream_profile_sha256": "6884c497a0ca43800278bc9f844c77eab16feca73daf768b66e6380a2b25a838"
+  },
+  "trial_conditions": {
+    "phy": 2,
+    "csid": 3,
+    "combo_mode": true,
+    "lane_mask": "0x18",
+    "settle": 22,
+    "regulator_load_vote_return_values": [2, 0, 2, 2],
+    "boost_bypass_enabled": false,
+    "csid3_phy_clock_gate": "kept enabled"
+  },
+  "trials": [
+    {
+      "name": "baseline-load",
+      "packets_before": 0,
+      "packets_after": 0,
+      "ecc_before_after": [0, 0],
+      "crc_before_after": [0, 0],
+      "phy_irq_status_after": ["0x0", "0x0", "0x0", "0x4", "0x4", "0x0", "0x10", "0x0"],
+      "cleanup_errno": 0
+    },
+    {
+      "name": "misc-load",
+      "writes": {
+        "PHY2 lane 3 MISC1 (base+0xE8)": "0x06",
+        "PHY2 lane 4 MISC1 (base+0x128)": "0x0A"
+      },
+      "readback": ["0x06", "0x0A"],
+      "packets_before": 0,
+      "packets_after": 12677,
+      "ecc_before_after": [0, 0],
+      "crc_before_after": [0, 0],
+      "phy_irq_status_after": ["0x0", "0x0", "0x0", "0x4", "0x4", "0x0", "0x10", "0x0"],
+      "cleanup_errno": 0
+    },
+    {
+      "name": "misc-load-repeat",
+      "writes": {
+        "PHY2 lane 3 MISC1 (base+0xE8)": "0x06",
+        "PHY2 lane 4 MISC1 (base+0x128)": "0x0A"
+      },
+      "readback": ["0x06", "0x0A"],
+      "packets_before": 0,
+      "packets_after": 12720,
+      "ecc_before_after": [0, 0],
+      "crc_before_after": [0, 0],
+      "phy_irq_status_after": ["0x0", "0x0", "0x0", "0x4", "0x4", "0x0", "0x10", "0x0"],
+      "cleanup_errno": 0
+    }
+  ],
+  "sensor_stream_observation": {
+    "sensor_counter_before": "0x00",
+    "sensor_counter_samples": 16,
+    "sensor_counter_changes": 0,
+    "sensor_counter_after_stop": "0x00",
+    "sensor_stop_errno": 0,
+    "diagnostic_status": "failed stage=stream-test errno=-110",
+    "interpretation": "The receiver counts show CSI packets, while the old sensor counter diagnostic still stalls. No delivered image was captured."
+  },
+  "front_camera_check": {
+    "app": "org.lineageos.aperture",
+    "camera_id": 1,
+    "session_opened": true,
+    "screenshot_preview": "black; visible image quality could not be confirmed in the phone's current scene",
+    "active_client_closed_after_check": true
+  },
+  "cleanup": {
+    "receiver_released": true,
+    "sensor_stopped": true,
+    "camera_services_running": ["cameraserver", "qcamerasvr", "vendor.camera-provider-2-4"],
+    "active_camera_clients": 0,
+    "boost_bypass_enable": 0,
+    "boost_bypass_use_count": 0,
+    "wled_brightness": 0,
+    "torch_and_flash": "left off"
+  },
+  "limits": [
+    "This validates repeatable CSID3 packet reception with the MISC1 combo-lane correction; no image payload was delivered to Android.",
+    "The camera preview opened, but its screenshot was black, so the front-camera image itself was not confirmed.",
+    "No Android iris unlock or authentication was implemented."
+  ]
+}
