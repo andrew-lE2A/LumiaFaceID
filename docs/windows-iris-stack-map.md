@@ -29,6 +29,45 @@ into `/private/tmp` for inspection. The ARM32 hash matches the provenance hash
 recorded in [hardware.md](hardware.md); the ARM64 hash was computed from its
 pinned package file. Neither DLL is included in this repository.
 
+### Windows Mobile WinBio iris components recovered
+
+The same FFU's `MainOS` image contains a complete iris path beyond the camera
+and ARC components. The following extracted ARMv7 Thumb PE32 files remain
+outside Git in `/private/tmp`:
+
+| Component | SHA-256 | Static evidence |
+| --- | --- | --- |
+| `DeltaIrisEngineAdapter.dll` | `a38076cd597752c847d2da222e6210c3cd1800f43e873784fcaa1ac14d097059` | Exports `WbioQueryEngineInterface`; imports `irm2_*` frame, enrollment, identification, template, eye-info, camera-control and liveness functions from the algorithm DLL. Strings name enrollment/update/commit, duplicate checks, template loading, match-result storage, exposure control and anti-spoofing frame handling. |
+| `IrisSensorAdapter.dll` | `40633018c9416fa03cf70ca9d28bc2490005b36256abdd1726002853ee648ab2` | Exports `WbioQuerySensorInterface`; imports `SensorsNativeApi.dll` sensor open/start/stop. Strings reference capture, sensor status/calibration, LED and ALS lifecycle/read operations. |
+| `iris_mobile_v2.WindowsPhone.dll` | `9e8c53cdf428e4dbdc953ef548105aa4c18905595d739441ee68ffdc76862a43` | Exports 22 `irm2_*` APIs for preview/capture, frames, feature extraction, enrollment, identification, comparison, templates, eye info, liveness and UI hints. Strings expose per-eye processing, frame splitting, spoof checks and image dimensions (width 640–10000; height 480–10000). |
+
+This corrects the earlier conclusion that no Windows iris matcher or
+enrollment API had been found. The adapter imports and engine exports establish
+the recognition component boundary and available operations. They do not
+establish exact runtime call order, thresholds, liveness strength, template
+protection or recognition quality. The DLLs were not executed.
+
+The sensor adapter's strings name capture, export, push-to-engine, cancel,
+reset and calibration operations. The engine adapter's strings name sample
+acceptance, frame analysis, enrollment and identification workers, match-result
+reporting, spoof reporting and eye-info reporting. Together, this supports a
+component flow of sensor capture -> WinBio engine adapter -> `irm2_*` engine
+calls -> biometric result reporting; it does not prove the exact threading or
+buffer handoff sequence. The engine's validation strings require one or two
+eyes and image dimensions of 640–10000 by 480–10000, and expose camera and
+nominal resolution parameters. These are input constraints from compiled
+assertions, not recommended capture settings. Pixel format, rotation values,
+enrollment quality policy and match thresholds remain unresolved.
+
+`LumiaSensorAlgorithmControl.dll` (SHA-256
+`4b6983f5f4177d6b113c06cbea8cd78e1418dd20cb1a8054e39f4d27b28154d6`) exports
+open/close/speed/speed-mode controls, but their semantics and connection to
+iris processing are unknown. `Origa2Auth.sys` (SHA-256
+`0b8fcbe9a420d660a69d9396fe49e0a565844ffba2c3f83208f36201ef851e4d`) is also
+present; its exact role is unresolved. The adapter and engine PDB identities
+were checked against Microsoft's public symbol server and returned 404; no
+matching symbols or source were recovered.
+
 ### Windows Mobile retail FFU located
 
 For comparison with the WOA driver bundle, the LumiaDB RM-1085 listing was used
@@ -105,11 +144,21 @@ vtable at offset `+4` at `0x100101c6`. It subsequently queries static
 by the import table; the engine's `FeedImage` task path is the next useful
 call-flow target. A later call at `0x10010290` dispatches through the same
 object's vtable at offset `+0x14`, passing a pointer to a structure at
-`this + 8` and the routine's second input argument. Since Icaros also contains the `CARCEngine::FeedImage` diagnostic name, this
-is a plausible `FeedImage` slot
-mapping; it remains an inference until the object's vtable and the frame
+`this + 8` and the routine's second input argument. Since Icaros also contains the `CARCEngine::FeedImage` diagnostic name,
+this is a plausible `FeedImage` slot mapping; it remains an inference until the object's vtable and the frame
 structure are fully resolved. These addresses refer to the extracted Mobile
 DLL, not to runtime measurements.
+
+The embedded CodeView records also give stable PDB identities for future
+symbol searches. `Icaros.dll` names
+`D:\GIT\Camera_ImagingAlgorithms\IcarosDll\arm\Release\Icaros.pdb`
+with GUID-age `e3d6b579-fa08-4042-829c-b2edf35ff7bf-2`. Both Mobile and WOA
+`CameraAuthentication.dll` copies name the same PDB path
+`e:\Build_e\st\1E708389_143\output\camera\camera_authentication\arm\fre\CameraAuthentication.pdb`
+and share GUID-age `40cb8540-89f5-46c5-8990-22ddc9aeb932-2`. Neither PDB is
+present in the extracted MainOS filesystem. Exact GUID-age lookups on
+Microsoft's public symbol server returned HTTP 404 for both, so matching
+private symbols are not currently available through that server.
 
 Sources: [LumiaDB RM-1085 firmware listing](https://lumiadb.com/?model=RM-1085)
 and [LumiaDB API documentation](https://lumiadb.com/developers). The original
@@ -169,51 +218,38 @@ connects them.
 This clarifies the boundary between **capture** and **recognition**:
 
 1. The sensor driver handles sensor discovery/configuration and stream control.
-2. The authentication UMDF component coordinates camera frames, exposure and
-   IR pulse/current requests, and tracks eye-region statistics.
-3. A separate `Icaros.dll` component receives work through `IARCEngine` APIs;
-   its role in iris recognition is still unknown.
-4. Windows Hello's enrollment store, policy and final authentication result
-   are outside the sensor driver. The currently inspected DLL evidence does
-   not reveal how templates are protected or whether `Icaros.dll` itself owns
-   templates.
+2. The WinBio sensor adapter provides the sensor interface, while the
+   authentication UMDF and Icaros components handle camera/frame and ARC work.
+3. `DeltaIrisEngineAdapter.dll` bridges Windows Biometric Framework to the
+   distinct `iris_mobile_v2.WindowsPhone.dll` algorithm, whose API includes
+   enrollment, identification, templates and liveness operations.
+4. Windows Hello's enrollment storage, policy and final result path remain
+   incompletely mapped. These binaries do not establish template protection or
+   secure match-result transport.
 
-Therefore, porting only the Windows sensor driver behavior cannot create an
-Android matcher. The strongest near-term implementation reference is the
-authentication component's **capture contract**: frame request lifecycle,
-capture format negotiation, per-frame eye coordinates, exposure feedback and
-pulse synchronization. Android can reproduce those control concepts while
-using a separately selected and evaluated matcher.
+The Windows image now gives us a concrete recognition API reference, but its
+ARMv7 Windows DLLs cannot be loaded directly as Android libraries and do not
+constitute an Android biometric implementation. Reverse-engineering the
+adapter-to-engine data flow may guide a native design; recognition, template
+storage, liveness and framework security still need independent implementation
+and evaluation.
 
 ## Next offline reverse-engineering pass
 
-1. Recover the authentication DLL's function boundaries and trace the
-   `CameraAuthCaptureData`, camera lifecycle, `CFrameHandler::Process`, and
-   `CArcHelper` call paths into `CARCEngine::BeginTask` / `FeedImage`. Recover
-   the task/config names and determine whether an iris recognition plug-in is
-   ever invoked. Preserve the DLL hashes and avoid executing the binaries.
-2. Locate `Icaros.dll` and establish what its `IARCEngine` API does before
-   calling it a matcher. The pinned WOA driver tree contains the separate
-   `icaros_cam_esp` support project but no `Icaros.dll` binary.
-3. Compare the extracted Mobile and WOA `CameraAuthentication.dll` files at the
-   function and call-site level, then disassemble the Icaros `IARCEngine`
-   implementation reached through `CArcHelper`. The WOA driver bundle is not
-   an equivalent runtime: its ARM64 authentication device is explicitly null,
-   and its release notes say cameras and Hello iris are unavailable.
-4. Only then compare the recovered capture contract with Android's current
-   Camera2 probe and framework service. Keep the diagnostic matcher outside
-   Keyguard until its false-accept, false-reject, liveness, storage and
-   cancellation properties have been evaluated.
+1. Trace the WinBio adapter's `irm2_*` imports and frame/result buffers to map
+enrollment and identification call order, pixel format, rotation, liveness
+decisions and template lifecycle. Keep analysis static; do not execute the
+Windows binaries.
+2. Compare Mobile `CameraAuthentication.dll` and `Icaros.dll` call paths with
+WOA builds, separately from the WinBio iris algorithm path.
+3. Determine how the Windows adapters bind to kernel sensor/flash controls and
+which component owns template persistence and result protection.
+4. Compare the recovered API contract with Android's camera path. Keep
+experimental matching outside Keyguard until matching, liveness, protected
+storage/result delivery, cancellation and lockout are evaluated.
 
-The ARM32 `CameraAuthentication.dll`'s embedded PDB path names a Microsoft
-build directory, but no matching PDB was present in the public package or local
-workspace. The ARM64 DLL instead identifies itself with a `LumiaNull.pdb`
-path, consistent with the null-device configuration. Function-name strings
-and imports are useful map points; exact control flow and value semantics
-still require disassembly and data-flow verification. A matching Windows
-Mobile FFU and extracted ARM32 `Icaros.dll` are available outside Git. The
-main static-analysis gap is now tracing the opaque ARC engine implementation
-and matching the Mobile `CameraAuthentication.dll` build to its WOA counterpart.
-The WOA ESP source can be read independently, but its camera power,
-orientation, focus-stat and thermal functions do not supply the missing iris
-recognition implementation.
+The Mobile FFU, extracted ARM32 Icaros and WinBio iris components are available
+outside Git. The main static-analysis gap is tracing the WinBio adapter-to-
+algorithm buffers and call sequence, then matching Mobile capture/ARC
+components to WOA counterparts. The WOA ESP source remains ancillary and does
+not implement the recovered WinBio iris algorithm API.

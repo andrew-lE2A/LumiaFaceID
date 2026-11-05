@@ -12,7 +12,12 @@ front camera; its differences are sensor data and the allowed CSI receiver
 range. `CameraAuthentication.dll` is a capture/frame provider. Its static
 analysis records eye-ROI exposure control and per-frame illumination requests
 through `FlashCtrlPulseUs`, `IS.HE.FlashPulseLenghtUs`, and
-`UseFlashOutOfFrame`. It is not the iris matcher.
+`UseFlashOutOfFrame`. Separate components in the Windows Mobile FFU now
+identify the actual Windows Biometric Framework iris engine:
+`DeltaIrisEngineAdapter.dll` imports enrollment, identification, template,
+eye-info and liveness APIs from `iris_mobile_v2.WindowsPhone.dll`. This
+establishes the algorithm interface, but not its exact runtime sequence or
+security properties; see [windows-iris-stack-map.md](windows-iris-stack-map.md).
 
 The sensor's strobe capability is zero (`0x1a02` reads zero and DCC block 5 has
 no override). Windows therefore does not program the sensor STROBE registers
@@ -28,13 +33,14 @@ that observation does not establish an eye-safe exposure.
 
 The new one-frame Android YUV capture is **not** the original Windows Hello
 enrollment or authentication algorithm. It only checks the camera-to-frame
-stage. The Lumia-specific static analysis recovered capture controls and
-per-frame flash requests from `CameraAuthentication.dll`, but no iris matcher,
-template format, or enrollment call sequence. Microsoft's general Windows
-Hello documentation describes an enrollment profile derived from sensor data
-and stored as an encrypted, device-local template; that is useful architectural
-context, but it does not prove the exact Lumia Windows 10 Mobile implementation
-or reveal its matcher. The [Windows Hello FAQ](https://learn.microsoft.com/en-us/windows/security/identity-protection/hello-for-business/hello-faq)
+stage. The Windows Mobile FFU now provides the original algorithm DLL and
+adapter interface, including enrollment, identification, template and
+liveness operations. Format and lifecycle semantics still need static
+call-flow analysis; those Windows ARM binaries are not Android libraries.
+Microsoft's general Windows Hello documentation describes an enrollment
+profile derived from sensor data and stored as an encrypted, device-local
+template; that is architectural context but does not establish how this Lumia
+build protects templates or transports trusted results. The [Windows Hello FAQ](https://learn.microsoft.com/en-us/windows/security/identity-protection/hello-for-business/hello-faq)
 and [Windows Biometric Framework driver guide](https://learn.microsoft.com/en-us/windows-hardware/drivers/biometric/)
 cover that general model.
 
@@ -180,10 +186,11 @@ The next gates are:
 1. Complete stable RAW/YUV frame delivery, correct orientation/geometry,
    controlled exposure and synchronized IR. Add iris/eye localization and
    quality feedback for a diagnostic enrollment screen.
-2. Select and evaluate an iris matcher, including repeatability, false-match
-   rates, presentation attacks and liveness. Store enrollment templates per
-   Android user; do not put raw frames or templates in a normal app's shared
-   storage.
+2. Trace the recovered Windows adapter-to-engine contract, then decide whether
+   to implement a native Android engine or use a separately selected matcher.
+   Evaluate repeatability, false-match rates, presentation attacks and
+   liveness. Store enrollment templates per Android user; do not put raw frames
+   or templates in a normal app's shared storage.
 3. Choose and implement the framework route only after the capture/matcher
    evidence exists. The Android 16 AOSP `hardware/interfaces/biometrics` tree
    has Face and Fingerprint AIDL HALs, but no Iris AIDL HAL. AOSP's Android 16
