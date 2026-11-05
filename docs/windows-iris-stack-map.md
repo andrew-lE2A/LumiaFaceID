@@ -88,6 +88,24 @@ template, or match method names in the inspected export names, and the opaque
 engine's behavior still needs disassembly and call-flow analysis. The manifest
 proves co-installation, not template ownership.
 
+Additional internal diagnostic strings narrow the role of the ARC engine.
+They name `CARCEngine::Initialize`, `LoadCameraTunigs` (spelling as stored),
+`HasPipe`, `BeginTask`, `FeedImage`, output-buffer reservation/freeing,
+`GetTaskSettings`, `EndTask`, and `ProcessInputFormat`. The same DLL contains
+general ISP and image algorithms plus `CFrameAlgorithm_Run3AAECOnly::FindIrisTotalExposure`,
+`IrisPct_P99/P95/P90`, and `EyeROI[0..1]` settings. This is consistent with a
+camera image-processing engine that accepts frames and computes exposure from
+iris-region statistics. The names do not establish iris identity matching.
+
+In the Mobile authentication DLL disassembly, a setup path calls
+`IARCEngine::New` at `0x1001014c`, then dispatches through the returned object's
+vtable at offset `+4` at `0x100101c6`. It subsequently queries static
+`IARCEngine::Release` and `Generation` functions, and a cleanup path calls
+`IARCEngine::Delete`. The virtual method's name and arguments are not exposed
+by the import table; the engine's `FeedImage` task path is the next useful
+call-flow target. These addresses refer to the extracted Mobile DLL, not to
+runtime measurements.
+
 Sources: [LumiaDB RM-1085 firmware listing](https://lumiadb.com/?model=RM-1085)
 and [LumiaDB API documentation](https://lumiadb.com/developers). The original
 sensor driver is cached under `/private/tmp/lumia-iris-notes/`.
@@ -166,7 +184,9 @@ using a separately selected and evaluated matcher.
 
 1. Recover the authentication DLL's function boundaries and trace the
    `CameraAuthCaptureData`, camera lifecycle, `CFrameHandler::Process`, and
-   `CArcHelper` call paths. Preserve the DLL hash and avoid executing it.
+   `CArcHelper` call paths into `CARCEngine::BeginTask` / `FeedImage`. Recover
+   the task/config names and determine whether an iris recognition plug-in is
+   ever invoked. Preserve the DLL hashes and avoid executing the binaries.
 2. Locate `Icaros.dll` and establish what its `IARCEngine` API does before
    calling it a matcher. The pinned WOA driver tree contains the separate
    `icaros_cam_esp` support project but no `Icaros.dll` binary.
