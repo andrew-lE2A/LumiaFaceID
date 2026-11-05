@@ -152,6 +152,24 @@ source is UNKNOWN, so cross-clock exposure overlap cannot be calculated, and
 the helper timestamps do not measure LED optical latency. Production-grade
 synchronization remains unproven.
 
+### Windows CCI pulse route versus Linux CCI support (static source audit)
+
+The Windows notes trace the IR pulse to a hardware-timed CCI GPIO queue
+sequence: wait, drive one CCI output high, wait, then drive it low. The Cityman
+Linux kernel snapshot used for these experiments declares `MSM_CCI_GPIO_WRITE`
+and GPIO command enum values in `msm_cci.h`, but `msm_cci_config()` handles
+`MSM_CCI_GPIO_WRITE` with an empty case. No CCI GPIO command encoder or GPIO
+queue register definitions appear in that CCI implementation; the exposed
+queue registers and writer cover I2C only. The enum is therefore not a usable
+GPIO sequencer.
+
+This narrows a Linux port: matching the Windows timing requires adding and
+validating CCI GPIO-queue support in the kernel, then establishing which
+physical output the iris uses and whether it reaches the PMIC IR input. The
+notes' GPIO-21/CCI-timer-0 connection remains an inference. Do not drive GPIO
+21 or write guessed CCI registers. The current-source finding is static only;
+no queue was started and no pin or LED was touched.
+
 ### Camera flash plumbing audit (2026-11-05)
 
 Static review of the pinned Cityman camera sources found that the iris plugin
