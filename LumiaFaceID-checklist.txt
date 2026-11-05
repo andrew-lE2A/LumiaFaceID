@@ -14,6 +14,8 @@ DONE / VERIFIED
 [x] Confirmed the sensor reports no strobe capability; sensor strobe is not the illumination path. Windows analysis points to host/camera-driver flash scheduling, whose exact IR-channel consumer and timing are unresolved.
 [x] Recovered the Windows flash driver's accepted assist levels (13/20/30/100%, LED-7 codes 10/15/23/22), pulse caps (80/40 ms, likely), and heat-load guards from static analysis. These values are not Android brightness conversions or eye-safety limits.
 [x] Audited the local Linux CCI driver against Windows' CCI-timed IR pulse: GPIO command enums exist, but MSM_CCI_GPIO_WRITE is a no-op and no GPIO queue encoder is implemented.
+[x] Confirmed the legacy GPIO ioctl has only two 16-bit queue fields and falsely returns success; Linux I2C queue locking, fixed-point WAIT timing and I2C-only IRQ handling do not establish GPIO queue support.
+[x] Traced the Windows GPIO WAIT scale in disassembly: it is a per-platform multiplier copied from a nested context byte, not proven to be the Linux I2C clock formula.
 [x] Recorded one bounded minimum torch_0 pulse and an illuminated frame with higher signal. It did not establish a usable eye region, optical timing or eye-safe limits.
 [x] Verified camera teardown and LED cleanup after recorded tests; recent readback showed all cameras closed and all four LED channels at 0.
 [x] One latest IR-off frame arrived, but was nearly black (luma p95=2); it did not show usable iris detail.
@@ -27,7 +29,7 @@ IN PROGRESS
 [~] Continue static analysis of Windows: resolve the private BIR vendor image layout, adapter/engine argument discrepancy, and the camera KMD's per-frame IR request consumer and pulse timing. The accepted flash levels are known, but their current-code units and mapping to the PMIC request remain unresolved.
 [~] Continue Origa2Auth.sys analysis: both WDF GUIDs match values under qcbifbattdrv\\AuthLibrary; Origa2Auth binds ACPI\\MSHW1002, while qcbifbattdrv is Qualcomm's BIF battery service. This points toward a battery-auth interface, not proven iris use. Trace consumers/callbacks and validate the package connection before assigning a role.
 [~] Design a safe Android illumination route with a verified low current, frame synchronization, hard timeout and cleanup on every failure. Camera2 torch is not synchronized; the current iris slot has no camera flash endpoint.
-[~] Determine the Windows CCI GPIO output-to-physical-pin mapping and the PMI8994 IR trigger path before considering a Linux GPIO-queue implementation. GPIO 21 / CCI timer 0 remains an inference; no guessed CCI or pin writes.
+[~] Determine whether Windows CCI output index 0 selects MSM8994 CCI_TIMER0 (mux-capable on GPIO21), whether the active boot config selects that mux, and whether the board routes it to the PMI8994 IR input. The current DTB defines a GPIO21 TPIU mux state but does not prove it is selected. No guessed CCI or pin writes.
 [~] Develop Android enrollment/authentication architecture. The framework lifecycle patches are source-only scaffolding; the service still returns HW_UNAVAILABLE and has no camera-backed authenticator.
 
 NOT DONE
@@ -42,7 +44,8 @@ NOT DONE
 
 NEXT CHECKPOINTS
 [ ] Obtain repeatable useful iris frames under a confirmed diffuse setup; avoid IR until the setup is safe and emitter channel is verified.
-[ ] Finish the Windows flash-request trace and use it to design a bounded, frame-synchronized Linux illumination path.
+[ ] Port Windows CCI-timed illumination behavior into Linux: trace the scale byte to its ACPI/registry producer; recover GPIO queue MMIO offsets, queue/selector meaning, GPIO IRQ/completion behavior and safe coexistence from qccamplatform8994.sys or an MSM8994 TRM. Keep the pulse's physical time unit unresolved until both inputs are known.
+[ ] Confirm whether CCI output 0 maps to MSM8994 CCI_TIMER0/GPIO21 and whether that line reaches the PMI8994 IR input.
 [ ] Build and test the image pipeline and matcher on representative on-device frames before connecting any success result to Keyguard.
 [ ] Implement and compile the real Android camera authenticator, enrollment/removal, lockout and camera arbitration.
 [ ] Only after security and accuracy gates are met, test end-to-end enrollment and lock-screen unlock.

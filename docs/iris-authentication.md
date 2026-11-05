@@ -163,12 +163,36 @@ queue register definitions appear in that CCI implementation; the exposed
 queue registers and writer cover I2C only. The enum is therefore not a usable
 GPIO sequencer.
 
+This is not just a peculiarity of the local snapshot. The public Qualcomm
+`android-7.1.0_r0.2` `msm_cci.c` has the same empty `MSM_CCI_GPIO_WRITE` case
+([source](https://android.googlesource.com/kernel/msm/%2B/android-7.1.0_r0.2/drivers/media/platform/msm/camera_v2/sensor/cci/msm_cci.c#1613)).
+A later Qualcomm camera-stack `cam_cci_core.c` also retains an empty handler
+([source](https://android.googlesource.com/kernel/msm/%2B/472258941e6fd2e3f66febfe1753280ef8ba9761/drivers/media/platform/msm/camera/cam_sensor_module/cam_cci/cam_cci_core.c));
+its queue writer still emits I2C commands. These comparisons show that the
+header declarations alone are not evidence of a working timed GPIO path, and
+that copying a newer CCI driver is not a ready-made solution for this pulse.
+
 This narrows a Linux port: matching the Windows timing requires adding and
 validating CCI GPIO-queue support in the kernel, then establishing which
 physical output the iris uses and whether it reaches the PMIC IR input. The
-notes' GPIO-21/CCI-timer-0 connection remains an inference. Do not drive GPIO
-21 or write guessed CCI registers. The current-source finding is static only;
-no queue was started and no pin or LED was touched.
+MSM8994 pinctrl function table lists `cci_timer0` on GPIO21
+([source](https://cos.googlesource.com/third_party/kernel/%2B/40e7f406117dc701508205d0ebb98b0b9dbf897f/drivers/pinctrl/qcom/pinctrl-msm8994.c));
+that confirms the SoC mux option, but not that Windows output index 0 selects
+timer 0 or that the board routes it to the PMIC IR input. A read-only decode
+of `cityman-current-boot.img` (SHA-256
+`8fbebc5265dd33cdad419f8f34dfc2d5bbde4eb4d71842a2fa81d5714567f38e`, Cityman
+DTB SHA-256
+`aade67dbfc09f4c44fa2bd484bdb94c94459ea58a5d4e6f08489467ac86caebb`) found
+the CCI0/CCI1 bus pin states on GPIOs 17–20 and a `tpiu-setb-8` *definition*
+for GPIO21 with mux function 6. The DTB contains no `cci_timer0` pin state or
+reference selecting that TPIU definition, so it does not establish GPIO21's
+active runtime mux. Do not drive GPIO21 or write guessed CCI registers. No
+queue was started and no pin or LED was touched.
+
+The MSM8994 camera CCI device tree configures four CCI bus pads: GPIOs 17/18
+for CCI0 clock/data and GPIOs 19/20 for CCI1 clock/data. Their labels are
+`CCI_I2C_DATA0`, `CCI_I2C_CLK0`, `CCI_I2C_DATA1`, and `CCI_I2C_CLK1`. It does
+not map Windows output indexes 0–4 to TLMM pins or the PMIC input.
 
 The Windows CCI HAL disassembly also clarifies the driver's third argument:
 its GPIO-output encoder accepts an output index 0–4 and a level 0/1, then packs
@@ -176,6 +200,110 @@ those into the GPIO command word. The iris sequence uses the configured
 selector as that output index and requests high then low. This confirms the
 logical CCI output number; it still does not map that number to a TLMM pin or
 the PMI8994 input.
+
+The reverse-engineered Windows queue encoder provides an implementation
+reference without providing a safe Linux register map. WAIT is encoded as
+`(scale * value) << 4 | 2`; GPIO output `n` at level `l` is encoded as
+`((1 << (n + 4)) | (l << (n + 12))) & ~9 | 6`. For output 0 this gives
+`0x1016` (high) and `0x0016` (low). Windows scales the wait value by a
+per-device clock factor; the pulse delay/duration unit and factor are still
+unverified. These queue words cannot be submitted until the GPIO queue's
+register offsets, queue selection, and completion/error handling are
+established for this CCI revision.
+
+**Additional audit of the complete local kernel snapshot (2026-11-05).** The
+snapshot's `MSM_CCI_GPIO_WRITE` ioctl cannot carry a sequence: its payload has
+only `gpio_queue` and `i2c_queue` 16-bit fields, with no command array, count,
+timing request, or user buffer. Its handler also returns the initial `rc = 0`
+without doing work, so a caller receives a false success. A future
+implementation should make that legacy handler return `-EOPNOTSUPP` until
+real support exists; it should not reinterpret those two queue fields as
+command data. Prefer a new iris-private, bounded request/API that lets the
+kernel construct the fixed four-command sequence itself.
+
+The existing I2C path supplies design constraints, not a GPIO register map. It
+serializes queue access with a per-master mutex, starts a selected I2C queue
+through `CCI_QUEUE_START`, waits on the master completion, and propagates
+timeout and I2C error status. The IRQ handler only recognizes reset and I2C
+read/report/halt/error bits. The register header defines I2C queue windows and
+I2C IRQ masks only; `NUM_QUEUES` is two per I2C master, and the device struct
+has no GPIO queue state. Therefore GPIO queue offsets, GPIO completion IRQs,
+reset/flush behavior, and safe coexistence with that shared completion and IRQ
+path remain unknown. GPIO support cannot safely be added by cloning I2C offset
+arithmetic or merely increasing `NUM_QUEUES`.
+
+The kernel's I2C WAIT encoder computes a fixed-point cycle scale from the CCI
+clock (`((clk / 1000) * 256) / 1000`) and emits
+`((delay_us * cycles_per_us) / 256) << 4 | CCI_I2C_WAIT_CMD`. With a 19.2 MHz
+source this corresponds to about 19.2 clock cycles per microsecond after the
+fixed-point division. This documents Linux I2C timing only; it does not prove
+that the Windows GPIO WAIT scale uses the same clock, source, or unit. The GPIO
+implementation still needs binary-level recovery of its scale initialization
+and selector setup before timing can be ported.
+
+**Windows WAIT scale dataflow (static disassembly, 2026-11-05).** In the
+available `qccamplatform8994-mobile.sys` image (SHA-256
+`6ae3eb8078998b3d4e75200c671b90c5e5f385168014c70465941bfad4e90aa2`), function
+`0x407914` multiplies the WAIT argument by a 32-bit value at command-context
+offset `+0x18`, then shifts it into the WAIT word. The command-context setup at
+`0x407750` copies a byte from a nested platform context (`[context + 0x10]`,
+then byte offset `+0x0c`) into that scale field. This establishes that Windows
+uses a per-platform configured multiplier; the analyzed path does not derive
+it directly from a visible clock-rate calculation. The iris driver divides its
+delay and duration arguments by ten before submitting them, but their physical
+unit and the configured scale's relationship to the CCI clock are still
+unknown. Next, trace that platform-context byte to its ACPI/registry producer;
+do not substitute Linux's I2C formula.
+
+The current app-level workaround is already available: it requests
+`torch_0` at brightness 14, queues one iris capture while the light is on, and
+requests OFF on the capture-result callback. One phone run delivered a
+high-signal frame (luma p95 212) with matching result/YUV timestamps, but no
+face-derived eye ROI; the sensor clock and optical LED edges were not
+measured. This is a frame-bracketed illumination check, not the Windows
+hardware-timed pulse or usable iris imaging.
+
+### Porting the Windows driver behavior
+
+Port the behavior into the Android camera stack; do not try to load the ARM32
+Windows `.sys` binaries. The Windows sensor driver uses Windows CCI and power
+interfaces, and the camera/authentication stack uses Windows-specific driver
+and WinBio contracts. The existing Android sensor plugin already provides a
+separate IR0861 camera slot and returns image frames, so replacing it wholesale
+with a monolithic kernel sensor driver would duplicate a working layer.
+
+The matching driver should be split at these boundaries:
+
+1. **Sensor and stream control:** keep the existing IR0861 camera slot for
+   probe, mode tables, exposure and frame delivery. Port only any verified
+   missing sensor behavior from the Windows SMIA++ path.
+2. **Timed illumination request:** add an iris-only kernel CCI GPIO sequencer
+   that accepts bounded delay/duration requests and queues Windows-compatible
+   WAIT/GPIO words. Before writing it, recover the CCI GPIO queue register
+   offsets, queue index/selector meaning, Windows wait-scale initialization,
+   GPIO IRQ bits and completion/error behavior from `qccamplatform8994.sys`.
+   The Linux CCI WAIT encoder is known for I2C only; do not assume the GPIO
+   queue shares its register layout or clock scale.
+3. **Physical output and LED:** establish whether output 0 is CCI_TIMER0/GPIO21
+   and whether the board connects it to the PMI8994 IR input. Until verified,
+   do not treat sensor STROBE or a generic camera flash endpoint as equivalent.
+   Keep the tested minimum-current `torch_0` app path as a separate diagnostic.
+4. **Android authentication:** implement enrollment, matching, lockout and
+   framework integration as a separate Android biometric authenticator. The
+   Windows WinBio engine and result protocol are not part of the sensor driver
+   and are not binary-compatible with Android.
+
+For a faithful pulse, the kernel interface should be iris-only, reject
+out-of-range requests, serialize with CCI/I2C traffic, clear any queued work on
+cancel/release, report queue errors, and guarantee a low output on teardown.
+The existing no-op ioctl is not a usable implementation contract: it falsely
+reports success and has no sequence payload.
+Only after a register-map review should an opt-in, temporary-boot test verify
+queue acceptance and completion without issuing a GPIO output command. A
+single output pulse should wait until its pin mux and route are established and
+the emitter channel has a verified disabled state. This keeps the Windows queue
+implementation independent of the PMIC current-control path and avoids
+mistaking a successful CCI command for a successful optical pulse.
 
 ### Camera flash plumbing audit (2026-11-05)
 
