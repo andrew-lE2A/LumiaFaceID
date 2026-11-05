@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-05",
+  "scope": "read-only phone/package inspection before any app update",
+  "device": {
+    "product": "lineage_cityman",
+    "model": "Lumia_950_XL",
+    "camera_device_count": 3,
+    "active_camera_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "installed_probe": {
+    "package": "com.lumia.irisprobe",
+    "installed": true,
+    "base_apk_sha256": "d6a76a5af420fadff5fff136a240fca212ae502cbde6a908b666f9010eb330de",
+    "signer_sha256": "e17c680fedff020daef90eed58ecf9ffe50816330d432e2240540ebda382315d"
+  },
+  "available_repository_apk": {
+    "path": "build/LumiaIrisProbe.apk",
+    "sha256": "34cebdf7fc6cdfa7e99c6e53ed3fb13e3dde46b299b54528aad2e204fbafea76",
+    "signer_sha256": "2a06b09f345f3e3bf7da926495b3efd1032cd7dad448cdb6953734a3d2693d87",
+    "signer_matches_installed": false
+  },
+  "action": "No install, uninstall, camera open, or LED write was performed; app data remains untouched.",
+  "publication": "local only; no commit or push"
+}

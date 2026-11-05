@@ -74,7 +74,8 @@ int main(void) {
             unsigned int i;
             for(i=0;i<4;i++) assert(!enables[i] && !state.enabled[i]);
             assert(!gpio_owned && !state.gpio_owned && !cci.ref_count && !state.cci_on);
-            assert(!clock_refs[0] && !clock_refs[1] && source.rate==24000000);
+            assert(!clock_refs[0] && !clock_refs[1] && !clock_refs[2] &&
+                   !clock_refs[3] && !clock_refs[4] && source.rate==24000000);
         }
     }
     puts("9 production sensor/receiver integration scenarios passed");

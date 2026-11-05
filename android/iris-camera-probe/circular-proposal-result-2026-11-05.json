@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-05",
+  "scope": "host-only synthetic grayscale pattern; no eye image or phone frame used",
+  "method": "bounded dark-pupil circle contrast search followed by same-center limbus edge search within a supplied eye crop",
+  "synthetic_geometry": {
+    "image": [
+      240,
+      200
+    ],
+    "pupil_center": [
+      120,
+      100
+    ],
+    "pupil_radius": 22,
+    "iris_outer_radius": 52,
+    "pupil_luma": 28,
+    "iris_luma": "textured around 104",
+    "sclera_luma": 190
+  },
+  "proposal": {
+    "center": [
+      121,
+      99
+    ],
+    "pupil_radius": 22,
+    "iris_radius": 51,
+    "pupil_edge_strength": 0.29332107843137256,
+    "limbus_edge_strength": 0.2698529411764706,
+    "phase_code_valid_bit_fraction": 0.9996744791666666
+  },
+  "flat_image": "rejected; no circular boundary candidate",
+  "apk_build": "Android SDK platform 35 build and APK signature verification passed; SHA-256 2e4185a19074da45e62a70ab3c4a6532f3357d5630eac4804b3b01e51984fe8f",
+  "phone_test": "latest quality package launched without crash; camera not opened, no live frame analyzed, four LED channels read zero",
+  "limitations": [
+    "only a synthetic circular eye pattern was used",
+    "pupil and iris were concentric, unlike many real eyes",
+    "no eyelid, eyelash, glint, motion, gaze, specular reflection, or lens-distortion model",
+    "proposal scores and valid-bit fraction are uncalibrated",
+    "no match, enrollment, liveness, or authentication performed",
+    "partial-lid stress case remained concentric at the iris boundary and used a simple horizontal occlusion"
+  ],
+  "stress_case_partial_occlusion_and_offset_pupil": {
+    "synthetic_changes": "upper ~30% of eye patch hidden by a dark lid-like region; pupil shifted +2 px relative to limbus",
+    "proposal_center": [
+      121,
+      99
+    ],
+    "proposal_radii": {
+      "pupil": 22,
+      "iris_outer": 53
+    },
+    "edge_strength": {
+      "pupil": 0.2566789215686274,
+      "limbus": 0.18118872549019607
+    },
+    "interpretation": "within the configured broad tolerance on this synthetic case only"
+  },
+  "apk_sha256": "9a28667514351cc982525dd6d9225674ebd7932f3c0b7fd42bd2061006d04281",
+  "host_test_command": "python3 -m unittest tests/test_iris_probe_host.py",
+  "host_test_status": "passed: clean pattern, partial lid-like occlusion with pupil offset, flat-image rejection"
+}

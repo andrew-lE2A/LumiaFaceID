@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-05",
+  "scope": "installed updated diagnostic probe as a separate package; app was not launched",
+  "device": {
+    "serial": "<redacted>",
+    "android_release": "16",
+    "lineage_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "package": {
+    "name": "com.lumia.irisprobe.devnext",
+    "version_code": 0,
+    "installed_apk_path": "/data/app/~~EsOMadgdW5IrVK1z9VFF7g==/com.lumia.irisprobe.devnext-W6r7PBofr9SX3JfTeJDLAw==/base.apk",
+    "host_apk": "/private/tmp/lumia-iris-probe-next.Vu4aWw/app/build/LumiaIrisProbe.apk",
+    "host_apk_sha256": "30382ab13d7f77cfd54a0e363b4ef8fc1aed6cbbce13c3a08a7864d5ae868ded"
+  },
+  "actions": {
+    "package_installed": true,
+    "app_launched": false,
+    "camera_opened": false,
+    "image_saved_or_transferred": false,
+    "emitter_written": false,
+    "original_probe_packages_unmodified": true
+  },
+  "post_install_readback": {
+    "active_camera_clients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "install_note": "Incremental install was rejected by Android; adb fell back to streamed install and reported Success."
+}

@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-05",
+  "scope": "isolated camera-preview coordinate check; no still image or illumination",
+  "build": {
+    "sdk": "/private/tmp/android-sdk",
+    "platform": "android-35",
+    "build_tools": "35.0.0",
+    "javac_d8_aapt_zipalign": "passed",
+    "apk_signature": "passed with a temporary test key",
+    "apk_sha256": "34ba701c8886896d9e767f1827c16f7607e75971cc6c5923f8dcbf7327620bba"
+  },
+  "phone": {
+    "serial": "<redacted>",
+    "temporary_package": "com.lumia.irisprobe.manualroi",
+    "camera_id": "2",
+    "active_camera_clients_during_check": [
+      {
+        "camera_id": "2",
+        "package": "com.lumia.irisprobe.manualroi"
+      }
+    ],
+    "roi_touch": {
+      "tap_screen": [
+        720,
+        555
+      ],
+      "buffer_fraction": [
+        0.499,
+        0.499
+      ],
+      "reported_touch_buffer_screen_round_trip_error_px": 0.0
+    },
+    "preview_geometry": {
+      "overlay_screen_bounds": [
+        509,
+        181,
+        930,
+        930
+      ],
+      "overlay_size_px": [
+        421,
+        749
+      ],
+      "overlay_center_px": [
+        211.0,
+        374.0
+      ],
+      "overlay_radius_px": 105.3,
+      "interpretation": "center and radius match the actual rotated preview overlay view dimensions"
+    },
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "cleanup": {
+      "temporary_package_uninstalled": true,
+      "hierarchy_dump_removed": true,
+      "active_camera_clients_after_cleanup": [],
+      "camera_services_running": true
+    }
+  },
+  "limitations": [
+    "The overlay was checked through accessibility bounds and coordinate math, not by exporting a screenshot.",
+    "The sensor remained covered; no eye or iris image was available.",
+    "No still image, biometric template, or enrollment code was saved.",
+    "No IR or flash channel was enabled."
+  ]
+}

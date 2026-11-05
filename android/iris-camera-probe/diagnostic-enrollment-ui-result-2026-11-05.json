@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "serial": "<redacted>",
+    "android_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.development",
+    "apk_sha256": "abe74dbfe67a6dc3b70995356da4409da7bb4689d0f4402cf9cec5b88642fb2b"
+  },
+  "test": {
+    "scope": "one user-started diagnostic enrollment sample; Camera2 only; no IR or flash",
+    "selected_camera_id": "2",
+    "capture_callbacks_before_close": 145,
+    "candidate": {
+      "center_sensor_px": [1122, 372],
+      "pupil_radius_px": 72,
+      "iris_radius_px": 132,
+      "edge_strength_pupil_limbus": [0.070, 0.028],
+      "phase_bits_valid_percent": 0.0
+    },
+    "enrollment": "sample rejected because the phase code had zero valid bits; in-memory sample count remained 0/3",
+    "comparison": "not attempted; no enrollment consensus",
+    "raw_frame_or_template_saved": false
+  },
+  "cleanup": {
+    "camera_close": "normal UI close followed by force-stop to clear transient state",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "camera_permission": "revoked",
+    "app_process": "stopped"
+  },
+  "interpretation": "The candidate geometry alone was insufficient for acceptance; the nonzero-phase-bit requirement rejected it. The can-covered frame is not evidence for or against useful uncovered iris imaging.",
+  "publication": "local only; no commit, push, or PR"
+}

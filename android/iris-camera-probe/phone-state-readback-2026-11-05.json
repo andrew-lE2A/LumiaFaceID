@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "android_release": "16",
+    "serial": "<redacted>"
+  },
+  "method": "read-only ADB; no camera opened and no LED writes",
+  "camera": {
+    "device_count": 3,
+    "active_clients": [],
+    "historical_entry": "dumpsys media.camera retained an older closed-session entry for com.lumia.irisprobe.frametest"
+  },
+  "led_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "biometrics": {
+    "iris_service": "not found",
+    "registered_sensors": [],
+    "current_session": null
+  },
+  "result": "device idle; no biometric unlock path registered"
+}

@@ -18,7 +18,7 @@ class IrisSequenceTests(unittest.TestCase):
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(program)], capture_output=True, text=True, timeout=10)
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-            self.assertIn('28 actual production-sequence scenarios passed', run.stdout)
+            self.assertIn('37 actual production-sequence scenarios passed', run.stdout)
 
 
 if __name__ == '__main__':

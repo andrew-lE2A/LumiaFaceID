@@ -1,0 +1,338 @@
+{
+  "date": "2026-11-05",
+  "scope": "static source review of AOSP android16-release plus the pinned LineageOS framework commit; paired with read-only runtime checks on the installed phone",
+  "lineage_framework_commit": "daf2b33fac918a464f6f7193214b27d164d39bea",
+  "findings": {
+    "biometric_aidl_hal_tree": "contains common, face and fingerprint; no iris AIDL HAL",
+    "auth_service": "still reads legacy TYPE_IRIS sensor configuration and calls IIrisService.registerAuthenticators with sensor properties",
+    "aosp_android16_framework_cross_check": "AOSP android16-release retains the legacy iris registration hook in AuthService, but its biometric HAL tree contains no iris HAL and BiometricService has no TYPE_IRIS-specific branch. BiometricService does expose generic IBiometricAuthenticator registration and sensor/session handling. Lineage's IrisService is therefore a compatibility adapter into that generic service path, not a platform iris AIDL HAL.",
+    "lineage_iris_service": "IrisService is present. Pinned SystemServer starts it only when FEATURE_IRIS is declared. AuthService parses TYPE_IRIS config and forwards sensor properties through IIrisService; IrisService registers a generic IBiometricAuthenticator with modality TYPE_IRIS.",
+    "lineage_iris_authenticator": "stub at the pinned commit: it stores the IIrisService reference but does not use it; hardware/enrollment return false, sensor properties and test/proto data return null, auth prepare/start/cancel and invalidation are empty, authenticator ID is always 0, and lockout always reports none.",
+    "runtime_phone": "service check iris reports not found; pm list features has no iris/face/biometric feature match; dumpsys biometric has no registered sensors",
+    "implication": "The bring-up needs the legacy IrisService feature/config wiring plus a camera-backed IBiometricAuthenticator and lifecycle. Class 1 cannot authorize apps or keystore keys and does not require a Strong-class HAT. The installed AuthSession accepts a non-Strong success without a token, but this is the BiometricPrompt dialog path; it is not by itself a Keyguard unlock callback. The camera-backed software matcher must not fabricate a token.",
+    "class1_lock_screen_route": "Android 16 defines Class 1 (Convenience) for lockscreen-only biometric use; the CDD does not permit app-facing biometric APIs or keystore-key authorization for Class 1. The pinned BiometricService accepts BIOMETRIC_CONVENIENCE registration. A non-Strong AuthSession result can be delivered without a HAT in the BiometricPrompt dialog flow, but this does not establish the separate Keyguard modality callback. The device still does not qualify: FAR/SAR and presentation-attack metrics are unmeasured, and enrollment/removal lifecycle and trustworthy persistent template storage are absent.",
+    "class1_cdd_gates": [
+      "FAR below 0.002%; Android protocol spoof/imposter acceptance no higher than 30% for Level A and 40% for Level B PAI species (40% maximum per species)",
+      "credential-confirmed enrollment using a device credential secured by TEE; delete identifiable iris data when user or primary credential is removed",
+      "honor DevicePolicyManager.KEYGUARD_DISABLE_IRIS and rate-limit attempts; no more than 20 false trials before credential fallback, with at least 90 seconds backoff",
+      "fallback to primary credential at least every 24 hours and after 4 hours idle or 3 failed biometric attempts; disable biometrics once primary-authentication backoff triggers",
+      "no third-party biometric API or keystore-key authorization for Class 1"
+    ],
+    "exact_keyguard_route": "The installed framework.jar defines BiometricSourceType.IRIS (ordinal 2), but IrisManager has only an empty constructor. IIrisService only registers authenticators; it cannot authenticate or enroll. Installed SystemUI has no IrisManager or TYPE_IRIS Keyguard path: its KeyguardUpdateMonitor switch maps only FINGERPRINT and FACE and rejects IRIS in isUnlockingWithBiometricAllowed. Generic biometric callbacks exist, but no iris-specific listener/request route is wired. The installed IBiometricService exposes generic authenticate(PromptInfo) and cancelAuthentication operations but no authenticateForKeyguard operation. BiometricService source explicitly allows BIOMETRIC_CONVENIENCE registration without making the sensor available to android.hardware.biometrics APIs, so an ordinary BiometricPrompt call is not a supported Class 1 bridge. A dedicated system-internal Keyguard request/cancel/result path plus the sensor authenticator is needed. IrisService already registers a generic authenticator with BiometricService, but this registration is not the direct Keyguard modality path. The pinned FaceService has a separate modality authenticate() call that schedules through a sensor provider and a separate prepareForAuthentication() path for BiometricPrompt. Mirror that split for iris and explicitly gate the direct request to Keyguard/SystemUI. The existing BiometricPrompt AuthSession is not that Keyguard route. Installed AuthSession.onAuthenticationSucceeded accepts an empty token for non-Strong success, drops any non-Strong token, and still calls StatusBarService.onBiometricAuthenticated(modality). This confirms the BiometricPrompt success notification path only; it does not prove a Keyguard unlock callback. The pinned Lineage KeyguardUpdateMonitor subscribes to FaceAuthenticationListener events and routes success, failure, acquired, error, lockout and enrollment changes into Keyguard state. The installed DEX also contains FaceManager references. The iris design must add a system-only request/cancel/result route and integrate it with Keyguard state handling.",
+    "class1_prompt_filter": "AOSP BiometricManager documents BIOMETRIC_CONVENIENCE (0x0FFF) as intended for DeviceConfig strength adjustment and explicitly invalid for public android.hardware.biometrics APIs. BiometricService.Utils.getPublicBiometricStrength() masks requested strengths with BIOMETRIC_WEAK, so Class 1 does not become an eligible sensor in the normal PromptInfo/PreAuthInfo flow. Android permits Class 1 for lockscreen use, so this confirms the required integration is a separate privileged Keyguard path, not ordinary BiometricPrompt.",
+    "preferred_class1_route": "Mirror the pinned FaceService separation: implement a modality-specific IrisService authenticate/cancel endpoint that requires USE_BIOMETRIC_INTERNAL, verifies the SystemUI Keyguard caller, and schedules through an iris sensor provider; expose it through a hidden IrisManager API and deliver explicit success/failure/error/lockout statuses into KeyguardUpdateMonitor. Keep IrisService generic IBiometricAuthenticator registration with BiometricService as separate registration/prompt plumbing, not as the Keyguard unlock callback. Keep public PromptInfo filtering unchanged and Convenience unavailable to apps.",
+    "class1_android16_cdd_requirements": {
+      "far": "Below 0.002%.",
+      "presentation_attack_acceptance": "Spoof and imposter acceptance no higher than 30% for Level A PAI species and 40% for Level B PAI species; CDD also sets a 40% maximum per PAI species.",
+      "attempt_policy": "Rate limit biometric attempts; challenge primary credential after at most 20 false trials with at least 90 seconds backoff; disable biometrics once primary-authentication backoff has triggered.",
+      "credential_and_lifecycle": "Require user confirmation of an existing or newly set device credential secured by TEE before adding biometrics; erase identifiable biometric data when user or primary credential is removed; honor KEYGUARD_DISABLE_IRIS.",
+      "fallback": "Challenge primary credential at least every 24 hours, and after 4 hours idle or 3 failed biometric attempts.",
+      "source": "https://source.android.com/docs/compatibility/16/android-16-cdd#73-biometric-sensors"
+    },
+    "keyguard_vs_biometricprompt_boundary": "The inspected AuthSession is for BiometricPrompt; StatusBarService.onBiometricAuthenticated does not establish the Keyguard modality callback path. Pinned Lineage KeyguardUpdateMonitor subscribes to FaceAuthenticationListener status events for face unlock; the installed SystemUI DEX contains FaceManager references. A system-only iris API and explicit callback/state integration are still missing.",
+    "framework_transport_route": "The phone has no iris VINTF HAL and the legacy IrisService is feature-gated, but a Camera2-backed SystemServer IrisService can use the existing camera provider without adding a biometric VINTF HAL. It still needs FEATURE_IRIS/product config, SystemServer startup, an iris modality service/client contract, SELinux permissions, provider scheduling, lifecycle and Keyguard-only caller checks. A separate Face AIDL route would mislabel iris and is not selected."
+  },
+  "next_source_audit": [
+    "establish stable repeatable illuminated sensor frames and validate an offline matcher before connecting authentication callbacks",
+    "implement a camera-backed IBiometricAuthenticator with real per-user enrollment/removal and lifecycle; the software Class 1 matcher should return no fabricated HAT",
+    "implement the camera-backed IrisService modality authenticate/cancel interface and provider scheduler following the pinned FaceService split (direct Keyguard modality request separate from prepareForAuthentication/BiometricPrompt); add a hidden IrisManager API and KeyguardUpdateMonitor iris status listener; retain generic registration separately, preserve public PromptInfo filtering, and do not add a new biometric VINTF HAL unless the chosen implementation actually introduces one",
+    "enable Class 1 only after FAR/SAR, credential-confirmed enrollment, DPM disable, lockout/backoff, user-switch and teardown gates are evidenced",
+    "keep the sensor out of Class 2/3 unless isolated matching, protected camera data/result paths and each class's acceptance-rate requirements are met"
+  ],
+  "pinned_lineage_source_readback": {
+    "revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "files": [
+      "services/java/com/android/server/SystemServer.java",
+      "services/core/java/com/android/server/biometrics/AuthService.java",
+      "services/core/java/com/android/server/biometrics/BiometricService.java",
+      "services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java",
+      "services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java"
+    ],
+    "storage": "/private/tmp; source-only review, not copied into the repository",
+    "system_server": "starts IrisService only when PackageManager.FEATURE_IRIS is present",
+    "registration": "AuthService forwards configured TYPE_IRIS SensorPropertiesInternal through IIrisService; IrisService registers the generic IBiometricAuthenticator with modality TYPE_IRIS",
+    "authenticator_stub": "IIrisService reference is unused; hardware/enrollment false; properties/test/proto null; prepare/start/cancel/invalidation/reset empty; lockout none; authenticator ID zero",
+    "result": "FEATURE_IRIS and sensor config alone cannot enable auth. The authenticator implementation plus enrollment/matcher and lifecycle are missing."
+  },
+  "probe_source_compile": {
+    "sdk": "/tmp/android-sdk, platform 35 / build-tools 35.0.0",
+    "status": "javac and d8 completed for latest source; unsigned dex only, not installed",
+    "dex_sha256": "8d6a2c8c20c6843bb5f040157cd6c65e7ed1c72e9a6cc7d263861f9d8bc9c06a"
+  },
+  "latest_phone_safety_check": {
+    "observed_at_host_utc": "2026-11-05T04:11Z",
+    "active_camera_clients": [],
+    "camera_device_count": 3,
+    "camera_devices_closed": [
+      "0",
+      "1",
+      "2"
+    ],
+    "camera_services_running": [
+      "cameraserver",
+      "android.hardware.camera.provider@2.4-service",
+      "mm-qcamera-daemon"
+    ],
+    "iris_service": "not found",
+    "biometric_sensors": [],
+    "active_biometric_session": null,
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "camera_opened_or_emitter_enabled": false,
+    "inspection": "read-only ADB dumpsys/service/sysfs readback; no camera or emitter access"
+  },
+  "security_constraints": [
+    "no mock-success authentication",
+    "no strong biometric classification or fabricated hardware-authentication token",
+    "Class 1 is lockscreen-only and remains gated on Android CDD FAR/SAR, enrollment, lockout, and lifecycle requirements",
+    "keep matcher/enrollment diagnostics outside Keyguard until capture reliability, liveness and framework lifecycle are validated"
+  ],
+  "sources": [
+    "https://android.googlesource.com/platform/hardware/interfaces/+/android16-release/biometrics/",
+    "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/biometrics/AuthService.java",
+    "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/biometrics/BiometricService.java",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/java/com/android/server/SystemServer.java",
+    "https://source.android.com/docs/security/features/biometric/measure",
+    "https://source.android.com/docs/compatibility/16/android-16-cdd",
+    "https://android.googlesource.com/platform/frameworks/base/+/android16-release/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java",
+    "https://android.googlesource.com/platform/frameworks/base/+/8e256e238c02/services/core/java/com/android/server/biometrics/Utils.java",
+    "https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/hardware/biometrics/BiometricManager.java",
+    "https://source.android.com/docs/security/features/biometric",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/core/java/android/hardware/iris/IrisManager.java",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/core/java/android/hardware/iris/IIrisService.aidl",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/services/core/java/com/android/server/biometrics/sensors/face/FaceService.java",
+    "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/core/java/android/hardware/face/FaceManager.java"
+  ],
+  "installed_systemui_readback": {
+    "observed_at_host_utc": "2026-11-05T04:01Z",
+    "device_serial": "<redacted>",
+    "apk_path": "/system/system_ext/priv-app/SystemUI/SystemUI.apk",
+    "apk_sha256": "76e01da350da10781cc168cce58c67535b3b4dca80c8f354e0b901d8689fbd23",
+    "dex_version": "039",
+    "classes_dex_sha256": "3989da307cde19f9a7444157d543ead934050faae6650122db111ec6e5e11e10",
+    "classes2_dex_sha256": "d9fbabae9bac56c009f6d864d67cc0267ac9148ae4b13fe2504c79d975fa47ec",
+    "inspection": "adb pull to /private/tmp; Android SDK 35 dexdump disassembly; no APK modified or installed",
+    "keyguard_evidence": [
+      "KeyguardUpdateMonitor$21.<clinit> at DEX offset 0x4e6514 maps switch cases only for FINGERPRINT and FACE; it has no IRIS mapping.",
+      "KeyguardUpdateMonitor.isUnlockingWithBiometricAllowed(BiometricSourceType) at DEX offset 0x4e73fc returns false for an unmapped source type.",
+      "SystemUI DEX has FaceManager and FingerprintManager call paths and no IrisManager or TYPE_IRIS Keyguard request path. Generic BiometricSourceType callbacks exist but do not add an iris listener.",
+      "The installed framework BiometricSourceType enum contains IRIS at ordinal 2, but the installed IrisManager has no authentication/enrollment methods."
+    ],
+    "conclusion": "The installed Keyguard cannot use an iris sensor for unlock as shipped. Adding only IrisService/IBiometricAuthenticator registration will not suffice.",
+    "limitations": [
+      "This inspects the deployed SystemUI binary, not the source files at the pinned Lineage revision.",
+      "It proves the installed Keyguard routing omission, but not the callback wiring required to deliver the IrisService result into SystemUI.",
+      "No camera, IR emitter, user biometric data or enrollment state was accessed."
+    ]
+  },
+  "installed_framework_readback": {
+    "observed_at_host_utc": "2026-11-05T04:02Z",
+    "device_serial": "<redacted>",
+    "jar_path": "/system/framework/framework.jar",
+    "jar_sha256": "67b1e7eb0c6810757ee0ecf7198e74d27cefb586b468be0b8b803f98d0d9ead5",
+    "classes_dex_sha256": "dce85698d5d31622d6965879763e15efabe4bc1601b042099d86208c67df1305",
+    "inspection": "adb pull to /private/tmp; Android SDK 35 dexdump class and Binder method inspection; no framework file modified or installed",
+    "biometric_source_type": {
+      "values": [
+        "FINGERPRINT",
+        "FACE",
+        "IRIS"
+      ],
+      "iris_ordinal": 2
+    },
+    "conclusion": "The platform enum already includes IRIS; the installed SystemUI Keyguard switch does not handle it.",
+    "iris_manager": {
+      "class": "android.hardware.iris.IrisManager",
+      "dex_location": "classes2.dex",
+      "methods": [
+        "<init>(Context, IIrisService)"
+      ],
+      "fields": [],
+      "virtual_methods": [],
+      "constructor_behavior": "calls Object.<init>() and returns; retains neither Context nor IIrisService",
+      "conclusion": "The installed legacy IrisManager is an API stub; it cannot start authentication or enrollment."
+    },
+    "classes2_dex_sha256": "d9fbabae9bac56c009f6d864d67cc0267ac9148ae4b13fe2504c79d975fa47ec",
+    "iiirisservice": {
+      "interface": "android.hardware.iris.IIrisService",
+      "methods": [
+        "registerAuthenticators(List)"
+      ],
+      "other_authentication_or_enrollment_methods": [],
+      "conclusion": "This Binder is a registration hook, not an iris sensor operation API."
+    },
+    "ibio_service": {
+      "interface": "android.hardware.biometrics.IBiometricService",
+      "methods_relevant_to_authentication": [
+        "authenticate(IBinder, operationId, userId, IBiometricServiceReceiver, opPackageName, PromptInfo)",
+        "cancelAuthentication(IBinder, opPackageName, requestId)",
+        "canAuthenticate(opPackageName, userId, callingUserId, authenticators)",
+        "registerAuthenticator(sensorId, modality, strength, IBiometricAuthenticator)",
+        "registerEnabledOnKeyguardCallback(callback)"
+      ],
+      "authenticate_for_keyguard_method": false,
+      "interpretation": "The generic authenticate entry creates the ordinary BiometricPrompt auth session and its public strength filter excludes Convenience. No dedicated Keyguard convenience request exists. Add a privileged Keyguard iris request/callback route while leaving Convenience unavailable to public APIs; if it uses BiometricService, define and enforce an explicit Keyguard callback contract."
+    },
+    "ibio_service_classes_dex_sha256": "dce85698d5d31622d6965879763e15efabe4bc1601b042099d86208c67df1305"
+  },
+  "installed_services_readback": {
+    "observed_at_host_utc": "2026-11-05T04:03Z",
+    "device_serial": "<redacted>",
+    "jar_path": "/system/framework/services.jar",
+    "jar_sha256": "321d8b27c20336afb7fcab70f14ac9e8465a6c7c510bfa92c6575dbd78310092",
+    "classes_dex_sha256": "9e934b4f93141d97ca9a7fa4cd4825cc2d3887af6d3f4f798e578bceef159c42",
+    "inspection": "adb pull to /private/tmp; Android SDK 35 dexdump class/method inspection; no service file modified or installed",
+    "iris_authenticator_methods": {
+      "isHardwareDetected": "returns false",
+      "hasEnrolledTemplates": "returns false",
+      "prepareForAuthentication": "one-code-unit return-void stub",
+      "startPreparedClient": "one-code-unit return-void stub",
+      "cancelAuthenticationFromService": "one-code-unit return-void stub",
+      "getAuthenticatorId": "returns 0",
+      "getLockoutModeForUser": "returns LOCKOUT_NONE"
+    },
+    "conclusion": "The installed server-side IrisAuthenticator is inert, matching the source audit; no iris client, capture or authentication operation is available in the shipped framework.",
+    "auth_session_dex_evidence": {
+      "method": "com.android.server.biometrics.AuthSession.onAuthenticationSucceeded(int, boolean, byte[])",
+      "dex_offset": "0x46e6e4",
+      "classes_dex_sha256": "9e934b4f93141d97ca9a7fa4cd4825cc2d3887af6d3f4f798e578bceef159c42",
+      "behavior": [
+        "Escrows token only when strong is true.",
+        "When strong is false, logs and discards a supplied token.",
+        "Calls StatusBarService.onBiometricAuthenticated(modality) after either branch in the BiometricPrompt dialog flow; this is not evidence of the Keyguard modality callback."
+      ],
+      "interpretation": "This records BiometricPrompt dialog delivery only. It does not implement the separate Keyguard callback; pinned Lineage face unlock reports FaceAuthenticationListener statuses to KeyguardUpdateMonitor."
+    }
+  },
+  "pinned_keyguard_source_readback": {
+    "revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "path": "packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java",
+    "github_blob_sha": "6aba55bd82fea8ac25f16a58386667be23d21854",
+    "source_url": "https://github.com/LineageOS/android_frameworks_base/blob/daf2b33fac918a464f6f7193214b27d164d39bea/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java",
+    "verified_flow": "KeyguardUpdateMonitor registers a FaceAuthenticationListener. It routes face auth success, failure, acquired/help/error statuses, lockout, running state and enrollment changes into its Keyguard callbacks/state handlers.",
+    "iris_gap": "There is no parallel iris listener, modality state, or IRIS case in isUnlockingWithBiometricAllowed in the installed phone build; the installed framework IrisManager is also a stub."
+  },
+  "pinned_iris_api_source_readback": {
+    "revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "files": {
+      "core/java/android/hardware/iris/IrisManager.java": {
+        "github_blob_sha": "281ac4769a8de9f0de1b2db44109aaa04ec0b0ef",
+        "verified": "IrisManager is only a hidden service marker with an empty constructor; it exposes no auth or enrollment API."
+      },
+      "core/java/android/hardware/iris/IIrisService.aidl": {
+        "github_blob_sha": "764f4d448843a7b02e01b8141e4fce99f3a667a5",
+        "verified": "The only Binder operation is registerAuthenticators(List<SensorPropertiesInternal>) under USE_BIOMETRIC_INTERNAL."
+      },
+      "services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java": {
+        "github_blob_sha": "35ea36c5d56f76bcb43b8188e2ea4cffdb1a5b67",
+        "verified": "IrisService asynchronously registers one IrisAuthenticator per configured sensor with IBiometricService.registerAuthenticator(sensorId, TYPE_IRIS, strength, authenticator). This is the existing scheduler registration seam."
+      },
+      "services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java": {
+        "github_blob_sha": "76b5c4e8f310b5ef07eaa526bce4407c522f2818",
+        "verified": "The implementation methods remain stubs and the constructor does not retain the sensor ID."
+      },
+      "packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java": {
+        "github_blob_sha": "6aba55bd82fea8ac25f16a58386667be23d21854",
+        "verified": "KeyguardUpdateMonitor consumes FaceAuthenticationListener status callbacks for success/failure/acquired/help/error, lockout/running state, and enrollment updates; there is no iris listener."
+      }
+    },
+    "source_revision_url": "https://github.com/LineageOS/android_frameworks_base/tree/daf2b33fac918a464f6f7193214b27d164d39bea"
+  },
+  "pinned_face_service_readback": {
+    "revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "files": {
+      "services/core/java/com/android/server/biometrics/sensors/face/FaceService.java": {
+        "github_blob_sha": "ab44ee723f43224e341c11aaf0c6ffcd7231209b",
+        "verified": "Direct authenticate() selects a sensor ServiceProvider and calls scheduleAuthenticate(..., isKeyguard); prepareForAuthentication() separately schedules restricted BiometricPrompt work through the provider. cancelAuthentication routes to the provider. This is the relevant service-side Keyguard modality model."
+      },
+      "core/java/android/hardware/face/FaceManager.java": {
+        "github_blob_sha": "3f2ef84a4ef02a0b83b6813c878f8fac321b81fd",
+        "verified": "The hidden FaceManager exposes authenticate(CryptoObject, CancellationSignal, AuthenticationCallback, Handler, FaceAuthenticateOptions) and cancels the returned service request ID; Keyguard uses this modality-specific API."
+      }
+    },
+    "source_revision_url": "https://github.com/LineageOS/android_frameworks_base/tree/daf2b33fac918a464f6f7193214b27d164d39bea"
+  },
+  "local_source_checkout": {
+    "path": "/private/tmp/lumia-android-frameworks-base",
+    "revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "branch": "local-iris-framework",
+    "checkout_mode": "sparse checkout of biometric framework, iris/face services, SystemServer and KeyguardUpdateMonitor source areas",
+    "working_tree": "contains local changes in IrisService.java, IrisAuthenticator.java, IIrisService.aidl, new IIrisServiceReceiver.aidl, IrisManager.java, and KeyguardUpdateMonitor.java; patches 0003-0005 record framework changes",
+    "remote_changes": "none; public source was fetched locally, and no commit or push was made"
+  },
+  "cityman_product_tree_review": {
+    "repository": "giannoccarol/android_device_msft_cityman",
+    "branch": "lineage-23-cityman",
+    "revision": "8f14e902f728898c1483c115cfe243ce637aa299",
+    "local_checkout": "/private/tmp/lumia-cityman-device",
+    "review": "device.mk did not copy android.hardware.iris.xml; there was no framework overlay for config_biometric_sensors. Pinned SystemServer starts IrisService only if FEATURE_IRIS is declared, and AuthService creates legacy TYPE_IRIS sensors from config_biometric_sensors entries formatted ID:Modality:Strength.",
+    "experimental_patch": "android/patches/0002-cityman-enable-experimental-iris-service.patch",
+    "patch_changes": [
+      "copy the platform android.hardware.iris.xml feature declaration into system permissions",
+      "overlay one config_biometric_sensors entry: 2:4:4095 (sensor ID 2, TYPE_IRIS=4, BIOMETRIC_CONVENIENCE=4095)",
+      "preserve all existing framework overlay resources; append only the config_biometric_sensors array"
+    ],
+    "patch_validation": "patch --dry-run -p1 succeeded against clean copies of both original files. Overlay XML parsed; pre-existing 82 resources were preserved and the one iris config array was added.",
+    "runtime_status": "not built or installed; the phone remains unchanged. This only enables service startup and generic sensor registration; current IrisAuthenticator is still a stub and cannot authenticate or unlock.",
+    "safety_and_scope": "local-only, no push; no camera or LED access; no raw biometric data collected."
+  },
+  "local_framework_registration_patch": {
+    "checkout": "/private/tmp/lumia-android-frameworks-base",
+    "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "changes": "IrisService passes each configured SensorPropertiesInternal object to IrisAuthenticator; IrisAuthenticator retains it and returns it from getSensorProperties instead of null.",
+    "artifact": "android/patches/0003-lineage-iris-authenticator-properties.patch",
+    "validation": "git diff --check passed. Not compiled or installed; full Android build tree is unavailable.",
+    "limits": "Hardware detection, enrollment, authentication, cancellation, lockout, authenticator ID and Keyguard routing remain unimplemented. No success result or HAT is generated."
+  },
+  "matcher_research_2026_11_05": {
+    "project_code_review": "The phase coder accepts caller-supplied circles. CircularBoundaryProposal is a coarse concentric contrast-boundary proposal and emits no per-pixel occlusion mask.",
+    "existing_frame_evidence": "One saved IR-off room frame was analyzed on-device; generic detector produced no eye box. No raw pixels were transferred to host. Synthetic matcher scores are not biometric performance evidence.",
+    "research_direction": "Separate segmentation, valid-pixel masking, normalization, encoding, and matching; add segmentation confidence and image-quality gates before any enrollment.",
+    "reference_systems": [
+      {
+        "name": "OSIRIS",
+        "url": "https://www.sciencedirect.com/science/article/pii/S0167865515002986",
+        "use": "modular baseline reference; evaluation uses public iris databases"
+      },
+      {
+        "name": "Notre Dame CVRL OpenSourceIrisRecognition",
+        "url": "https://github.com/CVRL/OpenSourceIrisRecognition",
+        "use": "IREX-submitted reference methods; expects polar-normalized inputs and uses segmentation masks; no code or weights copied due licensing/domain review"
+      },
+      {
+        "name": "NIST IREX",
+        "url": "https://www.nist.gov/programs-projects/iris-exchange-irex-overview",
+        "use": "image-quality evaluation is a distinct workstream from recognition performance"
+      }
+    ],
+    "constraints": "No representative IR0861 iris samples are available to this host; raw frames stay on-device. Public cross-sensor results cannot establish Lumia accuracy. The current phone enclosure still precludes any emitter use."
+  },
+  "keyguard_class1_iris_result_patch": {
+    "checkout": "/private/tmp/lumia-android-frameworks-base",
+    "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "artifact": "android/patches/0004-lineage-keyguard-class1-iris-result.patch",
+    "changes": [
+      "allow TYPE_IRIS / BiometricSourceType.IRIS through Keyguard strength policy only as non-strong Convenience",
+      "honor KEYGUARD_DISABLE_IRIS and KEYGUARD_DISABLE_BIOMETRICS",
+      "add a result sink that rejects sleep, wrong-user, and strong-auth-ineligible success; reports a non-strong biometric result; and does not add bypass behavior",
+      "track and clear per-user iris-recognized state with existing Keyguard biometric state",
+      "route iris enrollment state notifications and failure events to Keyguard callbacks"
+    ],
+    "verification": "Pinned DevicePolicyManager.java defines both referenced constants. git diff --check passed.",
+    "limits": "No call site, IrisManager request/cancel client, service callback, camera provider, matcher, lockout/rate-limit implementation, credential-confirmed enrollment, or persistent template store exists. The new success sink is unreachable in the current build and no success is fabricated. Source was not built or installed."
+  },
+  "local_keyguard_request_api_patch": {
+    "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+    "artifact": "android/patches/0005-lineage-iris-keyguard-request-api.patch",
+    "contract": "Adds hidden IrisManager.authenticateForKeyguard with cancellation and callbacks; adds IIrisService request/cancel Binder operations protected by USE_BIOMETRIC_INTERNAL; validates the caller with Utils.isKeyguard; current service returns BIOMETRIC_ERROR_HW_UNAVAILABLE because no real camera authenticator exists. KeyguardUpdateMonitor now exposes explicit start/stop methods, routes success/failure callbacks to its Class 1 handlers, and cancels during recognized-state clearing/sleep.",
+    "success_behavior": "No success callback is generated by the current server implementation. A future camera matcher must supply the actual result and cannot fabricate a HAT.",
+    "missing_integration": "No existing Keyguard controller invokes the new start/stop methods; there is still no enrollment check or real camera provider/matcher, so capture does not start automatically.",
+    "validation": "Patches 0003 and 0004 apply to a clean checkout; patch 0005 passes a dry-run on top of both. git diff --check passed. Not compiled or installed; Android build tree unavailable."
+  }
+}

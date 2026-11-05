@@ -1,7 +1,7 @@
 {
   "build_id": "iris-regulator-load-01",
   "device": "Lumia 950 XL cityman running unofficial LineageOS 23.2 / Android 16",
-  "serial": "d7baece4",
+  "serial": "<redacted>",
   "boot_method": "fastboot boot; temporary RAM boot; no partition writes",
   "temporary_kernel": "3.10.108-perf-gcc84cab9 #13",
   "test_design": {

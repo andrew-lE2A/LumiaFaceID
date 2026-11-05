@@ -1,0 +1,34 @@
+{
+  "observed_at_host_local": "2026-11-05 05:49 Europe/Zagreb",
+  "device": {
+    "serial": "<redacted>",
+    "product": "lineage_cityman",
+    "model": "Lumia_950_XL",
+    "device": "cityman",
+    "transport": "USB"
+  },
+  "checks": {
+    "iris_service": "not found",
+    "biometric_service": {
+      "legacy_settings": false,
+      "registered_sensors": [],
+      "current_session": null
+    },
+    "camera_service": {
+      "number_of_camera_devices": 3,
+      "active_camera_clients": [],
+      "historical_log_contains_iris_probe_clients": true
+    },
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0,
+      "green": 255,
+      "red": 0,
+      "blue": 0
+    }
+  },
+  "actions": "Read-only ADB queries only. No camera opened, no IR emitter enabled, no files installed, no reboot. The camera dump contains historical iris probe connects/disconnects, but active client list is empty.",
+  "result": "Phone remains on the existing build: its IrisService is not published and no biometric sensor is registered. The local device/framework source patches have not been built or installed."
+}

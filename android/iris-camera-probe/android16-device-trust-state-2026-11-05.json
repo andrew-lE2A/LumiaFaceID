@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "android_release": "16",
+    "serial": "<redacted>"
+  },
+  "read_only_checks": {
+    "registered_services": [
+      "android.security.authorization.IKeystoreAuthorization",
+      "android.security.compat.IKeystoreCompatService",
+      "android.security.legacykeystore.ILegacyKeystore",
+      "android.security.maintenance.IKeystoreMaintenance",
+      "android.security.metrics.IKeystoreMetrics",
+      "android.service.gatekeeper.IGateKeeperService",
+      "android.system.keystore2.IKeystoreService/default",
+      "android.hardware.biometrics.IAuthService",
+      "android.hardware.biometrics.IBiometricService",
+      "com.android.internal.widget.ILockSettings",
+      "android.app.trust.ITrustManager"
+    ],
+    "biometric_sensors": [],
+    "active_biometric_session": null,
+    "ro.boot.flash.locked": "1",
+    "ro.crypto.state": "unsupported",
+    "legacy_hardware_security_services": [
+      "android.hardware.keymaster@3.0::IKeymasterDevice/default (listed by lshal; vendor.keymaster-3-0 process running)"
+    ],
+    "not_found": [
+      "AIDL KeyMint service",
+      "Weaver service"
+    ]
+  },
+  "interpretation": "KeyStore2 and Gatekeeper are registered, and the legacy Keymaster 3.0 HAL appears in lshal with its vendor process running. These facts may support hardware-backed key operations but do not establish key attestation, secure user-ID binding, or protected camera-to-matcher/result processing. The unsupported crypto property means encryption at rest cannot be assumed. No app-level enrollment template should be treated as protected or used for strong lock-screen authentication until the trusted path and actual HAT policy are verified.",
+  "privacy": "No biometric image or template was captured or copied during this readback."
+}

@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-05",
+  "device": "Lumia 950 XL cityman, serial <redacted>",
+  "test_type": "read-only live-state verification and probe-app cleanup",
+  "initial_observation": {
+    "camera_service_event_log": "contained an old CONNECT/DISCONNECT entry for com.lumia.irisprobe; this was historical, not the live client list",
+    "led_channels": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "cleanup": "force-stopped com.lumia.irisprobe, com.lumia.irisprobe.dev, and com.lumia.irisprobe.quality",
+  "verified_after_cleanup": {
+    "active_camera_clients": [],
+    "camera_services_present": [
+      "cameraserver",
+      "android.hardware.camera.provider@2.4-service",
+      "mm-qcamera-daemon"
+    ],
+    "led_channels": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "ir_emitted": false,
+  "frame_accessed_or_exported": false,
+  "git_pushed": false
+}

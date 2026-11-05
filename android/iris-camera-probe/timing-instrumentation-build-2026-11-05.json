@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-05",
+  "scope": "local compile and package check for Camera2 pulse timing instrumentation; no phone or emitter test",
+  "toolchain": {
+    "sdk_platform": "Android 35",
+    "build_tools": "35.0.0",
+    "java_source_target": "8",
+    "d8_min_api": 26
+  },
+  "build": {
+    "javac": "passed",
+    "d8": "passed",
+    "aapt_manifest_package": "passed",
+    "zipalign": "passed",
+    "aapt_badging": "passed",
+    "warnings": [
+      "JDK reported the Java 8 source/target bootstrap warning and obsolete-option warnings.",
+      "IrisProbeActivity uses a deprecated Android API; no compile errors occurred."
+    ]
+  },
+  "source": {
+    "activity": "src/com/lumia/irisprobe/IrisProbeActivity.java",
+    "sha256": "c800ebcb8780b9acab8c2a37e5684a2bcb359251f2ad38496b2bafca4025b5f8"
+  },
+  "artifact": {
+    "path": "/private/tmp/lumia-probe-timing-build/aligned.apk",
+    "package": "com.lumia.irisprobe",
+    "sha256": "cf412f5c9471ad25d26f07b6df3da4b07f73cb5a441c8becc358d7e722909cb0",
+    "signed": false
+  },
+  "phone": {
+    "installed": false,
+    "camera_opened": false,
+    "led_channels_touched": false,
+    "raw_biometric_data_read_or_copied": false
+  },
+  "repository_build_outputs": "unchanged; temporary build directory used",
+  "publication": "local only; no commit or push"
+}

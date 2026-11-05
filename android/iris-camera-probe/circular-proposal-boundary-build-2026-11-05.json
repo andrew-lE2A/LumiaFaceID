@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-05",
+  "scope": "Java source compilation after crop-bound correction; no app install or phone camera use",
+  "command": "javac -source 8 -target 8 -classpath /private/tmp/android-sdk/platforms/android-35/android.jar -d /private/tmp/irisprobe-compile <probe Java sources>",
+  "result": "passed",
+  "change": "Outer limbus sample radius now uses the last valid crop pixel (exclusive right/bottom bounds adjusted by one) before applying the two-pixel sampling band.",
+  "warnings": [
+    "JDK warns that -source/-target 8 are obsolete and bootstrap classpath was not set.",
+    "IrisProbeActivity uses deprecated APIs."
+  ],
+  "toolchain": {
+    "android_platform": "35",
+    "ndk_directory": "/private/tmp/android-sdk/ndk/27.2.12479018",
+    "ndk_contents": "empty",
+    "opencv4_pkg_config": "not found",
+    "opencv_ximgproc": "not available"
+  },
+  "phone_actions": {
+    "camera_opened": false,
+    "emitter_written": false,
+    "apk_installed": false
+  }
+}

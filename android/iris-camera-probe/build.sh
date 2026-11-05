@@ -20,7 +20,11 @@ mkdir -p "$CLASSES" "$DEX"
     -I "$PLATFORM" -F "$OUT/unsigned.apk" \
     --min-sdk-version 26 --target-sdk-version 28
 javac -source 8 -target 8 -classpath "$PLATFORM" -d "$CLASSES" \
-    "$APP_DIR/src/com/lumia/irisprobe/IrisProbeActivity.java"
+    "$APP_DIR/src/com/lumia/irisprobe/IrisProbeActivity.java" \
+    "$APP_DIR/src/com/lumia/irisprobe/EyeRegionGeometry.java" \
+    "$APP_DIR/src/com/lumia/irisprobe/CircularBoundaryProposal.java" \
+    "$APP_DIR/src/com/lumia/irisprobe/DiagnosticFrameQuality.java" \
+    "$APP_DIR/src/com/lumia/irisprobe/LogGaborIrisCodePrototype.java"
 jar cf "$OUT/classes.jar" -C "$CLASSES" .
 "$BUILD_TOOLS/d8" --min-api 26 --lib "$PLATFORM" --output "$DEX" "$OUT/classes.jar"
 cp "$DEX/classes.dex" "$OUT/classes.dex"

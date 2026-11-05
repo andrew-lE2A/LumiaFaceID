@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-05",
+  "scope": "host-only synthetic phase-code mechanics check; no camera data",
+  "algorithm": "one-dimensional log-Gabor phase code with masked Hamming comparison and angular-shift search",
+  "single_handcrafted_pattern_scores": {
+    "same_synthetic_texture_aligned_rotation": {
+      "masked_hamming_distance": 0.0116,
+      "overlap_fraction": 1.0
+    },
+    "same_synthetic_texture_without_rotation_alignment": {
+      "masked_hamming_distance": 0.5557
+    },
+    "same_synthetic_texture_with_clipped_sector_after_alignment": {
+      "masked_hamming_distance": 0.0018,
+      "overlap_fraction": 0.781
+    },
+    "deliberately_different_synthetic_texture": {
+      "masked_hamming_distance": 0.4857,
+      "overlap_fraction": 1.0
+    }
+  },
+  "coverage": [
+    "angular shift recovered for a generated five-sample rotation",
+    "clipped sector reduced overlap while preserving low distance",
+    "one handcrafted distinct texture scored farther than the aligned same-texture sample",
+    "diagnostic consensus accepted three compatible samples, rejected a blank sample, and refused incomplete enrollment"
+  ],
+  "limitations": "These are deterministic toy patterns with known synthetic geometry, not human iris images or a representative genuine/impostor score distribution. They cannot set a match threshold, estimate false accept/reject rates, establish liveness, or support Android authentication.",
+  "publication": "local only; no commit, push, or PR"
+}

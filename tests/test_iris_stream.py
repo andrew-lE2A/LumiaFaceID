@@ -16,19 +16,19 @@ class IrisStreamTests(unittest.TestCase):
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(program)], capture_output=True, text=True, timeout=10)
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-            self.assertIn('28 actual production-sequence scenarios passed', run.stdout)
+            self.assertIn('37 actual production-sequence scenarios passed', run.stdout)
             baseline = re.search(r'Baseline: (\d+) startup transactions, (\d+) profile bursts, '
                                  r'(\d+) read transactions', run.stdout)
             self.assertIsNotNone(baseline, run.stdout)
             startup, bursts, reads = map(int, baseline.groups())
             self.assertGreater(startup, bursts)
             self.assertEqual(bursts, (87 + 7) // 8 + (30 + 7) // 8)
-            self.assertEqual(reads, 1 + 26 + 16 + 26)
+            self.assertEqual(reads, 3 + 2 * (26 + 31) + 16)
             # Baseline plus all startup/read failures, three stalled counters,
-            # twenty-six stalled-counter/post-snapshot failures, two mismatches,
-            # four stop failures, a wrong post-reset identity, and four
+            # fifty-seven stalled-counter/post-snapshot failures, two mismatches,
+            # four stop failures, one ancillary post-stop read failure, a wrong identity, and four
             # no-stream/profile-gate scenarios.
-            expected = 1 + startup + reads + 3 + 26 + 2 + 4 + 1 + 4 + 1
+            expected = 1 + startup + reads + 3 + 26 + 31 + 2 + 4 + 1 + 4 + 1 + 1
             self.assertIn(f'{expected} actual integrated stream scenarios passed', run.stdout)
 
 

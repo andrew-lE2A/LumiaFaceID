@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-05",
+  "serial": "<redacted>",
+  "scope": "read-only phone state check after privacy-routing build",
+  "device": {
+    "model": "Lumia 950 XL",
+    "product": "lineage_cityman",
+    "camera_devices": 3
+  },
+  "camera": {
+    "active_clients": [],
+    "active_client_listener_pids": [1249, 1685]
+  },
+  "biometrics": {
+    "sensors": [],
+    "active_session": null
+  },
+  "led_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "actions": {
+    "camera_opened": false,
+    "illumination_changed": false,
+    "package_installed": false
+  },
+  "notes": [
+    "The ADB server needed a permission-approved localhost restart before the read-only checks could run.",
+    "No IR pulse was attempted; the phone is still reported under a reflective metal can."
+  ]
+}

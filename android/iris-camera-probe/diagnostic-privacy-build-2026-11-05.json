@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-05",
+  "scope": "source compile and APK packaging; not installed",
+  "changes": [
+    "Image-derived eye/circle geometry and matcher comparison diagnostics are routed to the app status view without Logcat output.",
+    "Manual ROI buffer fractions are no longer written to Logcat.",
+    "ROI overlay accessibility description no longer exposes screen coordinates or radius."
+  ],
+  "build": {
+    "sdk": "/private/tmp/android-sdk",
+    "platform": "android-35",
+    "build_tools": "35.0.0",
+    "aapt": "passed",
+    "javac": "passed with standard source/target 8 deprecation/bootstrap warnings",
+    "d8": "passed",
+    "zipalign": "passed",
+    "apksigner_verify": "passed with temporary test key",
+    "apk_sha256": "0b1ced447b47574d99b328174701b66b4a5a27afc4a84d91a3e393793df13a4c",
+    "apk_path": "/private/tmp/lumia-iris-privacy-build-2026-11-05/LumiaIrisProbe.apk"
+  },
+  "phone": {
+    "installed": false,
+    "camera_opened": false,
+    "leds_written": false
+  },
+  "limitations": [
+    "No runtime check of Logcat emission was performed for a candidate-bearing frame.",
+    "The app status view still presents diagnostic values locally on-device when a usable frame exists."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-05",
+  "package": "com.lumia.irisprobe.quality",
+  "apk_sha256": "841751e31c041c2e923f7bb54fd5614e80e96bf01f856183bc0ea84725cbbb5d",
+  "build": "Passed with Android SDK platform 35 and build-tools 35.0.0; standard Java source/target and deprecation warnings only.",
+  "installed": true,
+  "capture_control": {
+    "request": "PULSE",
+    "minimum_torch_0_brightness": 14,
+    "maximum_on_time_seconds": 1,
+    "sequence": "helper turns torch_0 on and replies ON; app requests one YUV frame; helper forces torch_0 off and replies OFF",
+    "exit_signal_cleanup": "helper trap writes torch_0 brightness 0"
+  },
+  "hardware_test": {
+    "run": false,
+    "reason": "The sensor was reported covered with a metal can. Its reflectivity is unknown and it blocks the camera field of view, so an IR pulse/capture there would be unsafe to interpret.",
+    "next_setup": "Diffuse matte white target; phone aimed at target with no person or eyes in the reflected path."
+  },
+  "post_install_state": {
+    "active_camera_clients": 0,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "previous_private_frame_preserved_by_in_place_app_update": true
+  },
+  "publication": "local only; no commit or push"
+}

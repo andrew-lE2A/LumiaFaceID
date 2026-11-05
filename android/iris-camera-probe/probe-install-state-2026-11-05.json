@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-05",
+  "scope": "read-only package and local build artifact inspection",
+  "device": {
+    "serial": "<redacted>",
+    "installed_probe_packages": [
+      "com.lumia.irisprobe",
+      "com.lumia.irisprobe.dev",
+      "com.lumia.irisprobe.development",
+      "com.lumia.irisprobe.quality"
+    ],
+    "main_package_apk_path": "/data/app/~~yWXPJZcJdtoYL43MloGhOA==/com.lumia.irisprobe-F_EEs9YV3DO5yDl50_QF-w==/base.apk",
+    "main_package_version_code": 0,
+    "camera_opened": false,
+    "emitter_written": false
+  },
+  "host_artifacts": {
+    "local_apk": "android/iris-camera-probe/build/LumiaIrisProbe.apk",
+    "apk_mtime": "2026-11-05 01:48:45",
+    "activity_source_mtime": "2026-11-05 04:51:23",
+    "boundary_proposal_source_mtime": "2026-11-05 06:18:40",
+    "probe_password_environment_variables_present": false
+  },
+  "conclusion": "The local signed APK predates subsequent source edits and is not suitable for validating them. Rebuild and signing credentials/tooling must be resolved before installing the updated probe."
+}

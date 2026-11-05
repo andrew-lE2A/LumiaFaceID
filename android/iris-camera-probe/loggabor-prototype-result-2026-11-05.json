@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-05",
+  "scope": "host-only synthetic software smoke check; no phone image or biometric sample used",
+  "algorithm": "24-row normalized annulus; one-dimensional analytic log-Gabor phase bits; masked Hamming with bounded angular shift",
+  "synthetic_geometry": {
+    "image": "256x256 grayscale",
+    "center": [
+      128,
+      128
+    ],
+    "pupil_radius": 48,
+    "iris_radius": 108,
+    "rotation_samples": 5
+  },
+  "rotation_pair": {
+    "best_shift_samples": 5,
+    "aligned_masked_hamming": 0.011637369791666666,
+    "unaligned_masked_hamming": 0.5557454427083334,
+    "overlap_fraction": 1.0
+  },
+  "clipped_sector_pair": {
+    "masked_hamming": 0.0017712023338195457,
+    "overlap_fraction": 0.7810872395833334
+  },
+  "low_overlap_pair": "a synthetic template with only 30% of angular samples left visible was rejected by the 50% minimum-overlap gate; returned NaN distance and zero accepted overlap",
+  "flat_annulus": "all comparisons masked out; returned NaN distance and zero overlap",
+  "limitations": [
+    "synthetic data only",
+    "annulus geometry supplied manually and assumed concentric",
+    "no eye localization or pupil/iris segmentation",
+    "masking/filter interaction is simplified and not validated against eyelid occlusion",
+    "no quality gate or calibrated threshold",
+    "not connected to enrollment, authentication, or Keyguard",
+    "must not be used for identity decisions"
+  ],
+  "host_test_command": "python3 -m unittest tests/test_iris_probe_host.py",
+  "host_test_status": "passed: rotation alignment, clipped sector, low-overlap rejection, and flat image"
+}

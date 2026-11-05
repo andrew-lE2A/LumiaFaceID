@@ -13,7 +13,9 @@ import unittest
 
 SERVICES = ['cameraserver', 'vendor.camera-provider-2-4', 'qcamerasvr']
 INITIAL = ('status=ready stage=idle errno=0 model=0x0000 cleanup_errno=0 '
-           'attempts=0 blocked=0 rail_uv=0')
+           'attempts=0 blocked=0 rail_uv=0 load_trial=0 load_vote=0,0,0,0 '
+           'load_reset=0,0,0,0 boost_trial=0 boost_enable=0 boost_disable=0 '
+           'boost_uv_before=0 boost_uv_active=0 boost_uv_after=0')
 SUCCESS = ('status=identified stage=model-read errno=0 model=0x0861 '
            'cleanup_errno=0 attempts=1 blocked=0 rail_uv=1200000')
 COMMAND = '''#!/usr/bin/env python3
@@ -396,7 +398,9 @@ class IdentifyHelperTests(unittest.TestCase):
         self.csi_fixture()
         node = self.root / 'driver/device'
         prior = ('status=failed stage=stream-test errno=-110 model=0x0861 '
-                 'cleanup_errno=0 attempts=3 blocked=0 rail_uv=1200000\n')
+                 'cleanup_errno=0 attempts=3 blocked=0 rail_uv=1200000 load_trial=0 '
+                 'load_vote=0,0,0,0 load_reset=0,0,0,0 boost_trial=0 boost_enable=0 '
+                 'boost_disable=0 boost_uv_before=0 boost_uv_active=0 boost_uv_after=0\n')
         (node / 'result').write_text(prior)
         (node / 'stream_result').write_text('profile_loaded=1 stage=frame-counter stop_errno=0\n')
         (node / 'csi_result').write_text('requested=1 stage=released errno=0 cleanup_errno=0 phy=2\n')
@@ -464,7 +468,10 @@ class IdentifyHelperTests(unittest.TestCase):
     def receiver_clock_fixture(self):
         self.csi_fixture()
         (self.root / 'driver/device/csi2_once').write_text('')
-        for name, rate, measure in [('camss_csi3_clk', 240000000, 239999000),
+        for name, rate, measure in [('camss_csi3phy_clk', 200000000, 199999000),
+                                    ('camss_csi2_clk', 240000000, 239999000),
+                                    ('camss_csi0_clk', 240000000, 239999000),
+                                    ('camss_csi3_clk', 240000000, 239999000),
                                     ('camss_phy2_csi2phytimer_clk', 200000000, 199999000)]:
             clock = self.root / 'rxclocks' / name
             clock.mkdir(parents=True)
@@ -476,10 +483,12 @@ class IdentifyHelperTests(unittest.TestCase):
         run = self.run_helper(operation='csi2-once', option='--observe-receiver-clocks')
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         lines = [line for line in run.stdout.splitlines() if line.startswith('RXCLK sample=')]
-        self.assertEqual(len(lines), 12)
+        self.assertEqual(len(lines), 30)
         for index, line in enumerate(lines):
-            name = ('camss_csi3_clk', 'camss_phy2_csi2phytimer_clk')[index % 2]
-            self.assertIn(f'sample={index // 2 + 1} clock={name} ', line)
+            clocks = ('camss_csi3phy_clk', 'camss_csi2_clk', 'camss_csi0_clk',
+                      'camss_csi3_clk', 'camss_phy2_csi2phytimer_clk')
+            name = clocks[index % len(clocks)]
+            self.assertIn(f'sample={index // len(clocks) + 1} clock={name} ', line)
         self.assertIn('measured_hz=239999000', run.stdout)
         self.assertIn('measured_hz=199999000', run.stdout)
         self.assertLess(run.stdout.index(lines[-1]), run.stdout.index('Restored:'))
@@ -499,7 +508,7 @@ class IdentifyHelperTests(unittest.TestCase):
         self.state['csi_after'] = 'requested=1 stage=released errno=0 cleanup_errno=-5\n'
         run = self.run_helper(operation='csi-once', option='--observe-receiver-clocks')
         self.assertEqual(run.returncode, 3, run.stdout + run.stderr)
-        self.assertEqual(run.stdout.count('RXCLK sample='), 12)
+        self.assertEqual(run.stdout.count('RXCLK sample='), 30)
         self.assertIn('REBOOT_REQUIRED', run.stderr)
         self.assertNotIn('Restored:', run.stdout)
         self.assertEqual(list(self.state['services'].values()), ['stopped'] * 3)

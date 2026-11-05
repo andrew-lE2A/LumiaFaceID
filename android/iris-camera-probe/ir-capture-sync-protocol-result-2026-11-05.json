@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-05",
+  "scope": "software-only helper/app synchronization change with host tests; not a phone emitter test",
+  "protocol": [
+    "app sends PULSE to root-only localhost helper",
+    "helper writes minimum torch_0 level 14 and replies ON",
+    "app requests one Camera2 YUV still frame",
+    "app waits for ImageReader delivery or capture failure, then sends STOP",
+    "helper writes brightness 0 and replies OFF"
+  ],
+  "bounds_and_cleanup": {
+    "app_wait_before_cancel_ms": 850,
+    "helper_watchdog_ms": 1000,
+    "helper_off_on_client_disconnect": true,
+    "helper_off_on_signal_or_exit": true,
+    "app_off_confirmation": "OFF response read from helper"
+  },
+  "host_checks": {
+    "command": "python3 -m unittest tests/test_iris_torch_helper.py",
+    "status": "passed",
+    "cases": [
+      "STOP turns fake LED file off and returns OFF",
+      "watchdog turns fake LED file off when client stalls",
+      "client disconnect turns fake LED file off",
+      "worker signal triggers cleanup"
+    ]
+  },
+  "phone_test": "updated quality package started with no crash; camera was not opened; no LED channel enabled; physical sync protocol not exercised",
+  "latest_read_only_phone_check": {
+    "adb_device": "<redacted> (LineageOS cityman)",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "camera_or_emitter_test_run": false
+  },
+  "latest_source_rebuild": "not run: this shell does not have all Android SDK and signing environment variables; existing APK hash below is from prior build and does not represent the latest source",
+  "limitations": [
+    "fake LED file does not validate sysfs behavior or PMI8994 hardware",
+    "no optical timing measurement or exposure timestamp correlation",
+    "not eye-safety validation",
+    "not suitable for authentication illumination until hardware timing and safety are measured"
+  ],
+  "apk_sha256": "34cebdf7fc6cdfa7e99c6e53ed3fb13e3dde46b299b54528aad2e204fbafea76",
+  "quality_package_sha256": "2f16a6d1d54cac75ddc028a685b8cdeef49f1c75ff764cb72d647cf1329eb674"
+}

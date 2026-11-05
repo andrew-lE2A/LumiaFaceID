@@ -29,6 +29,7 @@ static int iris_cci_command(struct cityman_iris *, enum msm_cci_cmd_type);
 static int iris_read_model(struct cityman_iris *, u16 *);
 static const char *failure;
 static int remaining, enables[4], gpio_owned, reads, events, bad_voltage;
+static int optimum_calls[4], optimum_values[4][2], active_load[4];
 static u16 returned_model;
 static struct cci_device cci;
 
@@ -73,6 +74,15 @@ static int regulator_disable(struct regulator *r)
     if (!rc) enables[r->id]--;
     return rc;
 }
+static int regulator_set_optimum_mode(struct regulator *r, int load_ua)
+{
+    char name[40]; int rc, call = optimum_calls[r->id]++;
+    if (call < 2) optimum_values[r->id][call] = load_ua;
+    snprintf(name, sizeof(name), call == 0 ? "load:%d" : "load-reset:%d", r->id);
+    rc = event(name);
+    if (!rc) active_load[r->id] = load_ua;
+    return rc;
+}
 static int regulator_get_voltage(struct regulator *r)
 {
     const int values[] = {2800000, 1800000, 1300000, 1200000};
@@ -83,9 +93,17 @@ static int regulator_get_voltage(struct regulator *r)
 static unsigned long clk_get_rate(struct clk *c) { return c->rate; }
 static int clk_set_rate(struct clk *c, unsigned long rate)
 { int rc = event(rate == 9600000 ? "rate" : "restore"); if (!rc) c->rate = rate; return rc; }
-static int clock_refs[2];
+static int clock_refs[5];
+static struct clk csi2_clock, csi0_clock, csi3phy_clock;
 static int clk_prepare_enable(struct clk *c)
-{ int rc = event(c->id ? "clock" : "source"); if (!rc) clock_refs[c->id]++; return rc; }
+{
+    static const char *names[] = {"source", "clock", "csi2", "csi0", "csi3phy"};
+    int rc;
+    assert(c->id >= 0 && c->id < 5);
+    rc = event(names[c->id]);
+    if (!rc) clock_refs[c->id]++;
+    return rc;
+}
 static void clk_disable_unprepare(struct clk *c)
 { assert(clock_refs[c->id] == 1); clock_refs[c->id]--; }
 static void *v4l2_get_subdevdata(void *p) { return p; }
@@ -125,22 +143,32 @@ static void reset(const char *fail, int count)
 {
     int i;
     memset(&state, 0, sizeof(state)); memset(enables, 0, sizeof(enables));
+    memset(optimum_calls, 0, sizeof(optimum_calls));
+    memset(optimum_values, 0, sizeof(optimum_values));
+    memset(active_load, 0, sizeof(active_load));
     memset(clock_refs, 0, sizeof(clock_refs)); cci.ref_count = 0;
     failure = fail; remaining = count; gpio_owned = reads = events = 0;
     bad_voltage = -1; returned_model = IRIS_MODEL;
     state.dev = &device; state.reset = 102; state.pins = &pins;
     state.active = &active; state.sleep = &sleep_state;
     source.id = 0; source.rate = 24000000; clock.id = 1;
+    csi2_clock.id = 2; csi0_clock.id = 3; csi3phy_clock.id = 4;
     state.source = &source; state.clock = &clock;
+#ifdef CONFIG_CITYMAN_IRIS_CSI
+    state.csi2_clock = &csi2_clock; state.csi0_clock = &csi0_clock;
+    state.csi3phy_clock = &csi3phy_clock;
+#endif
     state.client.cci_subdev = &cci;
     for (i = 0; i < 4; i++) { regs[i].id = i; state.rails[i] = &regs[i]; }
 }
 static void balanced(void)
 {
     int i;
-    for (i = 0; i < 4; i++) assert(!enables[i] && !state.enabled[i]);
+    for (i = 0; i < 4; i++)
+        assert(!enables[i] && !state.enabled[i] && !state.load_voted[i] && !active_load[i]);
     assert(!gpio_owned && !state.gpio_owned && !cci.ref_count && !state.cci_on);
-    assert(!clock_refs[0] && !clock_refs[1] && !state.source_on && !state.clock_on);
+    assert(!clock_refs[0] && !clock_refs[1] && !clock_refs[2] && !clock_refs[3] && !clock_refs[4]);
+    assert(!state.source_on && !state.clock_on);
     assert(source.rate == 24000000 && !state.blocked && !state.cleanup_error);
 }
 int main(void)
@@ -153,6 +181,36 @@ int main(void)
     unsigned int i; int count = 0, previous;
     reset(NULL, 0); assert(!iris_identify(&state)); assert(!strcmp(state.status, "identified"));
     assert(state.model == IRIS_MODEL && state.attempts == 1); balanced(); count++;
+    reset(NULL, 0); state.load_trial = true;
+    assert(!iris_identify(&state));
+    {
+        static const int requested_loads[4] = {300000, 0, 300000, 80000};
+        for (i = 0; i < 4; i++) {
+            assert(optimum_calls[i] == 2);
+            assert(optimum_values[i][0] == requested_loads[i] && optimum_values[i][1] == 0);
+            assert(state.load_vote_rc[i] == 0 && state.load_reset_rc[i] == 0);
+        }
+    }
+    balanced(); count++;
+    for (i = 0; i < 4; i++) {
+        char fail_at[32];
+        reset(NULL, 0); state.load_trial = true;
+        snprintf(fail_at, sizeof(fail_at), "load:%u", i);
+        failure = fail_at; remaining = 1;
+        assert(iris_identify(&state) < 0 && !state.blocked && !state.cleanup_error);
+        assert(state.load_vote_rc[i] == -EIO);
+        balanced(); count++;
+    }
+    for (i = 0; i < 4; i++) {
+        char fail_at[32];
+        reset(NULL, 0); state.load_trial = true;
+        snprintf(fail_at, sizeof(fail_at), "load-reset:%u", i);
+        failure = fail_at; remaining = 1;
+        assert(iris_identify(&state) < 0 && state.blocked && state.cleanup_error == -EIO);
+        assert(state.load_reset_rc[i] == -EIO && state.load_voted[i]);
+        for (int rail = 0; rail < 4; rail++) assert(!enables[rail] && !state.enabled[rail]);
+        count++;
+    }
     for (i = 0; i < sizeof(failures)/sizeof(*failures); i++) {
         reset(failures[i], 2); assert(iris_identify(&state) < 0);
         assert(state.error < 0 && !strcmp(state.status, "failed")); balanced(); count++;

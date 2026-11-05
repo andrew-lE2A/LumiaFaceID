@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-05",
+  "scope": "best-effort cleanup for matcher scratch arrays, with host synthetic check and Android compile",
+  "changes": [
+    "Log-Gabor encode now overwrites its real, imaginary, and source-valid scratch arrays in a finally block.",
+    "If encoding fails before returning a template, partially generated bit and validity arrays are overwritten.",
+    "Diagnostic consensus now overwrites angular-alignment shifts in a finally block and clears partial output arrays on failure."
+  ],
+  "verification": {
+    "host_command": "python3 -m unittest tests/test_iris_probe_host.py",
+    "host_result": "passed; synthetic geometry, proposal, matcher, enrollment, and clear behavior checks",
+    "android_compile": "javac passed with standard source/target 8 and deprecated API warnings",
+    "d8": "passed, min API 26",
+    "dex_path": "/private/tmp/lumia-iris-scratch-clear/dex/classes.dex",
+    "dex_sha256": "8cd495451a8c1b76b326a8231dacaf28b6664966902de2fa0405805779b81a78",
+    "diff_check": "passed"
+  },
+  "phone": {
+    "installed": false,
+    "camera_opened": false,
+    "leds_written": false
+  },
+  "limitations": [
+    "Best-effort Java array overwrites cannot guarantee removal of runtime, JIT, or garbage-collector copies.",
+    "Does not validate real-eye capture, segmentation, matcher accuracy, liveness, or Android authentication."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

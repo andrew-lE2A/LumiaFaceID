@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "serial": "<redacted>",
+    "android_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.development",
+    "apk_sha256": "c58631ecd99779a60448878d408973b0b8e003d55431bcb40b11f98fc8a57c90"
+  },
+  "test": {
+    "scope": "read-only Camera2 result checks plus bounded exposure-request comparison; no YUV frames saved; IR and flash off",
+    "camera_id": "2",
+    "sensor_metadata": "1920x1088, facing=0",
+    "capabilities": {
+      "manual_sensor": true,
+      "ae_modes": [0, 1],
+      "advertised_exposure_range_ns": [29966, 1963576485],
+      "advertised_sensitivity_iso_range": [100, 800]
+    },
+    "default_ae": {
+      "ae_state": 2,
+      "exposure_ns": 75004280,
+      "sensitivity_iso": 4859,
+      "frame_duration_ns": 75184080,
+      "observation": "Repeated results after AE converged; sensitivity 4859 is 6.07 times the advertised maximum ISO 800."
+    },
+    "manual_baseline_request": {
+      "requested_exposure_ns": 30000000,
+      "requested_sensitivity_iso": 100,
+      "requested_frame_duration_ns": 33500000,
+      "returned_exposure_ns": 29995718,
+      "returned_sensitivity_iso": 100,
+      "returned_frame_duration_ns": 33441782,
+      "ae_state": 0,
+      "results": "Repeated capture results reflected the manual request while selected."
+    },
+    "source_timing_comparison": {
+      "source_output_pixel_rate_hz": 70080000,
+      "source_line_length_pixels": 2100,
+      "source_frame_length_lines": 1116,
+      "derived_line_time_ns": 29965.753425,
+      "derived_1000_line_exposure_ns": 29965753.425,
+      "derived_1116_line_frame_duration_ns": 33441780.822,
+      "manual_exposure_difference_percent": 0.1,
+      "manual_frame_duration_difference_ns": 1.178,
+      "source": "Static Windows/Siiri-derived mode timing and DCC baseline; values were not directly measured on Windows."
+    },
+    "restored_ae": "AE auto was restored; returned metadata immediately returned to approximately 75 ms / ISO 4859."
+  },
+  "cleanup": {
+    "camera_session": "closed normally",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "camera_permission": "revoked after test",
+    "app_process": "force-stopped"
+  },
+  "interpretation": "Manual Camera2 controls are honored and closely reproduce the source-derived line/frame timing. Default AE reports sensitivity far outside its advertised range and a longer frame period. This is a Camera2/HAL metadata/control anomaly to investigate; it does not demonstrate better iris image quality, sensor register correctness, or safe illumination. The sensor remained covered, and no IR was enabled.",
+  "publication": "local only; no commit, push, or PR"
+}

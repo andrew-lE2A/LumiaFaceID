@@ -1,0 +1,53 @@
+{
+  "observed_at_host_utc": "2026-11-05T04:01Z",
+  "device_reported_time": "2026-11-04T10:25:24-11:00",
+  "device": "Lumia 950 XL (cityman), ADB serial <redacted>",
+  "scope": "read-only state inspection plus force-stop of an already-open diagnostic probe to release the camera",
+  "before": {
+    "active_camera_client": "com.lumia.irisprobe.manualroi",
+    "camera_id": 2,
+    "iris_led_channels": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "action": "adb shell am force-stop com.lumia.irisprobe.manualroi",
+  "after": {
+    "camera_device_count": 3,
+    "active_camera_clients": [],
+    "camera_devices": {
+      "0": "closed, no client instance",
+      "1": "closed, no client instance",
+      "2": "closed, no client instance"
+    },
+    "camera_processes_running": [
+      "cameraserver",
+      "android.hardware.camera.provider@2.4-service",
+      "mm-qcamera-daemon"
+    ],
+    "iris_service": "not found",
+    "biometric_sensors": [],
+    "active_biometric_session": null,
+    "iris_led_channels": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "other_led_readback": {
+      "green_status_led": 255,
+      "lcd_backlight": 7
+    }
+  },
+  "camera_or_emitter_opened": false,
+  "boot_or_kernel_changed": false,
+  "raw_frame_accessed": false,
+  "notes": [
+    "The probe had left iris camera ID 2 open despite the earlier no-client readback.",
+    "The force-stop released its camera session; subsequent dumpsys reports the active-client list empty and all three camera devices closed.",
+    "The phone remains covered by a reflective can, so no camera stream or IR emitter test was run.",
+    "Device-reported wall clock and host UTC disagree; the host timestamp is retained for ordering and the device time is recorded verbatim."
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-05",
+  "scope": "Camera2 frame-identity and pulse-ordering instrumentation compile; no phone install or emitter test",
+  "device_metadata_used": {
+    "camera_ids": [0, 1, 2],
+    "iris_camera_id": 2,
+    "sensor_timestamp_source": "UNKNOWN",
+    "evidence": "Read-only dumpsys media.camera showed UNKNOWN for all three cameras."
+  },
+  "instrumentation": [
+    "Log one-frame CaptureRequest submission time in elapsed realtime.",
+    "Log ImageReader buffer timestamp and callback time.",
+    "Log pulse active state with the capture result and YUV callback.",
+    "Analyzer matches Image timestamp to CaptureResult.SENSOR_TIMESTAMP, then checks request and image callback order against helper ON/STOP."
+  ],
+  "build": {
+    "sdk_platform": "Android 35",
+    "build_tools": "35.0.0",
+    "javac": "passed",
+    "d8": "passed",
+    "aapt_manifest_package": "passed",
+    "zipalign": "passed",
+    "aapt_badging": "passed",
+    "python_analyzer_compile": "passed",
+    "warnings": [
+      "JDK emitted Java 8 source/target and bootstrap warnings.",
+      "IrisProbeActivity uses a deprecated Android API; compilation succeeded."
+    ]
+  },
+  "artifact": {
+    "path": "/private/tmp/lumia-probe-frame-timing-build/aligned.apk",
+    "package": "com.lumia.irisprobe",
+    "sha256": "29d353b3c730fe2276a6615479268700c12494c61f27e5285e5d0f80aea258e6",
+    "signed": false
+  },
+  "phone_update": {
+    "installed_probe_signer_sha256": "e17c680fedff020daef90eed58ecf9ffe50816330d432e2240540ebda382315d",
+    "available_repository_apk_signer_sha256": "2a06b09f345f3e3bf7da926495b3efd1032cd7dad448cdb6953734a3d2693d87",
+    "installed_signature_match": false,
+    "update_attempted": false,
+    "reason": "An in-place update with the available signing identity would fail; uninstalling could delete private app data."
+  },
+  "phone_state_after_read_only_inspection": {
+    "camera_devices": 3,
+    "active_camera_clients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "data_handling": "No camera frame or biometric data was read or copied.",
+  "publication": "local only; no commit or push"
+}

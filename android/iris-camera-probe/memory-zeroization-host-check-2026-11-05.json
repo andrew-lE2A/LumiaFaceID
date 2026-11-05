@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-05",
+  "scope": "host-only synthetic Java checks for geometry, phase-code mechanics, and diagnostic-template clearing",
+  "command": "python3 -m unittest tests/test_iris_probe_host.py",
+  "result": "passed",
+  "assertions_added": [
+    "cleared enrollment drops sample references",
+    "sample validity state is zero after enrollment clear",
+    "cleared templates no longer produce a comparable score",
+    "cleared enrollment cannot create a consensus",
+    "consensus validity state is zero after clear"
+  ],
+  "data": "generated synthetic patterns only; no camera frames or biometric samples",
+  "limitations": [
+    "Java boolean-array clearing is not guaranteed erasure of runtime copies",
+    "does not validate image quality, iris segmentation, matcher accuracy, liveness, or Android authentication"
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

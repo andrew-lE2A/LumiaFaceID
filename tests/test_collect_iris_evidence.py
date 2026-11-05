@@ -14,7 +14,7 @@ def clock_log():
     return ''.join(
         f'RXCLK sample={sample} clock={clock} rate_before_hz=200000000 '
         'enable_before=1 measured_hz=199999414 rate_after_hz=200000000 enable_after=1\n'
-        for sample in range(1, 7) for clock in evidence.CLOCKS)
+        for sample in range(1, 7) for clock in evidence.CLOCK_SETS[2])
 
 
 class FakeAdb:
@@ -73,7 +73,7 @@ class CollectIrisEvidenceTests(unittest.TestCase):
     def test_collect_uses_only_fixed_read_commands(self):
         adb = FakeAdb()
         report = evidence.collect(adb)
-        self.assertEqual(len(report['saved_receiver_clock_logs'][0]['samples']), 12)
+        self.assertEqual(len(report['saved_receiver_clock_logs'][0]['samples']), 30)
         self.assertEqual(adb.status_reads, 2)
         self.assertEqual(set(adb.commands), {
             evidence.STATUS_COMMAND, evidence.SNAPSHOT_COMMAND, evidence.LOG_LIST_COMMAND,

@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded IR-off Camera2 Analyze frame on a temporary package; no image saved or exported",
+  "temporary_package": {
+    "name": "com.lumia.irisprobe.frametest",
+    "apk_sha256": "d3f879f0feb48dfdc8265396e37fa9c509840780e774fa5b39279d45a0f25f56",
+    "signed_with_temporary_key": true,
+    "uninstalled_after_test": true
+  },
+  "build": {
+    "sdk_platform": "Android 35",
+    "build_tools": "35.0.0",
+    "javac": "passed",
+    "d8": "passed",
+    "aapt_manifest_package": "passed",
+    "zipalign": "passed",
+    "apksigner_verify": "passed",
+    "activity_source_sha256": "d0b506841c3d8fa900e109621d8788b5c1b9456c2569a75dc015d341d0a21a2f",
+    "analyzer_source_sha256": "7cb71479c3ca6e557cac5b7b137199ac672b633fceefc2261cd9fac58c8eecaa"
+  },
+  "camera": {
+    "device_count": 3,
+    "opened_id": 2,
+    "opened_sensor": "1920x1088 IR0861",
+    "sensor_timestamp_source": "UNKNOWN",
+    "preview_callbacks": "continuous during bounded session",
+    "still_request_elapsed_realtime_ns": 18724924973627,
+    "capture_result": {
+      "kind": "ANALYZE",
+      "frame_number": 492,
+      "sensor_timestamp_ns_unknown_clock": 18725021096885,
+      "exposure_ns": 29995718,
+      "sensitivity_iso": 100,
+      "frame_duration_ns": 33441782
+    },
+    "yuv_image_timestamp_ns": 18725021096885,
+    "capture_result_yuv_timestamp_match": true,
+    "analyzer": {
+      "capture_result_yuv_match_count": 1,
+      "capture_results_without_yuv_match": 0,
+      "yuv_images_without_capture_result_match": 0,
+      "pulse_count": 0
+    }
+  },
+  "on_device_quality_summary": {
+    "saved_frame": false,
+    "pixels_exported": false,
+    "luma_p05": 0,
+    "luma_p50": 0,
+    "luma_p95": 1,
+    "mean_absolute_gradient_horizontal": 0.13,
+    "mean_absolute_gradient_vertical": 0.13,
+    "clipped_at_or_below_16_fraction": 1.0,
+    "candidate_or_enrollment": "rejected by provisional p95 floor of 32"
+  },
+  "illumination": {
+    "emitter_enabled": false,
+    "helper_used": false,
+    "before": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "after": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "teardown": {
+    "temporary_app_force_stopped": true,
+    "temporary_package_uninstalled": true,
+    "temporary_ui_dump_removed": true,
+    "active_camera_clients": [],
+    "camera_services": {
+      "cameraserver": "running",
+      "android.hardware.camera.provider@2.4-service": "running",
+      "mm-qcamera-daemon": "running"
+    }
+  },
+  "interpretation": "The returned YUV buffer is correctly associated with Camera2 frame 492 even though the sensor timestamp clock is UNKNOWN. The covered-scene frame contains no useful image detail; this test validates metadata/frame association only.",
+  "data_handling": "Only Camera2 timing metadata and aggregate spatial metrics were read from logs; image pixels stayed in memory on the phone.",
+  "publication": "local only; no commit or push"
+}

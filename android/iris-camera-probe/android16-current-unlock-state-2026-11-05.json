@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-05",
+  "scope": "read-only ADB snapshot; no camera opened and no emitter writes",
+  "device": {
+    "serial": "<redacted>",
+    "model": "Lumia 950 XL cityman",
+    "android_release": "16",
+    "lineage_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "framework": {
+    "iris_service": "not present in service list",
+    "biometric_service": "registered",
+    "auth_service": "registered",
+    "biometric_sensors": [],
+    "active_biometric_session": null
+  },
+  "camera": {
+    "devices": 3,
+    "active_clients": [],
+    "iris_camera_id_2_open": false,
+    "historical_dump_mentions_client": true
+  },
+  "illumination_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "result": "Unlock integration is not active on the installed build. The source patches are local and have not been built or installed."
+}

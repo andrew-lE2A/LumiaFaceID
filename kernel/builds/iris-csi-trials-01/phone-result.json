@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "device": "Lumia 950 XL cityman",
-  "adb_serial": "d7baece4",
+  "adb_serial": "<redacted>",
   "kernel": 19,
   "boot_method": "fastboot boot; temporary RAM boot",
   "installed_boot_partition_written": false,

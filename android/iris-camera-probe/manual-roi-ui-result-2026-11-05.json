@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-05",
+  "scope": "compile, isolated UI check and one IR-off in-memory frame analysis; no image saved",
+  "source": "android/iris-camera-probe/src/com/lumia/irisprobe/IrisProbeActivity.java",
+  "build": {
+    "sdk": "/private/tmp/android-sdk",
+    "platform": "android-35",
+    "build_tools": "35.0.0",
+    "javac": "passed",
+    "d8": "passed",
+    "aapt": "passed",
+    "zipalign": "passed",
+    "apk_signature": "passed with a temporary test key",
+    "apk_sha256": "efb269990e1f48c05c2f281d5145e48b375174b209da0b4d3fccd1a11945fc30",
+    "apk_path": "/private/tmp/lumia-iris-manual-roi-build-2026-11-05/manualroi/LumiaIrisProbe.apk"
+  },
+  "phone": {
+    "serial": "<redacted>",
+    "temporary_package": "com.lumia.irisprobe.manualroi",
+    "ui_activity_started": true,
+    "hierarchy_text": [
+      "SELECT EYE ROI (TAP PREVIEW)",
+      "START 3-FRAME DIAGNOSTIC ENROLLMENT (RAM ONLY)",
+      "ANALYZE ONE LIVE FRAME (NO SAVE)"
+    ],
+    "manual_roi_touch": {
+      "button_tapped": true,
+      "preview_tap_location": "near center of preview",
+      "reported_preview_buffer_fraction": [
+        0.499,
+        0.499
+      ],
+      "interpretation": "touch-to-buffer mapping matches the center tap; overlay geometry was not visually inspected"
+    },
+    "camera_opened": true,
+    "camera_id": "2",
+    "camera_concurrency": "iris camera ID 2 only",
+    "one_frame_analysis": {
+      "request_result_frame": 1154,
+      "sensor_timestamp_ns": 20329697001885,
+      "yuv_image_timestamp_ns": 20329697001885,
+      "exposure_ns": 29995718,
+      "sensitivity_iso": 100,
+      "frame_duration_ns": 33441782,
+      "luma_p05_p50_p95": [
+        0,
+        0,
+        1
+      ],
+      "mean_abs_gradient_horizontal_vertical": [
+        0.1,
+        0.1
+      ],
+      "quality_gate": "rejected before ROI proposal; p95 1 < provisional threshold 32",
+      "raw_saved_or_exported": false
+    },
+    "active_camera_clients_after_cleanup": [],
+    "camera_services_after_cleanup": {
+      "cameraserver": "running",
+      "camera_provider": "running",
+      "mm-qcamera-daemon": "running"
+    },
+    "led_brightness_after_cleanup": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "iris_service": "not found",
+    "cleanup": {
+      "temporary_package_uninstalled": true,
+      "hierarchy_dump_removed": true,
+      "existing_probe_packages_modified": false
+    }
+  },
+  "limitations": [
+    "The frame was nearly black because the sensor remained covered by the reflective can; it provides no useful iris-image evidence.",
+    "The low-signal quality gate prevented the manual crop's circle proposal and matcher path from running.",
+    "The overlay was not visually inspected and no enrollment code was produced or persisted.",
+    "No IR or visible flash channel was enabled."
+  ]
+}

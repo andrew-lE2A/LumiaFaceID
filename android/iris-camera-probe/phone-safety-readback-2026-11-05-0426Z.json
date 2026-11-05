@@ -1,0 +1,26 @@
+{
+  "observed_at_host_utc": "2026-11-05T04:26:02Z",
+  "device_serial": "<redacted>",
+  "phone_reported_time": "Wed Nov 4 21:50:17 UTC 2026",
+  "inspection": "Read-only ADB shell queries; no camera or LED control commands issued",
+  "led_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "camera_devices": {
+    "0": "closed, no client instance",
+    "1": "closed, no client instance",
+    "2": "closed, no client instance"
+  },
+  "camera_service_active_clients": [],
+  "historical_camera_dump_note": "The dump retains historical entries showing camera ID 2 opened by com.lumia.irisprobe.manualroi at 11-04 09:36:40 and disconnected at 11-04 09:36:40; current per-device state is closed.",
+  "iris_service": "not found",
+  "biometric_service": {
+    "legacy_settings": false,
+    "sensors": [],
+    "current_session": null
+  },
+  "result": "Safe idle state confirmed: LEDs off, all cameras closed, no registered iris service or biometric session. No stream or IR test performed because the phone remains under the reflective can."
+}

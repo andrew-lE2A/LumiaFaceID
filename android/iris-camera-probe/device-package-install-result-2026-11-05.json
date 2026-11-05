@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-05",
+  "package": "com.lumia.irisprobe.development",
+  "build": {
+    "source": "current workspace android/iris-camera-probe Java sources",
+    "sdk": "/tmp/android-sdk, platform 35 and build-tools 35.0.0",
+    "manifest_only_change": "temporary build copy uses a distinct application ID and fully qualified source activity; repository manifest was not changed",
+    "signature": "temporary development key outside the repository",
+    "apksigner_verified": true,
+    "apk_sha256": "b63220721e64bf5d2f92d9112e2217e1ff66cddcb090c5d5f705f23514d7417d"
+  },
+  "phone": {
+    "install": "adb streamed install succeeded; incremental mode was rejected by this Android build and adb fell back to streamed install",
+    "installed_apk_sha256": "cc194690719002a7d12e781340cb395e9359fa03bfdcdd8529b89864546a1381",
+    "launcher_resolves": "com.lumia.irisprobe.development/com.lumia.irisprobe.IrisProbeActivity",
+    "activity_launched": true,
+    "camera_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "camera_permission": "granted temporarily for the bounded test, then revoked",
+    "camera_stream_test": "camera ID 2 selected by 1920x1088 metadata; Camera2 opened and configured a 1920x1080 preview with 1920x1080 YUV analysis output; repeated capture result callbacks reached frame 480 during approximately 38 seconds; updated in-memory luma quality diagnostics were compiled and installed in the second run",
+    "one_frame_analysis": "in-memory no-save analysis: spatial Y p05=11, p50=19, p95=98, mean absolute gradient H/V=1.09/1.09, clipped <=16/>=240=36.23%/0.89%, tile standard deviation min/max=3.16/56.17; no frontal-face candidate; the can-covered setup makes these image-quality readings inconclusive for iris detail",
+    "camera_clients_after_cleanup": [],
+    "led_brightness_after_cleanup": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "teardown_note": "Camera2 logged error code 3 during force-stop teardown; after cleanup CameraService showed no active camera clients"
+  },
+  "privacy_and_safety": {
+    "camera_opened": true,
+    "ir_enabled": false,
+    "raw_biometric_data_copied": false
+  },
+  "publication": "local only; no commit, push, or PR"
+}

@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-05",
+  "scope": "read-only ADB state check on attached Lumia 950 XL cityman",
+  "device": {
+    "serial": "<redacted>",
+    "transport": "USB",
+    "camera_device_count": 3,
+    "active_camera_clients": [],
+    "all_camera_devices_closed": true,
+    "iris_framework_service": "not found",
+    "iris_feature_advertised": false
+  },
+  "illumination": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "actions": {
+    "camera_opened": false,
+    "emitter_written": false,
+    "device_modified": false
+  },
+  "result": "phone was idle and all queried illumination channels were off"
+}

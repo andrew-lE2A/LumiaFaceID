@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-05",
+  "apk_sha256": "5911fd16d9566facf7af85858a8ad1b374bebab9ae8c4ff4a5c8e72ee51f98c0",
+  "package": "com.lumia.irisprobe.quality",
+  "input": {
+    "source": "existing app-private phone frame",
+    "dimensions": "1920x1080 I420",
+    "capture_scene": "previous uncontrolled dark-room pink-light baseline, IR off",
+    "raw_pixels_exported": false,
+    "new_camera_capture": false
+  },
+  "method": {
+    "operation": "downsample luma in memory, rotate 90 degrees using sensor orientation, run Android FaceDetector on RGB_565 bitmap",
+    "working_dimensions": "180x320",
+    "maximum_faces": 1,
+    "outputs": "candidate confidence and coarse eye-pair midpoint/separation only"
+  },
+  "result": "No frontal-face candidate detected at 180x320. This room-only frame is not an eye sample; a negative result does not establish whether a face/eye can be detected under a usable capture setup.",
+  "cleanup": {
+    "active_camera_clients": 0,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "limitations": [
+    "Android FaceDetector is a generic face detector, not an iris detector.",
+    "It supplies only a coarse eye-pair estimate and cannot segment the pupil/iris boundary.",
+    "No matcher, enrollment, or authentication was attempted."
+  ]
+}

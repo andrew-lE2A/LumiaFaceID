@@ -185,6 +185,12 @@ Keep binary inputs outside Git and preserve their provenance and hashes.
 The baseline collector can identify existing Linux interfaces, but cannot recover
 an absent sensor's register program or prove optical safety.
 
+The newly recovered authentication-component boundary and its separate
+`Icaros.dll` dependency are mapped in
+[windows-iris-stack-map.md](windows-iris-stack-map.md). This is static binary
+metadata and string/import analysis; it does not recover the recognition
+algorithm or Windows Hello template storage.
+
 ## Android authentication is a separate implementation
 
 In inspected LineageOS 23.2 sources:

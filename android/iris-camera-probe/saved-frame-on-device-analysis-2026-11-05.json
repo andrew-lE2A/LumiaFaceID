@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded analysis of an existing private YUV file, performed entirely on the Lumia",
+  "source_frame": {
+    "package": "com.lumia.irisprobe.quality",
+    "path": "/data/user/0/com.lumia.irisprobe.quality/files/iris-frame-1793810192831-1920x1080-i420.yuv",
+    "dimensions": [1920, 1080],
+    "original_left_in_place": true,
+    "raw_pixels_transferred_to_host": false
+  },
+  "temporary_analyzer": {
+    "package": "com.lumia.irisprobe.savedanalysis",
+    "apk_sha256": "c08af13d86164f4c05bbb3c1af3e920d6c9f3bf19e49d12acf66f387bdaee45e",
+    "dex_sha256": "fd9b56097c4de93ed3c4b1ac75019313cbe7ad319646fddc61ad5aa50f64c16d",
+    "installed_separately": true,
+    "temporary_on_device_copy_removed": true,
+    "package_uninstalled": true
+  },
+  "setup_note": "The first temporary APK had a manifest namespace mismatch and failed before analysis. The activity declaration was corrected, rebuilt, and the corrected APK completed the saved-frame analysis.",
+  "result": {
+    "luma_mean": 72.28,
+    "luma_standard_deviation": 22.46,
+    "luma_range": [9, 161],
+    "luma_percentiles_p05_p50_p95": [39, 73, 106],
+    "mean_absolute_horizontal_vertical_gradient": [1.74, 1.74],
+    "tile_standard_deviation_min_max": [6.04, 15.60],
+    "generic_face_detector": "no face-derived eye-box proposal",
+    "whole_frame_contrast_fallback": "no candidate; the downsampled luma exceeded the provisional signal floor",
+    "interpretation": "The frame contains spatial variation, but the generic detector found no eye-box proposal. It is not a usable iris sample and does not establish matcher behavior."
+  },
+  "device_safety": {
+    "camera_opened": false,
+    "camera_permission_requested": false,
+    "active_camera_clients_after_teardown": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "original_frame_still_present": true
+  },
+  "source_changes": [
+    "Saved-frame aggregate diagnostics can display while the camera is closed.",
+    "The app no longer requests camera permission at startup; permission is requested only when Open iris is selected.",
+    "Saved-frame summary withholds eye-box coordinates and reports only whether a generic proposal was found.",
+    "The YUV read buffer, downsample sums/counts, spatial-quality accumulators, and plane summaries are overwritten after analysis."
+  ],
+  "limitations": [
+    "The original frame was captured under uncontrolled visible room light with IR off.",
+    "Spatial luma metrics do not prove iris texture resolution; detector failure is inconclusive for a dedicated iris view.",
+    "The negative whole-frame result is one room-scene observation and does not validate false-positive rejection on other scenes.",
+    "The temporary analyzer used the existing Camera2 probe activity and did not open the camera or request LED control.",
+    "Java array overwrites remain best effort rather than guaranteed secure erasure."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-05",
+  "scope": "local software implementation and synthetic geometry checks; not run on the phone",
+  "ui_action": "Analyze one live frame (no save)",
+  "acquisition": "one TEMPLATE_STILL_CAPTURE targeted at the existing YUV ImageReader, five-second timeout, no IR/LED request",
+  "processing": "downsample one Y plane to 320x180, run the existing generic frontal-face detector in memory, map eye-pair-derived heuristic crop boxes back to sensor coordinates, discard the frame",
+  "privacy": "no frame bytes, crops, or eye coordinates are persisted by this action",
+  "synthetic_geometry_checks": {
+    "source_size": [
+      1920,
+      1080
+    ],
+    "detector_size": [
+      320,
+      180
+    ],
+    "rotations_degrees": [
+      0,
+      90,
+      180,
+      270
+    ],
+    "round_trip_point_sensor": [
+      600,
+      390
+    ],
+    "round_trip_error_pixels": 0
+  },
+  "build": "Android SDK platform 35 APK build and apksigner verification passed",
+  "apk_sha256": "34cebdf7fc6cdfa7e99c6e53ed3fb13e3dde46b299b54528aad2e204fbafea76",
+  "phone_test": {
+    "package_update": "com.lumia.irisprobe.quality updated in place with a temporary namespace-adjusted build signed by its existing development key",
+    "activity_launch": "launch reached the probe activity; logcat recorded Ready and preview texture ready without an app crash",
+    "ui_verification": "uiautomator hierarchy showed the system keyguard rather than the probe controls, so the new button was not verified visually",
+    "camera_stream": "active client list empty after force-stop",
+    "leds": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "raw_export": false,
+    "quality_package_sha256": "2f16a6d1d54cac75ddc028a685b8cdeef49f1c75ff764cb72d647cf1329eb674",
+    "latest_package_startup": "latest package launch reached Ready and preview texture ready; no crash",
+    "live_frame_action": "not run; camera left closed and can setup not used for capture"
+  },
+  "limitations": [
+    "Android generic face detector may not detect an eye/face in this IR stream",
+    "crop boxes are heuristics around the inter-eye estimate, not iris or pupil bounds",
+    "does not invoke or validate an iris matcher",
+    "not enrollment or Android authentication"
+  ],
+  "frame_operation_controls": "save, live analysis, and IR pulse are mutually exclusive while one-frame work is pending; the IR pulse reserves the operation slot before contacting the helper; error/timeout/close clears pending state",
+  "host_test": "python3 -m unittest tests/test_iris_probe_host.py passed; synthetic-only geometry, boundary, mask, and phase-code checks"
+}

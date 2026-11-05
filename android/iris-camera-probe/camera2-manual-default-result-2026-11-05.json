@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "serial": "<redacted>",
+    "android_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.development",
+    "apk_sha256": "074761af37f545e85ba6f3b27ed54d1c5566d9205ae807f04a8d82386de5c831"
+  },
+  "test": {
+    "scope": "reversible Camera2 repeating-request control check; no IR, flash or saved YUV frames",
+    "camera_id": "2",
+    "initial_preview_mode": "manual baseline automatically selected because camera advertises MANUAL_SENSOR",
+    "manual_results": {
+      "exposure_ns": 29995718,
+      "sensitivity_iso": 100,
+      "frame_duration_ns": 33441782,
+      "observations": "Repeated across the initial preview and after returning from AE."
+    },
+    "ae_restore": {
+      "exposure_ns": 75004280,
+      "sensitivity_iso": 4859,
+      "frame_duration_ns": 75184080,
+      "ae_state": 2
+    },
+    "toggle_check": "Manual -> AE auto -> manual succeeded; result metadata followed each mode. The final test ended in manual mode before camera close.",
+    "capture_result_callbacks_before_close": 1181
+  },
+  "cleanup": {
+    "camera_close": "normal UI close",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "camera_permission": "revoked after test",
+    "app_process": "force-stopped"
+  },
+  "interpretation": "The source-derived manual exposure baseline is honored as the diagnostic app's initial mode. Automatic mode is still available for controlled comparison, but it returns ISO 4859 despite advertising ISO 100-800. No image quality was assessed in this test; the reflective can remained over the sensor and the emitter was never enabled.",
+  "publication": "local only; no commit, push, or PR"
+}

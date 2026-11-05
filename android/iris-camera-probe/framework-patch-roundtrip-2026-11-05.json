@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-05",
+  "scope": "local framework patch consistency check; no Android build or device installation",
+  "patches": [
+    "0003-lineage-iris-authenticator-properties.patch",
+    "0004-lineage-keyguard-class1-iris-result.patch",
+    "0005-lineage-iris-keyguard-request-api.patch"
+  ],
+  "method": "Copied the currently modified AIDL, Java, and SystemUI files into /private/tmp, reversed patches 0005, 0004, 0003, then applied them forward in order.",
+  "result": "all patches reversed and reapplied cleanly; every round-trip file matched the current framework working tree byte-for-byte",
+  "limits": [
+    "This establishes consistency between the patch artifacts and the already-modified working source; it is not an independent clean-baseline applicability check.",
+    "No AOSP framework compilation was run.",
+    "No phone framework files were changed."
+  ]
+}

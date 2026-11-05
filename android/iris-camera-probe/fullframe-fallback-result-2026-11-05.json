@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL (cityman)",
+    "serial": "<redacted>",
+    "android_build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.development",
+    "apk_sha256": "162a17a1ee0648c541b5a263f23b1755a947dd819d0d637b33ed78240164bf06"
+  },
+  "test": {
+    "scope": "one bounded Camera2 preview with one in-memory YUV analysis; IR and flash disabled",
+    "selected_camera_id": "2",
+    "sensor_metadata": "1920x1088, facing=0, orientation=90 degrees",
+    "stream": "1920x1080 preview and 1920x1080 YUV_420_888 analysis",
+    "capture_callbacks": 146,
+    "analysis_elapsed_seconds": 3.1,
+    "luma_quality": {
+      "p05": 10,
+      "p50": 18,
+      "p95": 75,
+      "mean_absolute_gradient_horizontal_vertical": [1.05, 1.09],
+      "clipped_percent_le_16_ge_240": [40.61, 0.51],
+      "tile_standard_deviation_min_max": [3.14, 99.47],
+      "grid": "8x6"
+    },
+    "face_detector": "no frontal-face candidate at 180x320",
+    "whole_frame_circular_proposal": "no candidate after the plausibility filter",
+    "context": "Sensor was under the reflective can. These metrics and negative proposals are not useful iris image or localization evidence. No frame pixels or biometric template were written or exported."
+  },
+  "algorithm_change": {
+    "observation": "The previous covered-scene run proposed center=(1272,354), pupil radius=24 px, iris radius=324 px, ratio=13.5:1, edge strengths=0.034/0.015.",
+    "change": "Added a generous maximum iris-to-pupil radius ratio of 8:1 and a coarser low-resolution fallback search. The implausible candidate was rejected. The new single-run duration was 3.1 s versus about 4.8 s in the previous run; this is not a controlled benchmark."
+  },
+  "cleanup": {
+    "camera_close": "normal UI close after analysis",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "camera_permission": "revoked after test",
+    "app_process": "stopped"
+  },
+  "publication": "local only; no commit, push, or PR"
+}

@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-05",
+  "scope": "local javac and D8 compile of the in-memory diagnostic cleanup; no APK installed",
+  "build": {
+    "sdk": "/private/tmp/android-sdk",
+    "platform": "android-35",
+    "build_tools": "35.0.0",
+    "javac": "passed with standard source/target 8 deprecation/bootstrap warnings",
+    "d8": "passed",
+    "dex_path": "/private/tmp/lumia-iris-zeroize-build/dex/classes.dex",
+    "dex_sha256": "eb9166d80dde21918dd3caaaec4bafd16006dfa366297684f4b8754839c4c125"
+  },
+  "changes": [
+    "Diagnostic phase-code and enrollment arrays are overwritten when cleared.",
+    "Frame luma, detector/downsample scratch, and quality-statistic buffers are overwritten after analysis, including error exits.",
+    "Private frame-derived diagnostics remain in the app status view rather than Logcat."
+  ],
+  "phone": {
+    "installed": false,
+    "camera_opened": false,
+    "leds_written": false
+  },
+  "limitations": [
+    "Java zeroization is best effort and cannot guarantee copies made by the runtime or camera stack are erased.",
+    "This is diagnostic application memory handling, not a protected biometric path.",
+    "No candidate-bearing frame was processed after these changes."
+  ]
+}

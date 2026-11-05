@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 typedef uint32_t u32;
+#define __iomem
 #define MAX_CSIPHY 3
 #define CSI_DECODE_10BIT 2
 #define CSIPHY_POWER_UP 0
@@ -17,8 +18,10 @@ struct platform_device { int id; };
 struct resource { unsigned int start; };
 struct csiphy_reg_parms_t {
     u32 mipi_csiphy_glbl_pwr_cfg_addr, mipi_csiphy_glbl_reset_addr,
-        mipi_csiphy_lnn_cfg2_addr, mipi_csiphy_lnn_cfg3_addr,
-        mipi_csiphy_lnn_misc1_addr, mipi_csiphy_interrupt_status0_addr;
+        mipi_csiphy_lnn_cfg1_addr, mipi_csiphy_lnn_cfg2_addr,
+        mipi_csiphy_lnn_cfg3_addr, mipi_csiphy_lnn_cfg4_addr,
+        mipi_csiphy_lnn_cfg5_addr, mipi_csiphy_lnn_misc1_addr,
+        mipi_csiphy_interrupt_status0_addr;
 };
 struct csid_reg_parms_t {
     u32 csid_stats_total_pkts_rcvd_addr, csid_stats_ecc_addr, csid_stats_crc_addr,
@@ -106,7 +109,7 @@ int main(void) {
     struct resource pm={0xfda0b400}, dm={0xfda08c00};
     struct csiphy_device p; struct csid_device d; struct iris_csi s;
     typeof(*d.ctrl_reg) regs={{0,4,8,12,16,20,24,28}};
-    typeof(*p.ctrl_reg) preg={{0x144,0x140,4,8,0x28,0x18c}};
+    typeof(*p.ctrl_reg) preg={{0x144,0x140,0,4,8,0xc,0x10,0x28,0x18c}};
     unsigned int n;
     int cleanup_status=0, teardown_calls=0;
     IRIS_CSI_RELEASE_STEP(cleanup_status, (++teardown_calls, -EIO));

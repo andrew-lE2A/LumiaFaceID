@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-05",
+  "device": "Lumia 950 XL cityman",
+  "android": "LineageOS 23.2 unofficial Android 16 port",
+  "test": "One no-save YUV frame analysis with source-derived manual exposure",
+  "package": "com.lumia.irisprobe.exposuretest",
+  "apk_sha256": "cfad9ad2d887ec1b638509a3e4e34553af97f1aac439d37f0f6649e1994da6c6",
+  "camera_id": "2",
+  "selected_stream": "1920x1080",
+  "requested_mode": "manual; CONTROL_MODE_AUTO, CONTROL_AE_MODE_OFF",
+  "requested_exposure_ns": 30000000,
+  "requested_sensitivity_iso": 100,
+  "requested_frame_duration_ns": 33500000,
+  "one_frame_capture_result": {
+    "frame_number": 447,
+    "exposure_ns": 29995718,
+    "sensitivity_iso": 100,
+    "frame_duration_ns": 33441782,
+    "ae_state": 1
+  },
+  "preview_capture_result_before_and_after": {
+    "exposure_ns": 29995718,
+    "sensitivity_iso": 100,
+    "frame_duration_ns": 33441782
+  },
+  "ae_auto_follow_up": {
+    "requested_mode": "AE auto after tapping Use AE auto (restore)",
+    "one_frame_capture_result": {
+      "frame_number": 119,
+      "exposure_ns": 75004280,
+      "sensitivity_iso": 4860,
+      "frame_duration_ns": 75184080,
+      "ae_state": 2
+    },
+    "preview_result_same_session": {
+      "exposure_ns": 75004280,
+      "sensitivity_iso": 4859,
+      "frame_duration_ns": 75184080,
+      "ae_state": 2
+    },
+    "in_memory_luma_summary": {
+      "p05": 7,
+      "p50": 14,
+      "p95": 25,
+      "mean_absolute_gradient_horizontal": 0.81,
+      "mean_absolute_gradient_vertical": 0.81,
+      "fraction_at_or_below_16_percent": 67.60,
+      "fraction_at_or_above_240_percent": 0.0,
+      "contrast_only_proposal": {
+        "center_sensor_px": [1182, 432],
+        "pupil_radius_px": 24,
+        "outer_radius_px": 60,
+        "edge_strengths": [0.060, 0.015],
+        "valid_phase_bit_fraction": 0.560
+      },
+      "interpretation": "The analyzer proposed a circle on the covered frame. The heuristic has not established that it depicts an eye or iris; it was not enrolled or compared."
+    }
+  },
+  "low_signal_gate_follow_up": {
+    "apk_sha256": "9c8206c182b23b0dd3ff769987a2ac4f8d87c712d96b682b76cbeb86603f7fa0",
+    "provisional_p95_floor": 32,
+    "phone_run": {
+      "mode": "AE auto",
+      "exposure_ns": 75004280,
+      "sensitivity_iso": 4860,
+      "frame_duration_ns": 75184080,
+      "luma_p05": 11,
+      "luma_p50": 18,
+      "luma_p95": 85,
+      "result": "The gate did not activate because p95 exceeded 32; no contrast candidate was found. This phone frame did not validate rejection at the low-signal boundary."
+    },
+    "host_boundary_checks": "p95 values 3 and 25 rejected; 32 accepted",
+    "interpretation": "A software guard against the two observed black frames; the threshold remains provisional and needs real uncovered captures before calibration."
+  },
+  "in_memory_luma_summary": {
+    "p05": 0,
+    "p50": 0,
+    "p95": 3,
+    "mean_absolute_gradient_horizontal": 0.25,
+    "mean_absolute_gradient_vertical": 0.25,
+    "fraction_at_or_below_16_percent": 99.04,
+    "fraction_at_or_above_240_percent": 0.0,
+    "interpretation": "Nearly black frame, consistent with the sensor being covered; no face or full-frame contrast candidate."
+  },
+  "image_saved": false,
+  "ir_enabled": false,
+  "led_brightness_after": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "camera_session_closed": true,
+    "probe_force_stopped": true,
+    "camera_permission_revoked": true,
+    "active_camera_clients_after_cleanup": []
+  },
+  "result": "One-shot YUV analysis inherited the manual preview exposure instead of falling back to AE. This verifies Camera2 control propagation, not image usability or iris recognition."
+}

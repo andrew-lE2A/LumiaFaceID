@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-05",
+  "device": {
+    "serial": "<redacted>",
+    "model": "Lumia 950 XL",
+    "build": "23.2-20261102-UNOFFICIAL-cityman"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.development",
+    "apk_sha256": "b63220721e64bf5d2f92d9112e2217e1ff66cddcb090c5d5f705f23514d7417d"
+  },
+  "test": {
+    "type": "bounded Camera2 stream and one-frame in-memory analysis; IR disabled",
+    "selected_camera_id": "2",
+    "selection_evidence": "1920x1088 sensor metadata; facing=0; sensorOrientation=90",
+    "configured_stream": "1920x1080 preview and 1920x1080 YUV_420_888",
+    "camera_callbacks": "CAPTURE RESULT callbacks logged through frame 480 over approximately 38 seconds; approximately 13 fps",
+    "analysis": "one live YUV frame analyzed in memory at 1920x1080; aggregate luma metrics logged; no frontal-face candidate at 180x320; frame pixels discarded; no file saved",
+    "ir": "not enabled; no IR pulse attempted",
+    "live_luma_quality": {
+      "p05": 11,
+      "p50": 19,
+      "p95": 98,
+      "mean_absolute_gradient_horizontal_vertical": [
+        1.09,
+        1.09
+      ],
+      "clipped_percent_le_16_ge_240": [
+        36.23,
+        0.89
+      ],
+      "tile_standard_deviation_min_max": [
+        3.16,
+        56.17
+      ],
+      "grid": "8x6"
+    }
+  },
+  "cleanup": {
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "probe_process": "force-stopped",
+    "camera_permission": "revoked after test",
+    "camera2_error": "code 3 logged at force-stop teardown; CameraService subsequently showed zero active clients"
+  },
+  "interpretation": "The Android Camera2 path returns non-flat pixel buffers and capture callbacks for camera ID 2. The high near-black fraction and weak average gradients were measured with the sensor covered by the can and are not useful calibration evidence. This does not confirm a usable iris image, iris localization, or authentication.",
+  "publication": "local only; no commit, push, or PR"
+}
