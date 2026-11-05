@@ -1,6 +1,7 @@
 package com.lumia.irisprobe;
 
 import java.util.Locale;
+import java.nio.ByteBuffer;
 
 /** Synthetic host checks for geometry, circular proposals, and phase-code mechanics. */
 public final class IrisProbeHostTest {
@@ -56,6 +57,44 @@ public final class IrisProbeHostTest {
                 "low-signal covered AE frame passed the provisional quality gate");
         check(DiagnosticFrameQuality.hasUsableLumaSignal(32),
                 "quality gate rejected its configured boundary");
+    }
+
+    private static void testYuvPlaneCropCopy() {
+        boolean oddOriginRejected = false;
+        try {
+            YuvPlaneCopier.chromaCrop(1, 1, 5, 5);
+        } catch (IllegalArgumentException expected) {
+            oddOriginRejected = true;
+        }
+        check(oddOriginRejected, "odd-origin chroma crop was packed without rephasing");
+        YuvPlaneCopier.Crop evenCrop = YuvPlaneCopier.chromaCrop(2, 4, 7, 9);
+        check(evenCrop.left == 1 && evenCrop.top == 2 && evenCrop.width == 3
+                        && evenCrop.height == 3,
+                "even-origin chroma crop did not map to half-resolution bounds");
+
+        ByteBuffer source = ByteBuffer.allocate(40);
+        source.position(3);
+        int base = source.position();
+        int rowStride = 10;
+        int pixelStride = 2;
+        for (int row = 0; row < 3; row++) for (int column = 0; column < 4; column++) {
+            source.put(base + row * rowStride + column * pixelStride, (byte) (10 * row + column));
+        }
+        byte[] cropped = YuvPlaneCopier.copy(source, rowStride, pixelStride,
+                4, 3, 1, 1, 2, 2);
+        check(cropped.length == 4 && (cropped[0] & 0xff) == 11 && (cropped[1] & 0xff) == 12
+                        && (cropped[2] & 0xff) == 21 && (cropped[3] & 0xff) == 22,
+                "cropped plane copy ignored row/pixel stride or crop origin");
+        check(source.position() == base, "plane copy changed the caller's buffer position");
+
+        boolean boundsRejected = false;
+        try {
+            YuvPlaneCopier.copy(source, rowStride, pixelStride, 3, 3, 2, 1, 2, 1);
+        } catch (IllegalArgumentException expected) {
+            boundsRejected = true;
+        }
+        check(boundsRejected, "plane copy accepted a crop that extends into row padding");
+        java.util.Arrays.fill(cropped, (byte) 0);
     }
 
     private static void testCircularProposal() {
@@ -219,6 +258,7 @@ public final class IrisProbeHostTest {
     }
 
     public static void main(String[] args) {
+        testYuvPlaneCropCopy();
         testGeometry();
         testDiagnosticFrameQualityGate();
         testCircularProposal();

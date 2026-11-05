@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-05",
+  "scope": "bounded IR-off manual exposure sweep and one in-memory YUV quality sample on the Lumia 950 XL iris camera",
+  "device": {
+    "product": "lineage_cityman",
+    "android_release": "16",
+    "camera_count": 3,
+    "camera_id": "2",
+    "camera_role": "front-facing IR0861",
+    "sensor_orientation_degrees": 90,
+    "stream": [1920, 1080],
+    "sensor_exposure_range_ns": [29966, 1963576485],
+    "sensor_sensitivity_range_iso": [100, 800]
+  },
+  "build": {
+    "source": "android/iris-camera-probe/src/com/lumia/irisprobe/IrisProbeActivity.java",
+    "source_sha256": "af72a819c1dc3a5ba0cec3f616b3b4e56f489f4c4ccffa2c743c1f2d65f4d318",
+    "temporary_package": "com.lumia.irisprobe.exposurecheck",
+    "apk_sha256": "85a2c5e3f230e1c17ebec2024fa10aa62eb67c4d78ba41d0f9d83f2657680fe8",
+    "compile": "javac against Android SDK 35 succeeded; D8, zipalign, apksigner and APK signature verification succeeded"
+  },
+  "manual_exposure_requests": [
+    {"requested_exposure_ns": 50000000, "returned_exposure_ns": 49982876, "returned_frame_duration_ns": 53458904, "returned_iso": 100},
+    {"requested_exposure_ns": 75000000, "returned_exposure_ns": 74974312, "returned_frame_duration_ns": 78450344, "returned_iso": 100},
+    {"requested_exposure_ns": 100000000, "returned_exposure_ns": 99995720, "returned_frame_duration_ns": 103441784, "returned_iso": 100},
+    {"requested_exposure_ns": 150000000, "returned_metadata_recorded": false, "note": "request accepted by Camera2; no sampled preview callback was logged before the next step"},
+    {"requested_exposure_ns": 200000000, "returned_exposure_ns": 199991440, "returned_frame_duration_ns": 203467456, "returned_iso": 100},
+    {"requested_exposure_ns": 300000000, "returned_exposure_ns": 299987168, "returned_frame_duration_ns": 303463200, "returned_iso": 100}
+  ],
+  "one_frame_analysis": {
+    "requested_exposure_ns": 300000000,
+    "returned_exposure_ns": 299987168,
+    "requested_iso": 800,
+    "returned_iso": 800,
+    "post_raw_sensitivity_boost_percent": 100,
+    "frame_duration_ns": 303463200,
+    "crop": [0, 0, 1920, 1080],
+    "capture_result_yuv_timestamp_match": true,
+    "pixels_saved_or_exported": false,
+    "luma_p05_p50_p95": [21, 36, 47],
+    "mean_abs_gradient_horizontal_vertical": [3.62, 3.59],
+    "clipped_at_or_below_16_percent": 2.45,
+    "clipped_at_or_above_240_percent": 0.0,
+    "face_derived_eye_roi": "none",
+    "whole_frame_contrast_proposal": "display-only; not iris localization and not used for matching"
+  },
+  "illumination": {
+    "ir_enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_package_uninstalled": true,
+    "camera_device_count_after": 3,
+    "devices_0_1_2_closed_after": true,
+    "cameraserver_running_after": true,
+    "qcamerasvr_running_after": true,
+    "camera_provider_running_after": true,
+    "all_led_channels_zero_after": true
+  },
+  "interpretation": "The new manual exposure selector is range-clamped and Camera2 result exposure/frame-duration values tracked the 50, 75, 100, 200 and 300 ms requests. At 300 ms and ISO 800, in-memory luma statistics passed the provisional p95=32 signal floor, unlike the 30 ms / ISO 100 near-black baseline. No face-derived eye ROI was found and no pixels were saved, so this establishes a higher-signal diagnostic setting only; it does not prove usable iris detail, physical analog gain calibration, matcher quality or authentication.",
+  "publication": "recorded in the local LumiaFaceID repository"
+}

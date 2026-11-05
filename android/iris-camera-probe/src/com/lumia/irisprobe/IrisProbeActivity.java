@@ -11,6 +11,7 @@ import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -29,6 +30,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -53,6 +55,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -67,9 +70,17 @@ public final class IrisProbeActivity extends Activity {
     private static final int TORCH_PORT = 18761;
     private static final long WINDOWS_BASELINE_EXPOSURE_NS = 30_000_000L;
     private static final long WINDOWS_BASELINE_FRAME_DURATION_NS = 33_500_000L;
+    private static final long FRAME_READOUT_MARGIN_NS = 3_500_000L;
     private static final int WINDOWS_BASELINE_SENSITIVITY_ISO = 100;
+    private static final int[] MANUAL_SENSITIVITY_STEPS_ISO = {100, 200, 400, 800};
+    private static final long[] MANUAL_EXPOSURE_STEPS_NS = {
+            5_000_000L, 10_000_000L, 20_000_000L, 30_000_000L,
+            50_000_000L, 75_000_000L, 100_000_000L, 150_000_000L,
+            200_000_000L, 300_000_000L
+    };
 
     private final AtomicInteger completedFrames = new AtomicInteger();
+    private final AtomicReference<CountDownLatch> pendingPulseCaptureCompletion = new AtomicReference<>();
     private TextView status;
     private AspectTextureView preview;
     private AspectRatioFrame previewContainer;
@@ -88,7 +99,11 @@ public final class IrisProbeActivity extends Activity {
     private boolean surfaceReady;
     private boolean manualSensorSupported;
     private int sensorTimestampSource = -1;
+    private Range<Integer> sensorSensitivityRange;
+    private Range<Long> sensorExposureRangeNs;
+    private long sensorMaxFrameDurationNs;
     private volatile boolean manualExposureMode;
+    private volatile long manualExposureNs = WINDOWS_BASELINE_EXPOSURE_NS;
     private int previewRotationOffset;
     private Button irButton;
     private boolean pulseUsed;
@@ -99,6 +114,9 @@ public final class IrisProbeActivity extends Activity {
     private Button enrollButton;
     private Button compareButton;
     private Button exposureButton;
+    private Button exposureStepButton;
+    private Button sensitivityButton;
+    private volatile int manualSensitivityIso = WINDOWS_BASELINE_SENSITIVITY_ISO;
     private volatile boolean saveNextFrame;
     private volatile boolean analyzeNextFrame;
     private volatile boolean compareNextFrame;
@@ -236,6 +254,18 @@ public final class IrisProbeActivity extends Activity {
         exposureButton.setOnClickListener(v -> toggleExposureMode());
         root.addView(exposureButton, new LinearLayout.LayoutParams(-1, -2));
 
+        exposureStepButton = new Button(this);
+        exposureStepButton.setText("Manual exposure 30 ms (tap to change)");
+        exposureStepButton.setEnabled(false);
+        exposureStepButton.setOnClickListener(v -> cycleManualExposure());
+        root.addView(exposureStepButton, new LinearLayout.LayoutParams(-1, -2));
+
+        sensitivityButton = new Button(this);
+        sensitivityButton.setText("Manual ISO 100 (tap to increase)");
+        sensitivityButton.setEnabled(false);
+        sensitivityButton.setOnClickListener(v -> cycleManualSensitivity());
+        root.addView(sensitivityButton, new LinearLayout.LayoutParams(-1, -2));
+
         LinearLayout controls = new LinearLayout(this);
         rotateButton = new Button(this);
         rotateButton.setText("Rotate +90°");
@@ -247,7 +277,7 @@ public final class IrisProbeActivity extends Activity {
         });
         controls.addView(rotateButton, new LinearLayout.LayoutParams(0, -2, 1));
         irButton = new Button(this);
-        irButton.setText("IR + capture (min, 1 s)");
+        irButton.setText("IR + analyze (min, ≤1 s)");
         irButton.setEnabled(false);
         irButton.setOnClickListener(v -> pulseAndCaptureOnce());
         controls.addView(irButton, new LinearLayout.LayoutParams(0, -2, 1));
@@ -324,7 +354,11 @@ public final class IrisProbeActivity extends Activity {
                 try {
                     image = reader.acquireNextImage();
                     if (image != null) {
+                        Rect crop = image.getCropRect();
                         logLine("ONE-FRAME YUV IMAGE timestampNs=" + image.getTimestamp()
+                                + " buffer=" + image.getWidth() + "x" + image.getHeight()
+                                + " crop=" + crop.left + "," + crop.top + "-"
+                                + crop.right + "," + crop.bottom
                                 + " callbackElapsedRealtimeNs=" + SystemClock.elapsedRealtimeNanos()
                                 + " pulseSequenceActive=" + pulseSequenceActive);
                     }
@@ -345,6 +379,7 @@ public final class IrisProbeActivity extends Activity {
                     compareNextFrame = false;
                     frameOperationBusy = false;
                     finishPendingSave();
+                    signalPulseCaptureCompletion();
                     runOnUiThread(() -> {
                         logLine("YUV frame operation failed: " + e);
                         if (captureButton != null && camera != null && !frameSaved)
@@ -408,8 +443,12 @@ public final class IrisProbeActivity extends Activity {
             Size pixels = c.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
             Integer facing = c.get(CameraCharacteristics.LENS_FACING);
             Integer timestampSource = c.get(CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE);
-            Object exposureRange = c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
-            Object sensitivityRange = c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            Range<Long> exposureRange = c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            Long maxFrameDuration = c.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+            Range<Integer> sensitivityRange = c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            Range<Integer> postRawBoostRange = c.get(
+                    CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE);
+            Integer maxAnalogSensitivity = c.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);
             int[] capabilities = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
             int[] aeModes = c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES);
             boolean manualSensor = false;
@@ -421,6 +460,8 @@ public final class IrisProbeActivity extends Activity {
             }
             logLine("Metadata camera " + id + ": " + pixels + " facing=" + facing
                     + " exposureRangeNs=" + exposureRange + " sensitivityRangeIso=" + sensitivityRange
+                    + " maxAnalogSensitivity=" + maxAnalogSensitivity
+                    + " postRawSensitivityBoostRange=" + postRawBoostRange
                     + " timestampSource=" + timestampSource
                     + " manualSensor=" + manualSensor
                     + " aeModes=" + java.util.Arrays.toString(aeModes));
@@ -434,6 +475,9 @@ public final class IrisProbeActivity extends Activity {
                 match = id;
                 manualSensorSupported = manualSensor;
                 sensorTimestampSource = timestampSource == null ? -1 : timestampSource;
+                sensorSensitivityRange = sensitivityRange;
+                sensorExposureRangeNs = exposureRange;
+                sensorMaxFrameDurationNs = maxFrameDuration == null ? 0 : maxFrameDuration;
             }
         }
         return match;
@@ -452,21 +496,156 @@ public final class IrisProbeActivity extends Activity {
             request.set(CaptureRequest.CONTROL_AE_MODE, enableManual
                     ? CaptureRequest.CONTROL_AE_MODE_OFF : CaptureRequest.CONTROL_AE_MODE_ON);
             if (enableManual) {
-                request.set(CaptureRequest.SENSOR_EXPOSURE_TIME, WINDOWS_BASELINE_EXPOSURE_NS);
-                request.set(CaptureRequest.SENSOR_SENSITIVITY, WINDOWS_BASELINE_SENSITIVITY_ISO);
-                request.set(CaptureRequest.SENSOR_FRAME_DURATION, WINDOWS_BASELINE_FRAME_DURATION_NS);
+                manualSensitivityIso = WINDOWS_BASELINE_SENSITIVITY_ISO;
+                manualExposureNs = clampManualExposure(WINDOWS_BASELINE_EXPOSURE_NS);
+                applyManualSensorSettings(request);
             }
             session.setRepeatingRequest(request.build(), previewCaptureCallback(), cameraHandler);
             manualExposureMode = enableManual;
+            if (!enableManual) manualSensitivityIso = WINDOWS_BASELINE_SENSITIVITY_ISO;
             exposureButton.setText(enableManual
                     ? "Use AE auto (restore)"
                     : "Use manual 30 ms / ISO 100 baseline");
+            if (sensitivityButton != null) {
+                sensitivityButton.setEnabled(enableManual);
+                sensitivityButton.setText("Manual ISO " + manualSensitivityIso + " (tap to increase)");
+            }
+            if (exposureStepButton != null) {
+                exposureStepButton.setEnabled(enableManual);
+                exposureStepButton.setText("Manual exposure " + formatExposureMs(manualExposureNs)
+                        + " ms (tap to change)");
+            }
             logLine(enableManual
                     ? "Requested manual sensor baseline: exposure=30,000,000 ns (about 1000 source-derived lines), "
                             + "ISO=100, frame duration=33,500,000 ns; IR remains off."
                     : "Restored AE auto mode; IR remains off.");
         } catch (CameraAccessException | RuntimeException e) {
             logLine("Could not change Camera2 exposure mode: " + e);
+        }
+    }
+
+    private long clampManualExposure(long requestedNs) {
+        if (sensorExposureRangeNs == null) return requestedNs;
+        return Math.max(sensorExposureRangeNs.getLower(),
+                Math.min(sensorExposureRangeNs.getUpper(), requestedNs));
+    }
+
+    private static String formatExposureMs(long exposureNs) {
+        return String.format(Locale.US, "%.1f", exposureNs / 1_000_000.0);
+    }
+
+    private long manualFrameDurationForExposure(long exposureNs) {
+        long requested = Math.max(WINDOWS_BASELINE_FRAME_DURATION_NS,
+                exposureNs + FRAME_READOUT_MARGIN_NS);
+        if (sensorMaxFrameDurationNs > 0) requested = Math.min(requested, sensorMaxFrameDurationNs);
+        return Math.max(exposureNs, requested);
+    }
+
+    private void applyManualSensorSettings(CaptureRequest.Builder request) {
+        request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+        request.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualExposureNs);
+        request.set(CaptureRequest.SENSOR_SENSITIVITY, manualSensitivityIso);
+        request.set(CaptureRequest.SENSOR_FRAME_DURATION,
+                manualFrameDurationForExposure(manualExposureNs));
+    }
+
+    private void cycleManualExposure() {
+        if (!manualExposureMode || camera == null || session == null || frameOperationBusy) {
+            logLine("Manual exposure control requires an idle manual-exposure preview.");
+            return;
+        }
+        if (sensorExposureRangeNs == null) {
+            logLine("Manual exposure sweep disabled because the camera did not advertise an exposure range.");
+            return;
+        }
+        int currentIndex = -1;
+        for (int i = 0; i < MANUAL_EXPOSURE_STEPS_NS.length; i++) {
+            if (MANUAL_EXPOSURE_STEPS_NS[i] == manualExposureNs) currentIndex = i;
+        }
+        long nextExposureNs = -1;
+        for (int step = 1; step <= MANUAL_EXPOSURE_STEPS_NS.length; step++) {
+            int index = (currentIndex + step + MANUAL_EXPOSURE_STEPS_NS.length)
+                    % MANUAL_EXPOSURE_STEPS_NS.length;
+            long candidate = clampManualExposure(MANUAL_EXPOSURE_STEPS_NS[index]);
+            if (candidate == manualExposureNs) continue;
+            long frameDuration = manualFrameDurationForExposure(candidate);
+            if (sensorMaxFrameDurationNs > 0 && frameDuration > sensorMaxFrameDurationNs) continue;
+            nextExposureNs = candidate;
+            break;
+        }
+        if (nextExposureNs < 0) {
+            logLine("No other manual exposure step fits advertised exposure/frame-duration ranges: exposure="
+                    + sensorExposureRangeNs + " maxFrameDurationNs=" + sensorMaxFrameDurationNs + ".");
+            return;
+        }
+        long previousExposureNs = manualExposureNs;
+        try {
+            manualExposureNs = nextExposureNs;
+            CaptureRequest.Builder request = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            request.addTarget(previewSurface);
+            request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+            applyManualSensorSettings(request);
+            session.setRepeatingRequest(request.build(), previewCaptureCallback(), cameraHandler);
+            if (exposureStepButton != null)
+                exposureStepButton.setText("Manual exposure " + formatExposureMs(manualExposureNs)
+                        + " ms (tap to change)");
+            logLine("Requested manual exposure=" + manualExposureNs + " ns ("
+                    + formatExposureMs(manualExposureNs) + " ms), ISO=" + manualSensitivityIso
+                    + ", frameDuration=" + manualFrameDurationForExposure(manualExposureNs)
+                    + " ns; ranges are checked against camera metadata; IR remains off.");
+        } catch (CameraAccessException | RuntimeException e) {
+            manualExposureNs = previousExposureNs;
+            logLine("Could not change manual exposure: " + e);
+        }
+    }
+
+    private void cycleManualSensitivity() {
+        if (!manualExposureMode || camera == null || session == null || frameOperationBusy) {
+            logLine("Manual ISO control requires an idle manual-exposure preview.");
+            return;
+        }
+        int currentIndex = -1;
+        for (int i = 0; i < MANUAL_SENSITIVITY_STEPS_ISO.length; i++) {
+            if (MANUAL_SENSITIVITY_STEPS_ISO[i] == manualSensitivityIso) {
+                currentIndex = i;
+                break;
+            }
+        }
+        int nextSensitivityIso = -1;
+        for (int step = 1; step <= MANUAL_SENSITIVITY_STEPS_ISO.length; step++) {
+            int index = (currentIndex + step + MANUAL_SENSITIVITY_STEPS_ISO.length)
+                    % MANUAL_SENSITIVITY_STEPS_ISO.length;
+            int candidate = MANUAL_SENSITIVITY_STEPS_ISO[index];
+            if (sensorSensitivityRange == null
+                    || (candidate >= sensorSensitivityRange.getLower()
+                    && candidate <= sensorSensitivityRange.getUpper())) {
+                nextSensitivityIso = candidate;
+                break;
+            }
+        }
+        if (nextSensitivityIso < 0) {
+            logLine("No diagnostic manual ISO step is inside the sensor's advertised range "
+                    + sensorSensitivityRange + ".");
+            return;
+        }
+        try {
+            CaptureRequest.Builder request = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            request.addTarget(previewSurface);
+            request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+            request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            request.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualExposureNs);
+            request.set(CaptureRequest.SENSOR_SENSITIVITY, nextSensitivityIso);
+            request.set(CaptureRequest.SENSOR_FRAME_DURATION,
+                    manualFrameDurationForExposure(manualExposureNs));
+            session.setRepeatingRequest(request.build(), previewCaptureCallback(), cameraHandler);
+            manualSensitivityIso = nextSensitivityIso;
+            if (sensitivityButton != null)
+                sensitivityButton.setText("Manual ISO " + manualSensitivityIso + " (tap to increase)");
+            logLine("Requested manual sensitivity ISO=" + manualSensitivityIso
+                    + " at fixed exposure=" + manualExposureNs + " ns and frame duration="
+                    + manualFrameDurationForExposure(manualExposureNs) + " ns; IR remains off.");
+        } catch (CameraAccessException | RuntimeException e) {
+            logLine("Could not change manual sensitivity: " + e);
         }
     }
 
@@ -584,22 +763,41 @@ public final class IrisProbeActivity extends Activity {
     }
 
     private void saveYuvFrame(Image image) throws Exception {
-        int width = image.getWidth();
-        int height = image.getHeight();
+        Rect crop = image.getCropRect();
+        int width = crop.width();
+        int height = crop.height();
+        if (width <= 0 || height <= 0) throw new IllegalArgumentException("Empty YUV crop rect");
         File frameFile = new File(getFilesDir(), String.format(Locale.US,
                 "iris-frame-%d-%dx%d-i420.yuv", System.currentTimeMillis(), width, height));
         File metadataFile = new File(frameFile.getAbsolutePath() + ".json");
-        try (FileOutputStream out = new FileOutputStream(frameFile)) {
-            Image.Plane[] planes = image.getPlanes();
-            writePackedPlane(out, planes[0], width, height);
-            writePackedPlane(out, planes[1], (width + 1) / 2, (height + 1) / 2);
-            writePackedPlane(out, planes[2], (width + 1) / 2, (height + 1) / 2);
-        }
-        String metadata = String.format(Locale.US,
-                "{\"format\":\"I420\",\"width\":%d,\"height\":%d,\"timestampNs\":%d,\"sensorOrientation\":%d,\"cameraId\":\"%s\"}%n",
-                width, height, image.getTimestamp(), sensorOrientation, irisCameraId);
-        try (FileOutputStream out = new FileOutputStream(metadataFile)) {
-            out.write(metadata.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        try {
+            try (FileOutputStream out = new FileOutputStream(frameFile)) {
+                Image.Plane[] planes = image.getPlanes();
+                // I420 needs a chroma grid aligned to the luma crop origin. Until chroma
+                // rephasing is implemented, reject odd left/top origins instead of writing
+                // a plane whose dimensions disagree with the advertised output dimensions.
+                YuvPlaneCopier.Crop chromaCrop = YuvPlaneCopier.chromaCrop(
+                        crop.left, crop.top, crop.right, crop.bottom);
+                writePackedPlane(out, planes[0], image.getWidth(), image.getHeight(),
+                        crop.left, crop.top, width, height);
+                writePackedPlane(out, planes[1], (image.getWidth() + 1) / 2,
+                        (image.getHeight() + 1) / 2, chromaCrop.left, chromaCrop.top,
+                        chromaCrop.width, chromaCrop.height);
+                writePackedPlane(out, planes[2], (image.getWidth() + 1) / 2,
+                        (image.getHeight() + 1) / 2, chromaCrop.left, chromaCrop.top,
+                        chromaCrop.width, chromaCrop.height);
+            }
+            String metadata = String.format(Locale.US,
+                    "{\"format\":\"I420\",\"width\":%d,\"height\":%d,\"bufferWidth\":%d,\"bufferHeight\":%d,\"cropLeft\":%d,\"cropTop\":%d,\"timestampNs\":%d,\"sensorOrientation\":%d,\"cameraId\":\"%s\"}%n",
+                    width, height, image.getWidth(), image.getHeight(), crop.left, crop.top,
+                    image.getTimestamp(), sensorOrientation, irisCameraId);
+            try (FileOutputStream out = new FileOutputStream(metadataFile)) {
+                out.write(metadata.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            frameFile.delete();
+            metadataFile.delete();
+            throw e;
         }
         runOnUiThread(() -> {
             logLine("Saved one I420 frame and metadata inside app-private storage: " + frameFile.getName());
@@ -609,21 +807,18 @@ public final class IrisProbeActivity extends Activity {
         });
     }
 
-    private static void writePackedPlane(FileOutputStream out, Image.Plane plane, int width, int height)
+    private static void writePackedPlane(FileOutputStream out, Image.Plane plane,
+                                         int planeWidth, int planeHeight, int cropLeft,
+                                         int cropTop, int width, int height)
             throws Exception {
         ByteBuffer buffer = plane.getBuffer().duplicate();
-        int rowStride = plane.getRowStride();
-        int pixelStride = plane.getPixelStride();
-        byte[] packed = new byte[width * height];
-        int index = 0;
-        int base = buffer.position();
-        for (int row = 0; row < height; row++) {
-            int rowStart = base + row * rowStride;
-            for (int column = 0; column < width; column++) {
-                packed[index++] = buffer.get(rowStart + column * pixelStride);
-            }
+        byte[] packed = YuvPlaneCopier.copy(buffer, plane.getRowStride(), plane.getPixelStride(),
+                planeWidth, planeHeight, cropLeft, cropTop, width, height);
+        try {
+            out.write(packed);
+        } finally {
+            Arrays.fill(packed, (byte) 0);
         }
-        out.write(packed);
     }
 
     private void startDiagnosticEnrollment() {
@@ -799,21 +994,29 @@ public final class IrisProbeActivity extends Activity {
     private void applyCurrentExposure(CaptureRequest.Builder request) {
         request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         if (manualSensorSupported && manualExposureMode) {
-            request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
-            request.set(CaptureRequest.SENSOR_EXPOSURE_TIME, WINDOWS_BASELINE_EXPOSURE_NS);
-            request.set(CaptureRequest.SENSOR_SENSITIVITY, WINDOWS_BASELINE_SENSITIVITY_ISO);
-            request.set(CaptureRequest.SENSOR_FRAME_DURATION, WINDOWS_BASELINE_FRAME_DURATION_NS);
+            applyManualSensorSettings(request);
         } else {
             request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
         }
     }
 
     private void logOneFrameCaptureResult(String kind, CaptureResult result) {
+        Integer sensitivity = result.get(CaptureResult.SENSOR_SENSITIVITY);
+        Integer postRawBoost = result.get(CaptureResult.CONTROL_POST_RAW_SENSITIVITY_BOOST);
+        boolean sensitivityOutsideRange = sensitivity != null && sensorSensitivityRange != null
+                && (sensitivity < sensorSensitivityRange.getLower()
+                || sensitivity > sensorSensitivityRange.getUpper());
         logLine("ONE-FRAME " + kind + " RESULT frame=" + result.getFrameNumber()
                 + " requestedMode=" + (manualExposureMode ? "manual" : "AE")
                 + " exposureNs=" + result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                + " sensitivityIso=" + result.get(CaptureResult.SENSOR_SENSITIVITY)
+                + " requestedManualExposureNs=" + (manualExposureMode ? manualExposureNs : "n/a")
+                + " sensitivityIso=" + sensitivity
+                + " sensitivityOutsideAdvertisedRange=" + sensitivityOutsideRange
+                + " requestedManualSensitivityIso=" + (manualExposureMode ? manualSensitivityIso : "n/a")
+                + " postRawSensitivityBoost=" + postRawBoost
                 + " frameDurationNs=" + result.get(CaptureResult.SENSOR_FRAME_DURATION)
+                + " requestedManualFrameDurationNs=" + (manualExposureMode
+                        ? manualFrameDurationForExposure(manualExposureNs) : "n/a")
                 + " aeState=" + result.get(CaptureResult.CONTROL_AE_STATE)
                 + " sensorTimestampNs=" + result.get(CaptureResult.SENSOR_TIMESTAMP)
                 + " sensorTimestampSource=" + sensorTimestampSource
@@ -822,8 +1025,12 @@ public final class IrisProbeActivity extends Activity {
     }
 
     private void analyzeImageInMemory(Image image, boolean compare) {
-        int width = image.getWidth();
-        int height = image.getHeight();
+        Rect crop = image.getCropRect();
+        int width = crop.width();
+        int height = crop.height();
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("Frame analysis rejected an empty Camera2 crop rect");
+        }
         final int detectorWidth = 320;
         final int detectorHeight = 180;
         int[] sums = new int[detectorWidth * detectorHeight];
@@ -840,10 +1047,14 @@ public final class IrisProbeActivity extends Activity {
             int rowStride = yPlane.getRowStride();
             int pixelStride = yPlane.getPixelStride();
             for (int y = 0; y < height; y++) {
-                int rowStart = base + y * rowStride;
+                int rowStart = base + (crop.top + y) * rowStride + crop.left * pixelStride;
                 int dy = y * detectorHeight / height;
                 for (int x = 0; x < width; x++) {
-                    int value = buffer.get(rowStart + x * pixelStride) & 0xff;
+                    int offset = rowStart + x * pixelStride;
+                    if (offset < base || offset >= buffer.limit()) {
+                        throw new IllegalArgumentException("Camera2 luma crop exceeds plane buffer bounds");
+                    }
+                    int value = buffer.get(offset) & 0xff;
                     luma[y * width + x] = (byte) value;
                     quality.add(x, y, value);
                     int dx = x * detectorWidth / width;
@@ -1461,7 +1672,7 @@ public final class IrisProbeActivity extends Activity {
         pulseSequenceActive = true;
         frameOperationBusy = true;
         irButton.setEnabled(false);
-        logLine("Starting one minimum-current IR pulse (hardware code 1, maximum 1 second); one YUV capture will be requested while it is on.");
+        logLine("Starting one minimum-current IR pulse (hardware code 1, maximum 1 second); one YUV frame will be analyzed in memory and discarded.");
         new Thread(() -> {
             String response;
             long pulseRequestElapsedNs = 0;
@@ -1477,25 +1688,24 @@ public final class IrisProbeActivity extends Activity {
                 String state = in.readLine();
                 onAckElapsedNs = SystemClock.elapsedRealtimeNanos();
                 if ("ON".equals(state)) {
-                    CountDownLatch frameComplete = new CountDownLatch(1);
+                    CountDownLatch captureComplete = new CountDownLatch(1);
                     runOnUiThread(() -> {
                         if (!pulseSequenceActive || camera == null || session == null) {
                             logLine("IR capture cancelled because the camera activity closed.");
-                            frameComplete.countDown();
+                            captureComplete.countDown();
                             return;
                         }
-                        logLine("Minimum IR level is on; requesting one frame now.");
-                        frameOperationBusy = false;
-                        captureOneFrame(frameComplete::countDown);
+                        logLine("Minimum IR level is on; requesting one in-memory analysis frame now. The pulse will stop on the capture-result callback after exposure.");
+                        requestPulseAnalysisFrame(captureComplete);
                     });
-                    boolean delivered = frameComplete.await(850, TimeUnit.MILLISECONDS);
-                    pulseSequenceActive = false;
-                    if (!delivered) {
-                        saveNextFrame = false;
+                    boolean captured = captureComplete.await(850, TimeUnit.MILLISECONDS);
+                    if (!captured) {
+                        analyzeNextFrame = false;
+                        compareNextFrame = false;
                         frameOperationBusy = false;
-                        finishPendingSave();
+                        signalPulseCaptureCompletion();
                         runOnUiThread(() -> {
-                            logLine("IR frame did not arrive before the bounded pulse window; cancelling the pending save.");
+                            logLine("IR capture-result callback did not arrive before the bounded pulse window; no image was retained.");
                             if (captureButton != null && camera != null && !frameSaved)
                                 captureButton.setEnabled(true);
                             if (analyzeButton != null && camera != null) analyzeButton.setEnabled(true);
@@ -1511,6 +1721,9 @@ public final class IrisProbeActivity extends Activity {
                 }
             } catch (Exception e) {
                 response = "ERROR " + e.getClass().getSimpleName() + ": " + e.getMessage();
+            } finally {
+                pulseSequenceActive = false;
+                signalPulseCaptureCompletion();
             }
             String result = response + " pulseRequestElapsedRealtimeNs=" + pulseRequestElapsedNs
                     + " onAckElapsedRealtimeNs=" + onAckElapsedNs
@@ -1518,10 +1731,71 @@ public final class IrisProbeActivity extends Activity {
                     + " offAckElapsedRealtimeNs=" + offAckElapsedNs;
             runOnUiThread(() -> {
                 pulseSequenceActive = false;
-                if (!saveNextFrame && !analyzeNextFrame) frameOperationBusy = false;
+            if (!analyzeNextFrame) frameOperationBusy = false;
                 logLine("IR capture helper result: " + result + ".");
             });
         }, "iris-torch-capture").start();
+    }
+
+    private void requestPulseAnalysisFrame(CountDownLatch captureComplete) {
+        if (camera == null || session == null || frameReader == null) {
+            logLine("IR analysis frame request cancelled because the iris camera is not ready.");
+            captureComplete.countDown();
+            return;
+        }
+        if (!pendingPulseCaptureCompletion.compareAndSet(null, captureComplete)) {
+            logLine("IR analysis frame request cancelled because another pulse frame is pending.");
+            captureComplete.countDown();
+            return;
+        }
+        analyzeNextFrame = true;
+        compareNextFrame = false;
+        if (analyzeButton != null) analyzeButton.setEnabled(false);
+        if (captureButton != null) captureButton.setEnabled(false);
+        try {
+            CaptureRequest.Builder request = camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            applyCurrentExposure(request);
+            request.addTarget(frameReader.getSurface());
+            logLine("IR-ANALYZE REQUEST submitElapsedRealtimeNs="
+                    + SystemClock.elapsedRealtimeNanos()
+                    + " sensorTimestampSource=" + sensorTimestampSource
+                    + " pulseSequenceActive=" + pulseSequenceActive);
+            session.capture(request.build(), new CameraCaptureSession.CaptureCallback() {
+                @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest r,
+                                                        android.hardware.camera2.TotalCaptureResult result) {
+                    logOneFrameCaptureResult("IR_ANALYZE", result);
+                    // Capture completion follows sensor exposure. Stop illumination here,
+                    // without waiting for the YUV buffer callback or CPU analysis.
+                    signalPulseCaptureCompletion();
+                }
+
+                @Override public void onCaptureFailed(CameraCaptureSession s, CaptureRequest r,
+                                                       android.hardware.camera2.CaptureFailure failure) {
+                    analyzeNextFrame = false;
+                    compareNextFrame = false;
+                    frameOperationBusy = false;
+                    signalPulseCaptureCompletion();
+                    runOnUiThread(() -> {
+                        logLine("IR analysis frame capture failed: reason=" + failure.getReason());
+                        if (analyzeButton != null && camera != null) analyzeButton.setEnabled(true);
+                        if (captureButton != null && camera != null && !frameSaved)
+                            captureButton.setEnabled(true);
+                    });
+                }
+            }, cameraHandler);
+        } catch (CameraAccessException | RuntimeException e) {
+            analyzeNextFrame = false;
+            frameOperationBusy = false;
+            signalPulseCaptureCompletion();
+            logLine("Could not request in-memory IR analysis frame: " + e);
+            if (analyzeButton != null) analyzeButton.setEnabled(camera != null);
+            if (captureButton != null) captureButton.setEnabled(camera != null && !frameSaved);
+        }
+    }
+
+    private void signalPulseCaptureCompletion() {
+        CountDownLatch completion = pendingPulseCaptureCompletion.getAndSet(null);
+        if (completion != null) completion.countDown();
     }
 
     private void createPreviewSession(CameraDevice device) {
@@ -1530,10 +1804,8 @@ public final class IrisProbeActivity extends Activity {
             request.addTarget(previewSurface);
             request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
             if (manualSensorSupported) {
-                request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
-                request.set(CaptureRequest.SENSOR_EXPOSURE_TIME, WINDOWS_BASELINE_EXPOSURE_NS);
-                request.set(CaptureRequest.SENSOR_SENSITIVITY, WINDOWS_BASELINE_SENSITIVITY_ISO);
-                request.set(CaptureRequest.SENSOR_FRAME_DURATION, WINDOWS_BASELINE_FRAME_DURATION_NS);
+                manualExposureNs = clampManualExposure(WINDOWS_BASELINE_EXPOSURE_NS);
+                applyManualSensorSettings(request);
                 manualExposureMode = true;
                 logLine("Starting iris preview at source-derived manual baseline: 30 ms, ISO 100, "
                         + "33.5 ms frame duration; IR remains off.");
@@ -1561,6 +1833,15 @@ public final class IrisProbeActivity extends Activity {
                             exposureButton.setEnabled(manualSensorSupported);
                         if (exposureButton != null && manualSensorSupported)
                             exposureButton.setText("Use AE auto (restore)");
+                        if (sensitivityButton != null) {
+                            sensitivityButton.setEnabled(manualSensorSupported);
+                            sensitivityButton.setText("Manual ISO " + manualSensitivityIso + " (tap to increase)");
+                        }
+                        if (exposureStepButton != null) {
+                            exposureStepButton.setEnabled(manualSensorSupported);
+                            exposureStepButton.setText("Manual exposure " + formatExposureMs(manualExposureNs)
+                                    + " ms (tap to change)");
+                        }
                     });
                     try {
                         configured.setRepeatingRequest(request.build(), previewCaptureCallback(), cameraHandler);
@@ -1613,6 +1894,7 @@ public final class IrisProbeActivity extends Activity {
 
     private void closeCamera() {
         if (irButton != null) irButton.setEnabled(false);
+        signalPulseCaptureCompletion();
         pulseSequenceActive = false;
         saveNextFrame = false;
         analyzeNextFrame = false;
@@ -1634,6 +1916,11 @@ public final class IrisProbeActivity extends Activity {
         if (exposureButton != null) {
             exposureButton.setEnabled(false);
             exposureButton.setText("Use manual 30 ms / ISO 100 baseline");
+        }
+        manualSensitivityIso = WINDOWS_BASELINE_SENSITIVITY_ISO;
+        if (sensitivityButton != null) {
+            sensitivityButton.setEnabled(false);
+            sensitivityButton.setText("Manual ISO 100 (tap to increase)");
         }
         if (session != null) {
             try { session.stopRepeating(); } catch (CameraAccessException ignored) { }

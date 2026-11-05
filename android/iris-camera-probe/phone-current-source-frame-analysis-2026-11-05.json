@@ -1,0 +1,51 @@
+{
+  "recorded_date_host": "2026-11-05",
+  "test": "one IR-off Camera2 YUV frame analyzed in memory",
+  "source": {
+    "probe_source": "current local source",
+    "temporary_package": "com.lumia.irisprobe.framecheck",
+    "build": "Android SDK platform 35 and build-tools 35.0.0; package built and launched successfully"
+  },
+  "device": {
+    "model": "Lumia 950 XL cityman",
+    "android_release": "16",
+    "selected_camera_id": "2",
+    "sensor_orientation_degrees": 90
+  },
+  "frame": {
+    "format": "YUV_420_888",
+    "buffer": "1920x1080",
+    "crop": "0,0-1920,1080",
+    "exposure_ns": 29995718,
+    "sensitivity_iso": 100,
+    "frame_duration_ns": 33441782,
+    "image_saved": false,
+    "analysis": "in-memory only; no pixels or eye coordinates exported"
+  },
+  "quality": {
+    "luma_p05": 0,
+    "luma_p50": 1,
+    "luma_p95": 2,
+    "mean_absolute_gradient_horizontal": 0.37,
+    "mean_absolute_gradient_vertical": 0.37,
+    "clipped_at_or_below_16_percent": 100.0,
+    "clipped_at_or_above_240_percent": 0.0,
+    "tile_stddev_min": 0.61,
+    "tile_stddev_max": 0.92,
+    "face_detector": "no frontal-face candidate",
+    "candidate_processing": "rejected by provisional luma p95 floor 32"
+  },
+  "illumination": {
+    "enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_package_uninstalled": true,
+    "active_camera_clients_after_cleanup": [],
+    "all_led_channels_read_zero": true
+  },
+  "interpretation": "This confirms one-frame Camera2 delivery and the low-signal gate, not useful optical response. The scene remains too dark for eye localization or matcher evaluation."
+}

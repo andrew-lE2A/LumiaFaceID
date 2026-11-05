@@ -1,0 +1,110 @@
+{
+  "date": "2026-11-05",
+  "scope": "one current-source, minimum-level IR pulse with one in-memory YUV analysis on the connected Lumia 950 XL cityman",
+  "device": {
+    "serial": "d7baece4",
+    "product": "lineage_cityman",
+    "os": "LineageOS 23.2 / Android 16",
+    "kernel": "installed kernel #29; no reboot or kernel change"
+  },
+  "app": {
+    "package": "com.lumia.irisprobe.sessionanalysis",
+    "source": "current workspace android/iris-camera-probe source",
+    "apk_sha256": "fce510112f52708b1d3836c0eaa3a47ca35d5b141bd8dbede70fc224cf5352a1",
+    "action": "one IR + analyze pulse; frame pixels analyzed in memory then discarded"
+  },
+  "setup": {
+    "owner_report": "phone in a white thin box",
+    "material_or_reflectance_measured": false,
+    "interpretation_limit": "This is not a validated eye-safety enclosure or target. No optical power or exposure measurement was made."
+  },
+  "camera": {
+    "selected_id": "2",
+    "metadata": "1920x1088; sensor orientation 90 degrees",
+    "stream": "1920x1080 YUV_420_888, full crop 0,0-1920,1080",
+    "preview_mode": "manual exposure 29,995,718 ns; ISO 100; frame duration 33,441,782 ns; post-RAW boost 100",
+    "capture_result_frame": 748,
+    "capture_result_sensor_timestamp_ns": 69140758089885,
+    "yuv_image_timestamp_ns": 69140758089885,
+    "timestamps_match": true,
+    "sensor_timestamp_source": "UNKNOWN (reported as 0); cannot compare sensor time with elapsed-realtime helper events",
+    "yuv_buffer_callback_preceded_stop_request": true,
+    "pixels_saved_or_exported": false
+  },
+  "illumination": {
+    "channel": "led:torch_0",
+    "brightness_requested": 14,
+    "prior_driver_mapping": "lowest previously measured nonzero torch request; hardware code 1; max_brightness 200",
+    "pulse_request_elapsed_realtime_ns": 69140638085133,
+    "on_ack_elapsed_realtime_ns": 69140656201489,
+    "frame_request_elapsed_realtime_ns": 69140659415083,
+    "yuv_callback_elapsed_realtime_ns": 69140836576611,
+    "stop_request_elapsed_realtime_ns": 69140837705465,
+    "off_ack_elapsed_realtime_ns": 69141683959924,
+    "software_interval_from_pulse_request_to_stop_ms": 199.620,
+    "software_interval_from_on_ack_to_stop_ms": 181.504,
+    "off_ack_delay_after_stop_ms": 846.254,
+    "optical_on_time_measured": false,
+    "ir_on_during_cpu_analysis": false
+  },
+  "analysis": {
+    "luma_p05": 107,
+    "luma_p50": 126,
+    "luma_p95": 212,
+    "mean_abs_gradient_horizontal": 3.75,
+    "mean_abs_gradient_vertical": 3.71,
+    "clipped_at_or_below_16_percent": 0.0,
+    "clipped_at_or_above_240_percent": 0.51,
+    "tile_stddev_min": 3.71,
+    "tile_stddev_max": 17.38,
+    "grid": "8x6",
+    "face_or_eye_pair_roi": "none",
+    "heuristic_display_proposal": "center=(1542,672) sensor px; pupil radius 24 px; iris radius 60 px; edge strengths 0.007/0.003",
+    "proposal_warning": "whole-frame contrast heuristic only; display-only and explicitly excluded from matcher; not iris localization"
+  },
+  "timing_analyzer": {
+    "tool": "tools/analyze_iris_pulse_timing.py",
+    "pulse_count": 1,
+    "one_frame_request_result_and_yuv_counts": [
+      1,
+      1,
+      1
+    ],
+    "capture_result_yuv_timestamp_pairs": 1,
+    "request_after_helper_on_ack": true,
+    "matching_yuv_callback_before_stop": true,
+    "transaction_bracketed_by_helper": true,
+    "sensor_elapsed_clock_comparable": false,
+    "interpretation": "The request and matching buffer were bracketed by the helper ON/STOP transaction, but UNKNOWN sensor timestamp source prevents cross-clock exposure-overlap calculation; software ordering does not measure optical timing."
+  },
+  "comparison": {
+    "previous_ir_off_luma_p95": 1,
+    "current_ir_pulse_luma_p95": 212,
+    "controlled_same_scene_a_b": false,
+    "interpretation": "The delivered IR-pulse frame has substantially more luma signal than the previous IR-off frame. Because the phone setup/box may have changed between captures and optical output was not measured, the difference is evidence of a useful illuminated frame but not a controlled measurement of emitter gain or eye safety."
+  },
+  "cleanup": {
+    "temporary_app_force_stopped_and_uninstalled": true,
+    "camera_active_clients_after_test": 0,
+    "camera_services_restored": [
+      "cameraserver",
+      "camera provider",
+      "mm-qcamera-daemon"
+    ],
+    "helper_listener_stopped": true,
+    "temporary_helper_script_and_log_removed": true,
+    "final_led_readback": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "limits": [
+    "One pulse only; no repeated illumination or sensor-strobe use.",
+    "The helper's OFF acknowledgement followed STOP by about 846 ms; the script writes brightness zero before waiting for its watchdog child, but LED optical turn-off was not measured.",
+    "No reliable eye ROI, iris localization, liveness, matching, Android enrollment, or unlock was demonstrated.",
+    "Minimum hardware code and short software duration are not eye-safety validation."
+  ],
+  "publication": "local only; no commit, push or PR"
+}

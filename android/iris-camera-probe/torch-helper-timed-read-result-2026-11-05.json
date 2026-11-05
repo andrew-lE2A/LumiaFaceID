@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-05",
+  "scope": "bounded helper cleanup change; no real IR or flash LED writes",
+  "change": {
+    "file": "android/iris-camera-probe/iris-torch-server.sh",
+    "sha256": "053182f82119181a45ba327b46c9facdbecc80575400294db335528a96c0fcf4",
+    "summary": "Replaced the background sleep/watchdog child and blocking wait with the Android shell's one-second timed read. STOP, disconnect, timeout, and shell exit all reach the OFF write; a stalled transaction now exits after the timeout instead of leaving its connection worker blocked.",
+    "hardware_changes": false
+  },
+  "verification": {
+    "host": {
+      "command": "python3 -m unittest tests/test_iris_torch_helper.py",
+      "result": "3 tests passed",
+      "stop_ack_limit_seconds": 0.75,
+      "stop_ack_result": "passed"
+    },
+    "phone_shell": {
+      "device": "Lumia 950 XL cityman, Android 16, serial d7baece4",
+      "timed_read_support": "confirmed with /system/bin/sh using a piped STOP line",
+      "fake_led_path": "/data/local/tmp/lumia-iris-fake-brightness",
+      "stop_case": "PULSE then STOP returned ON and OFF; fake brightness ended at 0",
+      "stall_case": "PULSE without STOP timed out, returned ON and OFF, and fake brightness ended at 0",
+      "real_led_nodes_touched": false,
+      "temporary_files_removed": true
+    }
+  },
+  "final_phone_readback": {
+    "active_camera_clients": [],
+    "real_led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    },
+    "cameraserver": "running",
+    "camera_provider": "running"
+  },
+  "limits": [
+    "This verifies shell transaction cleanup against a fake brightness file, not optical LED latency or emitter safety.",
+    "The one-second software timeout is not an eye-safety limit."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

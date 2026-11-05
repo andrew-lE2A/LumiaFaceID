@@ -1,0 +1,56 @@
+{
+  "recorded_date_host": "2026-11-05",
+  "device": {
+    "serial": "<redacted>",
+    "product": "Microsoft cityman",
+    "model": "Lumia 950 XL",
+    "android_release": "16",
+    "android_sdk": 36,
+    "reported_build_fingerprint": "google/bullhead/bullhead:8.1.0/OPM3.171019.014/4503998:user/release-keys",
+    "build_fingerprint_note": "Fingerprint conflicts with product and release properties; do not use it as definitive build identity."
+  },
+  "test": {
+    "type": "bounded Camera2 preview only; no one-frame capture, no save, no IR",
+    "device_log_time": "2026-11-04 18:42:17-18:42:27, device timezone -11:00",
+    "app": {
+      "package": "com.lumia.irisprobe",
+      "installed_last_update_device_time": "2026-11-04 04:22:15",
+      "note": "Older installed diagnostic build; the current local source is newer than the packaged APK and was not rebuilt because Android SDK and signing variables are unset."
+    },
+    "camera_inventory": {
+      "number_of_cameras": 3,
+      "camera_1": "front-facing 2600x1952 VS6955, per existing metadata mapping",
+      "camera_2": "front-facing 1920x1088 IR0861, orientation 90 degrees"
+    },
+    "stream": {
+      "selected_camera_id": "2",
+      "selection": "unique 1920x1088 sensor; facing=front; sensorOrientation=90",
+      "configured_preview": "1920x1080 sensor stream, displayed 1080x1920",
+      "capture_result_callbacks": "callbacks #1, #30, #60 and #90 observed over about 6.7 seconds; approximately 13.5 callbacks/second based on log timestamps",
+      "last_logged_frame_number": 89
+    },
+    "image_data": "No still/YUV analysis request; no pixels were saved or exported.",
+    "illumination": {
+      "enabled": false,
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0,
+      "other_status_led_note": "The separate red notification LED class read 255; no flash/torch emitter channel was enabled."
+    }
+  },
+  "cleanup": {
+    "probe_process": "force-stopped; returned to home screen",
+    "camera_clients": [],
+    "camera_devices": {
+      "0": "closed",
+      "1": "closed",
+      "2": "closed"
+    },
+    "iris_service": "not found",
+    "biometric_sensors": [],
+    "camera_permission": "pre-existing grant; unchanged"
+  },
+  "interpretation": "The installed app opens the iris slot by its 1920x1088 metadata and receives continuous Camera2 capture-result callbacks. This verifies stream startup and teardown only. It does not verify useful pixel data, iris localization, matching, enrollment, or Android unlock.",
+  "publication": "local only; no commit, push, flash, or kernel change"
+}

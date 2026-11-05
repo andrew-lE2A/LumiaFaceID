@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-05",
+  "scope": "local software check for mapping an Image crop rectangle into YUV 4:2:0 chroma planes",
+  "change": {
+    "file": "src/com/lumia/irisprobe/YuvPlaneCopier.java",
+    "behavior": "rejects odd left/top origins until chroma rephasing is implemented; aligned origins map into half-resolution U/V dimensions"
+  },
+  "host_check": {
+    "command": "python3 -m unittest tests/test_iris_probe_host.py",
+    "result": "passed",
+    "new_cases": [
+      "odd origin (1,1) crop is rejected instead of emitting inconsistent I420 geometry",
+      "even origin with odd width/height maps to expected ceil-divided plane dimensions"
+    ],
+    "existing_plane_copy_cases": [
+      "padded row stride",
+      "non-unit pixel stride",
+      "nonzero crop origin",
+      "plane bounds rejection",
+      "source ByteBuffer position preservation"
+    ]
+  },
+  "android_compile": {
+    "command": "javac against /tmp/android-sdk/platforms/android-35/android.jar",
+    "result": "passed",
+    "warnings": "JDK source/target 8 deprecation and existing deprecated Android API notes"
+  },
+  "phone": {
+    "camera_opened": false,
+    "led_channels_changed": false,
+    "reason": "the current on-device crop is full-frame; no nonzero Image crop was available to validate crop mapping against the Cityman HAL"
+  },
+  "publication": "local only; no commit, push, or PR"
+}

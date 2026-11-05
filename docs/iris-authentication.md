@@ -21,8 +21,17 @@ security properties; see [windows-iris-stack-map.md](windows-iris-stack-map.md).
 
 The sensor's strobe capability is zero (`0x1a02` reads zero and DCC block 5 has
 no override). Windows therefore does not program the sensor STROBE registers
-for this sensor. Per-frame illumination is a host-side flash-driver request;
-the exact Windows call timing and ioctl sequence have not yet been recovered.
+for this sensor. Per-frame illumination is a host-side flash-driver request.
+Static analysis of the exact Windows Mobile FFU now confirms that
+`CameraAuthentication.dll` carries its per-frame pulse flag and IR-current
+byte in the video-result record and submits that record to the camera KMD via
+IOCTL `0x0023432A`. The matching `qccamavs8994.sys` contains a camera-owned
+flash/preflash scheduling and frame-gating surface, and the FFU's
+`qccamflashtertiary8994.sys` is byte-identical to the previously analyzed
+flash driver. The specific consumer of the iris result record, the mapping to
+flash selector `0x26`, current units and optical pulse edge remain unresolved;
+see
+[`windows-flash-driver-analysis-2026-11-05.json`](../docs/windows-flash-driver-analysis-2026-11-05.json).
 The sensor-strobe-to-PMIC wiring hypothesis is withdrawn. Do not set the PMIC
 LED to hardware-strobe mode for the iris.
 
@@ -48,32 +57,44 @@ cover that general model.
 
 The development probe's one-shot **IR + capture** path asks the
 root-localhost helper to set `torch_0` to brightness 14. After `ON`, it requests
-one YUV still; after the image reaches `ImageReader` (or the request fails),
-the app sends `STOP` and waits for the helper's `OFF` confirmation. Client
-disconnect, helper exit and a separate one-second watchdog all force the LED
-off. This couples the pulse to one completed capture rather than a UI timer,
-but optical timing and exposure overlap remain unmeasured. Host tests use a
-temporary fake LED file to check `STOP`, disconnect, signal and watchdog
-cleanup; the physical emitter path remains untested. Never use it while the
-phone is under the reflective can or enclosure, or point it at people/eyes.
-Any future emitter test needs an uncovered phone, a diffuse target and no
-person in the reflected path, followed by a readback confirming the channel is
-zero.
+one YUV still, analyzes the pixels in memory, and discards them; it does not
+persist the illuminated frame. Once the `ImageReader` receives the image (or
+the request fails), the app sends `STOP` and waits for the helper's `OFF`
+confirmation. Client disconnect, helper exit and its one-second timed read
+force the LED off. This couples the pulse to one completed buffer
+rather than a UI timer, but optical timing and exposure overlap remain
+unmeasured. Host tests use a temporary fake LED file to check `STOP`,
+disconnect, signal and watchdog cleanup. One physical minimum-code pulse has
+now delivered a high-signal YUV frame on Camera2 camera 2; it ran with the
+phone in an owner-reported white thin box, whose material reflectance was not
+measured. The frame had no face-derived eye ROI and the whole-frame contrast
+proposal was display-only. This is not an eye-safety validation or proof of
+usable iris detail; see the
+[`phone result`](../android/iris-camera-probe/phone-min-current-ir-analysis-2026-11-05.json).
+Never use IR while the phone is under a metal can or reflective enclosure, or
+point it at people/eyes. Any further emitter test needs a confirmed diffuse
+target, no person in the reflected path, and a readback confirming the channel
+is zero.
 
 Before considering per-frame synchronization established or using it beyond a
 bounded diagnostic:
 
 1. Recover the Windows flash request path and pulse scheduling semantics from
-   `CameraAuthentication.dll` and `qccamflashtertiary8994.sys`, including the
-   relationship between a frame timestamp, exposure duration, and LED request.
+   the camera KMD in the same Mobile FFU: identify the receiver for IOCTL
+   `0x0023432A`, trace the result fields into `SetFlashPulses_Flash` or another
+   consumer, and relate that schedule to frame/exposure progression. Static
+   analysis has confirmed the host-to-KMD handoff and the separate flash
+   driver's callback route, but not the connection between them.
 2. Trace the Android camera/PMIC flash path for `torch_0`. Linux's LED class
    brightness write is not a hardware exposure-synchronized interface. A
    production route should be driven by sensor/camera frame timing, not a UI
    timer.
-3. With a safe diffuse target, correlate the request and image timestamps with
-   sensor exposure metadata. Confirm the optical pulse falls inside that
-   frame's exposure and is off on cancellation, timeout, camera close, service
-   death, suspend and error. Do not do this with the current can setup.
+3. With a confirmed diffuse target and the phone uncovered, correlate the
+   request and image timestamps with sensor exposure metadata. Confirm the
+   optical pulse falls inside that frame's exposure and is off on cancellation,
+   timeout, camera close, service death, suspend and error. The recorded single
+   pulse used an owner-reported white thin box with unmeasured reflectance; it
+   does not establish this gate.
 4. Validate thermal limits and eye-safety independently before enabling
    repeated pulses or use near a face.
 
@@ -87,9 +108,11 @@ reports timestamp source `UNKNOWN` for all three cameras, including iris ID 2;
 the sensor timestamp therefore cannot be subtracted from app elapsed-realtime.
 The timing analyzer instead matches the YUV timestamp to its capture-result
 timestamp and checks request/image callback ordering between helper ON and
-STOP. No emitter run has been made with these logs, so optical exposure
-overlap and production-grade synchronization remain unproven. The helper
-timestamps bound software requests; they do not measure LED optical latency.
+STOP. One minimum-code emitter run confirmed that the frame request and
+matching YUV buffer were bracketed by the helper transaction. The sensor clock
+source is UNKNOWN, so cross-clock exposure overlap cannot be calculated, and
+the helper timestamps do not measure LED optical latency. Production-grade
+synchronization remains unproven.
 
 ### Camera flash plumbing audit (2026-11-05)
 
@@ -170,16 +193,41 @@ PMIC-backed flash endpoint can safely expose only `torch0_trigger` to the
 iris sensor while preserving the existing camera slots. That route needs a
 bounded off path; if per-frame timing is required, the kernel also needs a
 SOF path that controls the verified IR channel instead of blindly reusing the
-flash-only high path. Verify the lowest-current mapping before any phone test.
-The current phone setup is covered by a reflective metal can, so no emitter
-test is appropriate in that configuration. No synchronization or illumination
-change has been made by this source audit.
+flash-only high path. Verify the lowest-current mapping before any additional
+phone test. One bounded Android pulse has already been tested and logged; no
+kernel or camera-HAL illumination synchronization change has been made by this
+source audit. The current physical setup is not independently verified by the
+software; do not repeat an emitter test until the target is confirmed diffuse
+and the phone is uncovered.
 
 ## Enrollment and lock-screen authentication
 
 The current Android 16 system exposes the framework `IBiometricService`, but
 read-only service and VINTF inspection found no biometric HAL service. The
 probe app is not enrolled with Android and cannot unlock the device.
+
+Microsoft's WinBio workflow confirms that enrollment is driven by biometric
+samples accepted by an engine adapter, then incrementally updates and commits a
+template. The recovered Lumia binaries expose analogous interfaces, but the
+Windows documentation's strong secure-sensor path requires isolated matching,
+secure sample input, presentation-attack detection and a protected credential
+release (WinBio 4.0 `CreateKey` / `IdentifyFeatureSetSecure`). Static analysis
+has not shown that the Lumia's iris unit implements that v4 secure path. On
+Android, Camera2 frames are visible to the normal OS; therefore this project
+must not claim strong biometric unlock based only on an app-side matcher or
+template encryption. See Microsoft's [WinBio adapter workflow](https://learn.microsoft.com/en-us/windows/win32/secbiomet/adapter-workflow)
+and [secure-sensor requirements](https://learn.microsoft.com/en-us/windows/win32/secbiomet/sensor-requirements-for-secure-biometrics),
+and the [local Windows stack map](windows-iris-stack-map.md).
+
+The recovered Windows Mobile evidence is stronger than an unknown-version
+assessment: the WinBio registry entry sets `Capabilities=0x80` (virtual
+sensor) and omits `0x100` (secure sensor), while static analysis of
+`DeltaIrisEngineAdapter.dll` shows its exported WBF engine interface is v3.0.
+Microsoft's documented TPM secure-match methods are v4.0, so the recovered
+WinBio iris path does not expose that protocol. A separate Lumia trusted path
+is not ruled out; `Origa2Auth.sys` remains unresolved. The Android port still
+has no iris biometric service or trusted matcher, so an app-side matcher cannot
+be promoted to lock-screen authentication based on this Windows configuration.
 
 The next gates are:
 
@@ -315,14 +363,21 @@ Class 1 result sink in
 It uses only a non-strong success, honors iris-specific and global biometric
 DPM disable flags, rejects wrong-user and going-to-sleep callbacks, clears its
 per-user recognized state with other Keyguard biometric state, and adds no
-bypass path. The result sink and request API are not wired to a SystemUI call site yet;
-the camera provider, matcher, enrollment store, and lockout/rate-limiting path
-are still missing. It has not been built or installed.
+bypass path. Patch 0007 adds an initial lifecycle bridge through Keyguard state updates.
+It starts only while the selected user is on an interactive, visible Keyguard,
+with strong-auth/policy gates satisfied and no face-auth session, prompt, sleep,
+dream, user switch or pending biometric continuation. It stops when any gate
+closes and caches the per-user enrollment query until authenticator callbacks
+invalidate it. This source patch is not compiled or installed; the camera
+provider, matcher, enrollment store and lockout/rate-limiting path are still
+missing.
 
 I added a hidden request/cancel contract in
-[`0005-lineage-iris-keyguard-request-api.patch`](../android/patches/0005-lineage-iris-keyguard-request-api.patch): `IrisManager.authenticateForKeyguard()` sends an internal Binder request, receives success/failure/error callbacks, and supports cancellation. `IrisService` requires `USE_BIOMETRIC_INTERNAL`, verifies the caller with `Utils.isKeyguard()`, and currently returns `BIOMETRIC_ERROR_HW_UNAVAILABLE` because the camera authenticator is absent. The code has no success shortcut. KeyguardUpdateMonitor provides explicit start/stop methods that route callbacks and cancel when its biometric state is cleared; no existing Keyguard controller invokes them yet.
+[`0005-lineage-iris-keyguard-request-api.patch`](../android/patches/0005-lineage-iris-keyguard-request-api.patch): `IrisManager.authenticateForKeyguard()` sends an internal Binder request, receives success/failure/error callbacks, and supports cancellation. `IrisService` requires `USE_BIOMETRIC_INTERNAL`, verifies the caller with `Utils.isKeyguard()`, and currently returns `BIOMETRIC_ERROR_HW_UNAVAILABLE` because the camera authenticator is absent. The code has no success shortcut. KeyguardUpdateMonitor provides explicit start/stop methods that route callbacks and cancel when its biometric state is cleared; callbacks are now bound to the exact requested user ID before forwarding success. Patch 0007 now invokes these methods from Keyguard biometric-state updates and
+face-auth running-state changes. It also gates on visible/interactive Keyguard
+state, current user and policy, and cancels when face-auth activity is reported. It is not a provider-level camera lock; cancellation latency could still overlap camera ownership.
 
-Patch 0006 adds a Keyguard-only `hasEnrolledTemplatesForKeyguard()` query that checks the registered iris authenticators directly. The current `IrisAuthenticator` stub returns false, so Keyguard's start method now fails closed until a real per-user iris store reports an enrollment. This avoids treating another modality's enrollment as an iris enrollment. The query is not an enrollment implementation: there is still no camera provider, matcher, template store, active-user lifecycle, or iris lockout/rate-limit backend. Patches 0003-0006 have not been compiled or installed.
+Patch 0006 adds a Keyguard-only `hasEnrolledTemplatesForKeyguard()` query that checks the registered iris authenticators directly. The current `IrisAuthenticator` stub returns false, so Keyguard's start method now fails closed until a real per-user iris store reports an enrollment. This avoids treating another modality's enrollment as an iris enrollment. The query is not an enrollment implementation: there is still no camera provider, matcher, template store, active-user lifecycle, or iris lockout/rate-limit backend. Patches 0003-0007 have not been compiled or installed.
 
 The active device tree and
 vendor VINTF manifest have no iris HAL declaration. A camera-backed
@@ -382,6 +437,15 @@ three-sample rotation-aligned consensus helper exists in the experimental Java
 matcher and is now wired to an explicit diagnostic UI flow. The app retains
 only candidate codes in memory; it persists nothing and has no identity
 threshold.
+
+On 2026-11-05, a short IR-off preview check with the older installed probe
+selected camera ID 2 from its unique 1920×1088 metadata and logged capture
+result callbacks through frame 89 at roughly 13.5 callbacks/second. No still
+capture or pixel analysis was requested. After force-stop, CameraService
+reported all three devices closed and all four torch/flash channels read 0.
+This reconfirms stream startup and cleanup, not usable image content; the
+details are in
+[`phone-preview-check-2026-11-05.json`](../android/iris-camera-probe/phone-preview-check-2026-11-05.json).
 
 The phone exposes Android's framework `IBiometricService`, but its vendor
 VINTF manifests contain no Face or iris HAL. Android 16 has no Iris AIDL HAL.
@@ -681,6 +745,16 @@ frame was saved and no IR was enabled. See
 [`camera2-exposure-result-2026-11-05.json`](../android/iris-camera-probe/camera2-exposure-result-2026-11-05.json) and
 [`camera2-manual-default-result-2026-11-05.json`](../android/iris-camera-probe/camera2-manual-default-result-2026-11-05.json).
 
+A bounded no-save manual sensitivity sweep then requested ISO 100, 200, 400
+and 800 at the fixed 29.996 ms / 33.442 ms timings. Camera2 returned each
+requested sensitivity exactly and reported 100% post-RAW boost throughout;
+the AE-only ISO 4860 anomaly therefore does not occur on the manual request
+path. At ISO 100 the luma p95 was 3, confirming the available scene remained
+near black. No image-response or actual analog-gain conclusion can be drawn
+from this sweep. The temporary control was removed from the phone and the
+camera/LED state was verified clean. See
+[`phone-manual-sensitivity-sweep-2026-11-05.json`](../android/iris-camera-probe/phone-manual-sensitivity-sweep-2026-11-05.json).
+
 The one-shot YUV analyze request now sets the same selected exposure controls
 as preview. Phone capture-result metadata confirmed both manual values
 (29.996 ms / ISO 100 / 33.442 ms) and the AE values (75.004 ms / ISO 4860 /
@@ -771,9 +845,9 @@ sensor usable through `android.hardware.biometrics` APIs. The generic
 `authenticate(PromptInfo)` path is the ordinary prompt path, so using it as a
 Class 1 shortcut is not supported by the reviewed contract. The local patches
 now add a privileged Keyguard-only request/cancel/result path that keeps
-Convenience unavailable to apps, plus a KeyguardUpdateMonitor result sink and
-dormant start/stop methods. The request path currently fails closed with
-hardware unavailable, and no SystemUI lifecycle calls it.
+Convenience unavailable to apps, plus a KeyguardUpdateMonitor result sink and a local lifecycle hook in patch
+0007. The request path currently fails closed with hardware unavailable. The
+new hook is source-only and has not been exercised on a built framework.
 `AuthSession.onAuthenticationSucceeded()`
 does call `StatusBarService.onBiometricAuthenticated()`, but this is the
 BiometricPrompt callback/UI flow and does not replace Keyguard's modality
@@ -782,9 +856,10 @@ callback. In the pinned Lineage source, `KeyguardUpdateMonitor` subscribes to
 acquired, error, lockout and enrollment changes to Keyguard. The pinned
 `FaceService` is the closer model: its modality-specific `authenticate()`
 method schedules through a sensor provider, while `prepareForAuthentication()`
-handles BiometricPrompt. The remaining SystemUI work is an
-enrollment-aware lifecycle/listener that invokes the new methods and
-correctly cancels and serializes camera ownership. Keep the generic
+handles BiometricPrompt. Patch 0007 supplies an initial enrollment-aware lifecycle/listener that
+invokes the new methods and cancels when Keyguard state changes. It still needs
+build/runtime validation and correct camera serialization with any face-auth
+session. Keep the generic
 `IBiometricAuthenticator` registration separate and public `PromptInfo`
 filtering unchanged. The pinned `IIrisService` was registration-only before
 the local extension; the installed phone still exposes only that older
@@ -822,10 +897,25 @@ validated error rates or liveness performance. We therefore cannot connect
 its current diagnostic comparison to a screen-unlock success callback.
 
 The local patch set now includes a hidden Keyguard-only request/cancel/result
-contract (`0005`) and `KeyguardUpdateMonitor` start/stop methods. Those methods
-are still dormant: no SystemUI lifecycle calls them, and the service
-intentionally returns `BIOMETRIC_ERROR_HW_UNAVAILABLE`. Do not mistake the
-API plumbing for a working authenticator.
+contract (`0005`), the per-user enrollment query (`0006`), and an initial
+Keyguard lifecycle bridge (`0007`). The service still intentionally returns
+`BIOMETRIC_ERROR_HW_UNAVAILABLE`; there is no working camera authenticator.
+Do not mistake the source plumbing for a working or security-qualified
+unlock path. Patch 0007 has only been applied in a disposable source check; it
+has not been compiled or installed. Its review is recorded in
+[`framework-iris-keyguard-lifecycle-check-2026-11-05.json`](../android/patches/framework-iris-keyguard-lifecycle-check-2026-11-05.json).
+
+Source review found that patches 0005 and 0006 described the new `IrisManager`
+request, callback and enrollment-query APIs as internal but omitted some
+`@hide` annotations; the new AIDL receiver also lacked `@hide`. I added the
+missing annotations so the Keyguard-only contract stays out of SDK stubs.
+Patches 0003-0006 now apply in order to a disposable worktree at the pinned
+Lineage revision `daf2b33fac918a464f6f7193214b27d164d39bea`, and the combined
+diff passes `git diff --check`; the check is recorded in
+[`framework-iris-patch-sequence-check-2026-11-05.json`](../android/patches/framework-iris-patch-sequence-check-2026-11-05.json).
+This validates patch context and ordering, not Java/AIDL compilation. The
+framework patches have not been compiled or installed, so API-surface
+behavior still needs a source build check.
 
 Reviewing the pinned modern SystemUI source shows that face requests are
 started by `SystemUIDeviceEntryFaceAuthInteractor`, a `CoreStartable` whose
@@ -851,9 +941,9 @@ outer context to `IrisManager`, so the proposed SystemUI client reports its
 own package for that check. The pinned SystemUI manifest already requests
 `USE_BIOMETRIC_INTERNAL`, and the patched `KeyguardUpdateMonitor` routes the
 generic `TYPE_IRIS` callback to `BiometricSourceType.IRIS`. No extra manifest
-permission or result-type mapping is needed. The remaining source integration
-is the enrolled-template/backend path and a lifecycle that avoids concurrent
-use of the shared front-camera/iris CSI receiver.
+permission or result-type mapping is needed. The remaining source integration is the enrolled-template/backend path and
+runtime validation that lifecycle cancellation prevents concurrent use of the
+shared front-camera/iris CSI receiver.
 
 The pinned `BiometricManager.hasEnrolledBiometrics(userId)` is not suitable as
 the iris-enabled gate: AuthService forwards to BiometricService, which returns

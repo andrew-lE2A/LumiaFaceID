@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-05",
+  "scope": "one temporary-package, IR-off still-frame analysis on the unlocked Lumia 950 XL cityman",
+  "build": {
+    "package": "com.lumia.irisprobe.cropcheck",
+    "installation": "separately signed temporary package; original probe package and its data were not replaced",
+    "result": "aapt, javac, d8 and zipalign completed"
+  },
+  "camera": {
+    "selected_id": "2",
+    "selected_by": "unique 1920x1088 front-facing sensor metadata",
+    "preview": "opened; repeating capture results continued at the manual baseline",
+    "still_capture": {
+      "kind": "ANALYZE",
+      "frame_number": 572,
+      "exposure_ns": 29995718,
+      "sensitivity_iso": 100,
+      "frame_duration_ns": 33441782,
+      "timestamp_source": "UNKNOWN (Camera2 value 0)",
+      "buffer_dimensions": [1920, 1080],
+      "crop_rect": [0, 0, 1920, 1080],
+      "capture_result_and_yuv_timestamps_match": true,
+      "raw_frame_saved": false
+    },
+    "image_quality": {
+      "luma_p05_p50_p95": [0, 1, 3],
+      "mean_abs_gradient_horizontal_vertical": [0.47, 0.46],
+      "clipped_at_or_below_16_percent": 100.0,
+      "roi_or_matcher_processing": "skipped by the provisional low-signal gate; no frontal-face proposal"
+    }
+  },
+  "illumination": {
+    "pulse_count": 0,
+    "channels_before": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "channels_after": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "cleanup": {
+    "temporary_package_removed": true,
+    "project_probe_force_stopped": true,
+    "cleanup_note": "The post-test camera readback showed a client attributed to com.lumia.irisprobe; force-stopping the project probe cleared it.",
+    "active_camera_clients": [],
+    "camera_devices": {
+      "0": "closed",
+      "1": "closed",
+      "2": "closed"
+    },
+    "camera_device_count": 3,
+    "camera_services": [
+      "cameraserver running",
+      "android.hardware.camera.provider@2.4-service running",
+      "mm-qcamera-daemon running"
+    ]
+  },
+  "interpretation": "This confirms Camera2 can deliver a timestamp-matched YUV frame through the crop-aware path with the current full-frame crop. It does not exercise a nonzero crop, demonstrate useful iris texture, or validate matcher behavior. The UNKNOWN timestamp source prevents subtracting sensor timestamps from elapsed-realtime values.",
+  "limitations": [
+    "The received image was near-black and rejected before ROI/matcher processing.",
+    "The test was IR-off and did not evaluate illumination or eye safety.",
+    "The camera was closed and the temporary package removed after the single still capture."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

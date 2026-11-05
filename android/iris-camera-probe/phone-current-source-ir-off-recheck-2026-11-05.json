@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded IR-off current-source Camera2 frame analysis on a separately signed temporary package",
+  "build": {
+    "temporary_package": "com.lumia.irisprobe.framecheck",
+    "apk_sha256": "2c566466afe68bba9ef2a236badd2c5044cc04944a37c1e09e6ab8d0b91f012d",
+    "installed_as_separate_package": true,
+    "original_probe_package_modified": false
+  },
+  "device": {
+    "model": "Lumia 950 XL",
+    "product": "lineage_cityman",
+    "android_release": "16",
+    "sdk": 36,
+    "camera_device_count": 3
+  },
+  "camera": {
+    "selected_id": "2",
+    "sensor_metadata": "1920x1088, front-facing, orientation 90 degrees",
+    "stream": "1920x1080 YUV_420_888",
+    "crop_rect": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "mode": "manual",
+    "exposure_ns": 29995718,
+    "sensitivity_iso": 100,
+    "frame_duration_ns": 33441782,
+    "capture_result_frame_number": 409,
+    "capture_result_timestamp_ns": 75076730038885,
+    "yuv_timestamp_ns": 75076730038885,
+    "timestamps_match": true,
+    "sensor_timestamp_source": "UNKNOWN (Camera2 value 0)",
+    "pixels_saved_or_exported": false
+  },
+  "analysis": {
+    "luma_p05": 0,
+    "luma_p50": 0,
+    "luma_p95": 2,
+    "mean_absolute_gradient_horizontal": 0.26,
+    "mean_absolute_gradient_vertical": 0.25,
+    "clipped_at_or_below_16_percent": 100.0,
+    "clipped_at_or_above_240_percent": 0.0,
+    "tile_stddev_min": 0.09,
+    "tile_stddev_max": 1.29,
+    "eye_roi": "no face-derived eye candidate; not evidence that no eye is present",
+    "result": "low-signal gate rejected candidate analysis at provisional p95 threshold 32"
+  },
+  "illumination": {
+    "enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_package_force_stopped_and_uninstalled": true,
+    "active_camera_clients": [],
+    "all_four_led_channels_read_zero": true
+  },
+  "interpretation": "This confirms the current-source camera open, one-frame YUV delivery, crop handling, result/buffer identity and in-memory analysis on the installed device. The image was effectively black and provides no iris-quality evidence. With no emitted IR and no useful ambient signal, the next image-quality step requires a suitably illuminated, unobstructed scene; no exposure or matcher conclusion is drawn.",
+  "publication": "local only; no commit, push or PR"
+}

@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-05",
+  "scope": "source change and local build; no hardware IR pulse",
+  "change": {
+    "ir_action": "The bounded torch pulse now requests one YUV frame for in-memory analysis and discard instead of calling the save-to-private-storage capture action.",
+    "pulse_completion": "The helper is signalled as soon as the YUV buffer is delivered, before CPU analysis, so illumination need not remain on while the analyzer processes pixels.",
+    "failure_cleanup": "Capture failure, frame-reader exception, activity close and the 850 ms app timeout clear the pending frame operation; the helper retains its independent 1 s watchdog and off-on-disconnect trap.",
+    "ui_label": "IR + analyze (min, ≤1 s)"
+  },
+  "build": {
+    "result": "Android Java sources compiled with SDK platform 35; D8, zipalign and apksigner verification passed.",
+    "temporary_package": "com.lumia.irisprobe.sessionanalysis",
+    "apk_sha256": "fce510112f52708b1d3836c0eaa3a47ca35d5b141bd8dbede70fc224cf5352a1"
+  },
+  "host_checks": {
+    "command": "python3 -m unittest tests/test_iris_probe_host.py tests/test_iris_torch_helper.py",
+    "result": "6 tests passed, including source-level guards that the IR action uses in-memory analysis and the timing analyzer correlates IR_ANALYZE logs"
+  },
+  "phone_install_ui_smoke": {
+    "package": "com.lumia.irisprobe.sessionanalysis",
+    "launch": "explicit activity launch succeeded; foreground package verified",
+    "button": "IR + ANALYZE (MIN, ≤1 S) displayed",
+    "camera_opened": false,
+    "active_camera_clients": 0,
+    "temporary_package_removed": true,
+    "all_four_LED_channels_after_cleanup": 0
+  },
+  "phone_hardware_test": {
+    "run": true,
+    "result_record": "phone-min-current-ir-analysis-2026-11-05.json",
+    "setup_reported_by_owner": "phone in a white thin box; actual material reflectance was not measured",
+    "latest_readback": {
+      "torch_0_brightness": 0,
+      "torch_0_max_brightness": 200,
+      "torch_1_brightness": 0,
+      "flash_0_brightness": 0,
+      "flash_1_brightness": 0,
+      "active_camera_clients": 0
+    }
+  },
+  "limits": [
+    "Brightness 14 is a prior observed minimum nonzero torch setting, not a validated eye-safety level or measured optical output.",
+    "Software helper timestamps do not establish optical exposure overlap.",
+    "No IR image, iris match, enrollment, Android authenticator, or unlock was tested."
+  ],
+  "publication": "local only; no commit, push or PR"
+}

@@ -1,0 +1,111 @@
+{
+  "date": "2026-11-05",
+  "scope": "offline static analysis of the Windows iris capture-to-flash request path and Lumia tertiary PMIC flash driver",
+  "input": {
+    "path": "/private/tmp/qccamflashtertiary8994.sys",
+    "source": "WOA-Project/Lumia-Drivers pinned file",
+    "sha256": "58cf8c49d30756a5ddae896cf51aa1dd1ae2733217ee603aebacb44ce047c1c5",
+    "format": "PE32 ARMv7 Thumb, image base 0x400000",
+    "timestamp": "2016-05-02 12:09:15"
+  },
+  "capture_component_input": {
+    "path": "/private/tmp/CameraAuthentication-mobile.dll",
+    "sha256": "3f81977708e9907f043053037fef87f013cf9d9a2cf92b634e949bec45679e95",
+    "format": "PE32 ARMv7 Thumb, image base 0x10000000"
+  },
+  "mobile_firmware_input": {
+    "path": "../local-firmware/RM1085_1078.0053.10586.13169.12742.034EE8_retail_prod_signed.ffu",
+    "original_download_path": "/private/tmp/RM1085_1078.0053.10586.13169.12742.034EE8_retail_prod_signed.ffu",
+    "sha256": "3c6241fca0d302c0e462fa2ac438cfeb1f1ec6ef46b868a79e487ba19d61f4ef",
+    "platform": "Microsoft.MSM8994.P6211 (cityman)",
+    "os_version": "8.15.13169.318",
+    "mainos_partition_bytes": 2980052992
+  },
+  "observations": [
+    {
+      "image_address": "0x10005ab5 -> 0x10008f11",
+      "method_label": "CCameraConnection::SetPulsingMode -> CFrameHandler::SetPulsingMode",
+      "evidence": "The CCameraConnection method forwards the supplied mode via the CFrameHandler vtable slot at +0x18. The receiving handler stores it at object offset +0xa8 and sets a valid byte at +0xac. No PMIC or direct LED operation occurs in this setter.",
+      "confidence": "direct static disassembly; method labels resolved from embedded diagnostic strings"
+    },
+    {
+      "image_address": "0x10005b75 -> 0x100090fd",
+      "method_label": "CCameraConnection::SetIrLedCurrent -> CFrameHandler::SetIrLedCurrent",
+      "evidence": "The CCameraConnection method forwards its value via the CFrameHandler vtable slot at +0x20. The receiving handler copies the supplied 32-bit value to object offset +0xb0. No PMIC or direct LED operation occurs in this setter.",
+      "confidence": "direct static disassembly; method labels resolved from embedded diagnostic strings"
+    },
+    {
+      "image_address": "0x1000b98a",
+      "method_label": "CFrameHandler per-frame video-result construction",
+      "evidence": "The result-building path reads the cached pulsing mode at object offset +0xa8. Mode 1 sets byte +0x35 in the output record; other values clear it. It copies the cached current at +0xb0 to byte +0x2c, then passes an 0x88-byte record onward. The units and exact downstream consumer are not identified, so this does not prove when the PMIC output switches relative to exposure.",
+      "confidence": "direct static disassembly; inferred mode interpretation limited to observed output-field changes"
+    },
+    {
+      "image_address": "0x1000607a -> 0x10008144 -> 0x10008188; IOCTL literal at 0x100081c4",
+      "method_label": "capture worker submits latest frame result to camera KMD",
+      "evidence": "After the frame-handler callback, the capture worker calls helper 0x10008144. The helper invokes handler vtable slot +0x08 with out parameters for a pointer and byte count, then calls DeviceIoControl on the camera handle at connection offset +0x04. The pointer and length are passed as input buffer and input length; output buffer and output length are zero. The control code decodes to 0x0023432A (FILE_DEVICE_VIDEO 0x23, function 0x0CA, FILE_READ_ACCESS, METHOD_OUT_DIRECT).",
+      "confidence": "direct static disassembly for arguments and call flow; Windows CTL_CODE field interpretation"
+    },
+    {
+      "image_address": "qccamavs8994.sys, PE32 ARMv7 Thumb, image base 0x00400000",
+      "method_label": "Windows Mobile AVStream camera KMD flash/preflash surface",
+      "evidence": "Extracted from MainOS in the exact Mobile FFU. Static strings in this camera KMD include SetFlashPulses_Flash, WhiteLED_SetFlashResults_FlashDriverTest, fields FlashState, FlashPower, FlashCtrlPulseUs, UseHighPowerMode, UseAssistLight and PreFlashIndex, and the capture pipeline names OnStartPreflash, OnPreflashComplete and StartStillAfterFlashCompleted. Trace strings say CPin::CompleteFrame drops frames while preflash is active. This establishes that the Mobile camera KMD has a camera-owned pulse/preflash scheduling path and validates/debug surfaces. Strings alone do not prove this path consumes the 0x88 iris result record or identify its optical timing/current units.",
+      "file_sha256": "cf6d9928e5aec7aca3c2a54c4099befe7a3d6841e13958fc6c813bdc07a55f2c",
+      "confidence": "firmware extraction verified by file hash; behavior is limited to embedded diagnostic strings"
+    },
+    {
+      "image_address": "qccamavs8994.sys 0x40CEC0-0x40CFA0; CameraAuthentication.dll IOCTL 0x0023432A",
+      "method_label": "Candidate frame-result IOCTL to custom-camera-property connection",
+      "evidence": "The CameraAuthentication capture worker submits the 0x88-byte per-frame result record with IOCTL function field 0x0CA. Separately, qccamavs8994's function at 0x40CC98 initializes a property-result structure, and its selector-0xCA branch routes through a vtable accessor at object offset +0x78 to fill that output. Its unknown-selector trace string resolves to CCaptureFilter::PopulateNokiaCustomPropertyValue. A distinct setter path logs CCaptureFilter::SetNokiaCustomPropExt; its inspected selector cases cover 0x65-0x69 and 0xCC, not 0xCA. The observed 0xCA path is therefore an output-property query, not a match for CameraAuthentication's input-only result submission on current evidence. CTL_CODE function numbers and camera-property IDs are separate namespaces; the binary does not prove IOCTL 0x0023432A reaches either custom-property routine or that the payloads are related.",
+      "confidence": "static numeric correlation only; receiver and payload mapping unconfirmed"
+    },
+    {
+      "image_address": "qccamflashtertiary8994.sys, PE32 ARMv7 Thumb",
+      "method_label": "Original Mobile FFU flash-driver identity check",
+      "evidence": "The qccamflashtertiary8994.sys extracted from this Windows Mobile FFU has the same SHA-256 as the pinned WOA driver binary already analyzed in this artifact. The selector-0x26 and PMIC findings therefore apply to the exact driver file present in this Mobile image, but do not by themselves connect CameraAuthentication's IOCTL to that selector.",
+      "file_sha256": "58cf8c49d30756a5ddae896cf51aa1dd1ae2733217ee603aebacb44ce047c1c5",
+      "confidence": "exact file hash match"
+    },
+    {
+      "image_address": "0x404c51",
+      "method_label": "CameraKMDFlashEvtIoControl",
+      "evidence": "The internal operation dispatch table accepts selector 0x26; its branch logs CameraFlashDriver_WhiteLED_SetFlash. The branch checks the associated size field for 0x2c, copies configuration data, then invokes a registered callback through a context function pointer.",
+      "confidence": "direct static disassembly"
+    },
+    {
+      "image_address": "0x4047b9",
+      "method_label": "Pmic_SetFlash path",
+      "evidence": "The routine copies a 0x2c-byte configuration. The 32-bit word at byte offset 0x0c is rejected when <= 0 or > 100, then the configuration is passed to validation/configuration helpers. Its error logging names Pmic_SetFlash. The field's units and meaning are not established.",
+      "confidence": "direct static disassembly plus embedded diagnostic strings"
+    },
+    {
+      "image_address": "0x4050e2",
+      "method_label": "selector 0x26 SetFlash callback dispatch",
+      "evidence": "The selector-0x26 branch checks that the request length is 0x2c, copies seven dwords beginning at request byte offset 0x10 to the callback stack arguments, and invokes a function pointer from the registered flash context. The adjacent diagnostic branch identifies this operation as WhiteLED_SetFlash.",
+      "confidence": "direct static disassembly"
+    },
+    {
+      "image_address": "0x406225",
+      "method_label": "FlashCallback",
+      "evidence": "The callback walks an indexed schedule entry and reads its signed byte at entry offset 0x44. It logs either 'Turning Flash On', 'Turning Flash Off', or 'Flash already ON, turning Flash Off', then updates its internal ON/OFF state and schedule index. Timer-expiration and watchdog-expiration work-item paths exist elsewhere in the driver. This callback establishes scheduled state transitions, not the exact PMIC edge or its phase against exposure.",
+      "confidence": "direct static disassembly plus embedded diagnostic strings"
+    },
+    {
+      "image_address": "0x4047b9",
+      "method_label": "PMIC flash guard paths",
+      "evidence": "The binary contains validation for per-LED and aggregate flash power limits, watchdog petting, accumulated LED heat load, and thermal/cooldown paths. This establishes driver guard mechanisms exist in the binary, but not that their parameters are eye-safety limits or that the paths were exercised on this handset.",
+      "confidence": "embedded diagnostic strings plus static disassembly"
+    }
+  ],
+  "interpretation": "Windows captures per-frame pulsing-mode and IR-current settings into its video-result record and submits the record to the camera KMD through IOCTL 0x0023432A. Separately, the pinned tertiary flash driver has a SetFlash callback route into a PMIC flash implementation with timer/watchdog machinery. The receiver for IOCTL 0x0023432A has not been found, so the exact link between these two paths and the PMIC output edge remains unproven.",
+  "not_established": [
+    "That the qccamavs custom-property selector 0xCA is the receiver for CameraAuthentication IOCTL function 0xCA; the qccamavs 0xCA case is in PopulateNokiaCustomPropertyValue and writes an output structure, while the distinct inspected SetNokiaCustomPropExt cases do not include 0xCA. The capture DLL's input-only submission has not been connected to either routine.",
+    "That the receiver for IOCTL 0x0023432A is the pinned tertiary-flash dispatcher, or that it submits selector 0x26; an intermediate adapter may translate the frame-result fields.",
+    "That the qccamavs flash/preflash diagnostic surface is the specific receiver/consumer of CameraAuthentication's iris frame-result record; no matching IOCTL literal was found in the extracted qccamavs/qccamcore/qccamisp/qccamflash/qccamplatform binaries, but generic/dynamic dispatch is not ruled out.",
+    "The configuration structure's field names, units, or precise pulse semantics.",
+    "The optical pulse edge relative to the iris exposure or frame delivery.",
+    "Runtime behavior on the Lumia or any eye-safety limit."
+  ],
+  "method": "Verified the FFU, CameraAuthentication.dll, qccamavs8994.sys and qccamflashtertiary8994.sys SHA-256 values; extracted MainOS read-only using the FFU partition map and scanned its NTFS MFT for camera-driver files. Inspected ARM32 Thumb disassembly and embedded strings only. Searched all six extracted Mobile qccamavs/qccamcore/qccamisp/qccamflash/qccamplatform/qccamflashtertiary binaries for the exact little-endian 0x0023432A byte sequence, and the five available qccamavs/qccamcore/qccamisp/qccamflash/qccamplatform disassemblies for a MOVW low-half immediate 0x432A; neither form was found. This does not rule out computed codes, generic dispatch, or forwarding. No binary was executed and no device or LED was accessed.",
+  "publication": "local only; no commit, push, or PR"
+}

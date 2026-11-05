@@ -2,7 +2,7 @@
 
 A minimal Android Camera2 app for the Lumia 950 XL iris bring-up. The HAL can assign the iris different numeric camera IDs across boots, so the app reads camera metadata and selects the unique front-facing 1920×1088 sensor, then opens only that ID. If there is no unique match, it refuses to open a camera. The preview keeps the sensor aspect ratio and has a **Rotate +90°** control for adjusting the provisional mount angle. The screen and logcat show the selected ID, stream size, open/configuration errors, and capture-result callback counts.
 
-The **IR + capture** button is disabled until a capture-result callback arrives and is available once per app session. It asks a root-only localhost helper to set torch_0 brightness 14 (the lowest previously measured nonzero hardware level), requests one YUV frame, and sends `STOP` after that frame is delivered or fails. The helper turns the channel off on `STOP`, client disconnect or shell exit; an independent one-second watchdog is the hard maximum. This frame-completion synchronization path is experimental and has not been tested on hardware. It is not biometric authentication or a validated eye-safety level. Never aim the emitter at a person or eyes. Use only with a diffuse target and no one in the reflected path. **Do not use IR while the phone is covered by the metal can or any reflective enclosure.** The app cannot write the LED sysfs node directly. For this test, start the helper over adb:
+The **IR + analyze** button is disabled until a capture-result callback arrives and is available once per app session. It asks a root-only localhost helper to set torch_0 brightness 14 (the lowest previously measured nonzero hardware level), requests one YUV frame, and sends `STOP` when that capture's result callback arrives after sensor exposure, without waiting for YUV delivery or CPU analysis. The buffer is still analyzed in memory and discarded; it is not saved to app storage. Capture failure, reader failure, activity close, and an 850 ms app timeout also release the helper, which has an independent one-second hard software maximum. A bounded phone run with a fake brightness file verified this order without enabling a physical LED: `STOP` was requested about 3 ms after the capture-result callback and about 1 ms before the YUV callback; the helper wrote the fake level back to zero. This verifies software ordering, not the physical LED edge or optical exposure overlap. Previous physical runs provide separate request/result/buffer timestamp evidence, but the sensor clock is unknown and optical timing remains unmeasured. This is not biometric authentication or a validated eye-safety level. Never aim the emitter at a person or eyes. Use only with a diffuse target and no one in the reflected path. **Do not use IR while the phone is covered by the metal can or any reflective enclosure.** The app cannot write the LED sysfs node directly. For a hardware test, start the helper over adb:
 
 ```sh
 adb root
@@ -11,12 +11,12 @@ adb shell chmod 700 /data/local/tmp/iris-torch-server.sh
 adb shell 'nohup sh /data/local/tmp/iris-torch-server.sh >/data/local/tmp/iris-torch-server.log 2>&1 </dev/null &'
 ```
 
-The helper binds only to `127.0.0.1`, rejects all commands except `PULSE`, writes brightness 14 and replies `ON`, then waits for the app's `STOP` before reporting `OFF`. The watchdog forces brightness back to 0 after one second even if the client stalls. Its exit/signal trap also writes 0. It is temporary and stops when the phone reboots. Check `/sys/class/leds/led:torch_0/brightness` is `0` after use. Do not use the sensor-strobe path.
+The helper binds only to `127.0.0.1`, rejects all commands except `PULSE`, writes brightness 14 and replies `ON`, then waits for `STOP` for at most one second. It writes 0 and replies `OFF` when stopped, disconnected or timed out. No background watchdog process is needed; its exit/signal trap also writes 0. It is temporary and stops when the phone reboots. Check `/sys/class/leds/led:torch_0/brightness` is `0` after use. Do not use the sensor-strobe path. The software helper's one-second bound is not an eye-safety limit.
 
 For a future safe, uncovered-target run, the app logs elapsed-realtime
 timestamps immediately before sending `PULSE` and `STOP`, when it receives
-`ON` and `OFF`, when it submits the one-frame request, and when the YUV buffer
-arrives. It also logs the buffer timestamp and sensor timestamp source,
+`ON` and `OFF`, when it submits the one-frame request, when the capture-result
+callback arrives, and when the YUV buffer arrives. It also logs the buffer timestamp and sensor timestamp source,
 exposure duration and frame duration. The phone's iris camera currently
 reports `SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN`, so the sensor timestamp must
 not be compared with app elapsed-realtime values. The analyzer instead checks
@@ -48,9 +48,13 @@ When the iris preview session is open, **Save one YUV frame** requests one
 `YUV_420_888` still output and writes a packed I420 frame plus a small JSON
 metadata sidecar to the app's private internal files directory. The button is
 one-shot per app session; the capture has a five-second timeout. It does not
-turn on the IR emitter. The frame is not an enrollment template and is not
-uploaded or written to shared storage. Camera2 metadata identifies the sensor
-orientation; the pixel buffer itself remains in sensor orientation. On launch,
+turn on the IR emitter. Packing honors each plane's row/pixel stride and
+`Image.getCropRect()`; the sidecar records the crop origin, source buffer
+dimensions and output dimensions. Live luma analysis uses the same crop origin
+so detector and ROI coordinates refer to the pixels actually analyzed. The
+frame is not an enrollment template and is not uploaded or written to shared
+storage. Camera2 metadata identifies the sensor orientation; the pixel buffer
+itself remains in sensor orientation. On launch,
 the probe reports aggregate Y/U/V means, spread and ranges plus luma
 percentiles, horizontal/vertical mean absolute gradients, clipping fractions,
 and an 8×6 grid's local standard-deviation range for the latest private frame.
@@ -93,6 +97,81 @@ request is logged separately from repeating-preview results. Manual and AE
 one-frame paths were checked on the phone on 2026-11-05 without saving image
 data or enabling IR; see
 [`camera2-still-exposure-result-2026-11-05.json`](camera2-still-exposure-result-2026-11-05.json).
+The crop-aware live-frame path was separately exercised on 2026-11-05: one
+IR-off frame from camera 2 had a full 1920×1080 crop and an exactly matching
+Camera2 result timestamp, but its luma p95 was 3 and it was rejected before
+ROI analysis. No pixels were saved; see
+[`phone-crop-path-result-2026-11-05.json`](phone-crop-path-result-2026-11-05.json).
+One AE-auto IR-off frame later reached luma p95 142 and matched its Camera2
+result timestamp, but reported ISO 4860 against the advertised maximum of 800.
+The instrumented result reported post-RAW sensitivity boost 100%, the only
+advertised value, so ISP digital boost does not explain the high ISO. The
+open-source HAL copies vendor sensor sensitivity directly into Camera2 and
+maps ISP digital gain separately. The evidence points to an upstream vendor
+sensitivity metadata or gain-scaling issue; it does not reveal the actual
+analog gain. The frame produced no face/eye ROI; a whole-frame contrast
+proposal remained display-only. See
+[`phone-ae-quality-result-2026-11-05.json`](phone-ae-quality-result-2026-11-05.json).
+A follow-up manual sensitivity sweep requested ISO 100, 200, 400, and 800 at
+fixed 30 ms exposure. Each Camera2 result reported the matching requested ISO
+and 100% post-RAW boost, confirming the anomaly is in the AE result path. The
+available scene was near black (ISO 100 p95=3), so this did not establish
+image response or actual analog gain. The temporary diagnostic control and
+all four result records are in
+[`phone-manual-sensitivity-sweep-2026-11-05.json`](phone-manual-sensitivity-sweep-2026-11-05.json).
+The current source, including the range-aware ISO selector, was then built
+and opened under a separate temporary package on the phone. Camera2 accepted
+ISO 200 after one selector tap and reported ISO 200 while exposure and frame
+duration stayed fixed at about 30 ms and 33.44 ms. The temporary package was
+removed; all camera clients were closed and all four LED channels read zero.
+This verifies request/callback behavior, not physical analog-gain response or
+image quality. See
+[`phone-current-source-manual-iso-smoke-2026-11-05.json`](phone-current-source-manual-iso-smoke-2026-11-05.json).
+The current-source probe now has a separate manual-exposure selector. It
+clamps requests to the advertised exposure range and sets frame duration to at
+least exposure plus the readout margin, subject to the advertised maximum.
+An IR-off phone run returned exposure metadata for 50, 75, 100, 200 and
+300 ms. At 300 ms / ISO 800, one no-save YUV analysis reached luma p95=47,
+above the provisional signal floor, but still found no face-derived eye ROI.
+No image was retained; the temporary package was removed, all cameras closed
+and all LED channels read zero. This is evidence that longer exposure and
+requested sensitivity raise the captured signal, not that the sensor's analog
+gain is calibrated or that the frame contains usable iris detail. See
+[`phone-manual-exposure-check-2026-11-05.json`](phone-manual-exposure-check-2026-11-05.json).
+The current source also delivered one IR-off YUV frame to the in-memory
+analyzer. It was full-crop 1920×1080 with luma p95=2 and 100% of samples at or
+below 16, so candidate processing correctly stopped at the provisional low-
+signal gate. No pixels were saved, the temporary package was removed, all
+camera clients closed, and all four LED channels read zero. See
+[`phone-current-source-frame-analysis-2026-11-05.json`](phone-current-source-frame-analysis-2026-11-05.json).
+On 2026-11-05, the installed older package again opened only camera 2 and
+delivered 190 repeating capture-result callbacks over about 14.5 seconds; the
+session closed cleanly and all four emitter channels remained at zero. This
+was preview-only. The current local APK could not replace that installation
+because its signing certificate differs, so this run does not revalidate the
+newer YUV-analysis source. No app data was removed. See
+[`phone-preview-recheck-2026-11-05.json`](phone-preview-recheck-2026-11-05.json).
+The current APK was then installed under a temporary package name, leaving
+the original app intact. One IR-off `YUV_420_888` request on camera 2 delivered
+a full-crop 1920×1080 frame; its buffer timestamp exactly matched the
+capture-result timestamp. The in-memory analysis returned luma p95=1 and
+stopped at the existing provisional signal floor of 32. No pixels were saved,
+all four emitter channels remained zero, and the temporary package was removed
+after closing the camera. This confirms frame delivery and timestamp/crop
+handling, but the scene still provides too little signal to assess iris
+localization or matcher behavior. See
+[`phone-current-source-yuv-recheck-2026-11-05.json`](phone-current-source-yuv-recheck-2026-11-05.json).
+After the owner placed the phone in a white thin box, one minimum-level
+`torch_0` pulse was tested with the current-source in-memory analysis path.
+The single 1920×1080 YUV frame arrived 1.13 ms before the app's STOP request;
+its buffer timestamp exactly matched the Camera2 capture-result timestamp.
+Luma p95 was 212 (versus 1 in the previous IR-off capture), but no face/eye
+pair ROI was found. A whole-frame contrast proposal remained display-only and
+is not iris localization. The phone was closed and the temporary package,
+helper and helper files were removed; camera clients were zero and all four
+LED channels read zero. The box's reflectance and optical output were not
+measured, and this is not eye-safety validation. See
+[`phone-min-current-ir-analysis-2026-11-05.json`](phone-min-current-ir-analysis-2026-11-05.json).
 The diagnostic now skips circle proposals and enrollment/comparison when the
 frame's luma 95th percentile is below 32. This provisional floor rejects the
 two earlier can-covered frames (p95 3 and 25); it is not calibrated. A later
@@ -169,7 +248,14 @@ The APK is written to `build/LumiaIrisProbe.apk`. The local APK and signing mate
 The pure-Java geometry, boundary-proposal and phase-code checks use generated
 synthetic patterns only and can run on the host with
 `python3 -m unittest tests/test_iris_probe_host.py` from the repository root.
-The host checks also verify that cleared diagnostic enrollment drops sample
+The host checks also exercise crop-aware plane copying with padded row stride,
+non-unit pixel stride, nonzero crop origin, bounds rejection and preservation
+of the input buffer position. The saved I420 path rejects crop rectangles with
+odd left or top origins until chroma rephasing is implemented; this avoids
+writing U/V planes whose dimensions disagree with the output geometry.
+Synthetic checks cover odd-origin rejection and aligned even-origin crops.
+Crop extents are checked against each plane's dimensions, so row padding cannot
+be misread as image pixels. They also verify that cleared diagnostic enrollment drops sample
 references and that cleared sample/consensus codes no longer produce a valid
 comparison. This remains a software behavior check, not guaranteed erasure of
 all runtime copies; see

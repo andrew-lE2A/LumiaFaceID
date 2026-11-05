@@ -1,0 +1,46 @@
+{
+  "recorded_date_host": "2026-11-05",
+  "device": {
+    "model": "Lumia 950 XL",
+    "product": "lineage_cityman",
+    "device": "cityman",
+    "android_release": "16",
+    "android_sdk": 36,
+    "device_timezone": "Pacific/Midway"
+  },
+  "test": {
+    "type": "bounded Camera2 preview; no still/YUV request, no save, no IR",
+    "device_log_time": "2026-11-04 21:57:13-21:57:28 SST",
+    "app": {
+      "package": "com.lumia.irisprobe",
+      "installed_last_update_device_time": "2026-11-04 04:22:15",
+      "note": "Older installed diagnostic build. Installing the current local APK was rejected because its signing certificate does not match the installed package; no existing app data was removed."
+    },
+    "camera_inventory": {
+      "number_of_cameras": 3,
+      "selected_camera_id": "2",
+      "selection": "unique 1920x1088 metadata; facing=front; sensorOrientation=90"
+    },
+    "stream": {
+      "configured_preview": "1920x1080 sensor stream displayed as 1080x1920",
+      "capture_result_callbacks": 190,
+      "last_logged_frame_number": 189,
+      "observation_duration_seconds": 14.5,
+      "image_data": "No ImageReader capture was requested; callback counts do not prove a YUV frame was delivered or useful image quality."
+    },
+    "illumination": {
+      "enabled": false,
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0
+    }
+  },
+  "cleanup": {
+    "preview": "closed from the app",
+    "active_camera_clients": [],
+    "all_four_led_channels_read_zero": true
+  },
+  "interpretation": "The installed probe repeatedly selects the iris camera and sustains Camera2 capture-result callbacks. This is a preview-session check only; it does not verify the newer local YUV analysis path, delivered pixels, eye localization, matcher behavior, or Android unlock.",
+  "publication": "local only; no commit, push, flash, or kernel change"
+}

@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded IR-off manual sensitivity sweep on the Lumia 950 XL iris camera",
+  "camera": {
+    "id": "2",
+    "active_camera_clients_during_test": ["2"],
+    "buffer": [1920, 1080],
+    "crop_rect": [0, 0, 1920, 1080],
+    "sensor_timestamp_source": "UNKNOWN (Camera2 value 0)",
+    "capture_result_yuv_timestamp_match": true
+  },
+  "fixed_settings": {
+    "exposure_ns": 29995718,
+    "frame_duration_ns": 33441782,
+    "ae_mode": "OFF",
+    "ir": "off"
+  },
+  "sensitivity_sweep": [
+    {"requested_iso": 100, "reported_iso": 100, "outside_advertised_range": false, "post_raw_boost_percent": 100},
+    {"requested_iso": 200, "reported_iso": 200, "outside_advertised_range": false, "post_raw_boost_percent": 100},
+    {"requested_iso": 400, "reported_iso": 400, "outside_advertised_range": false, "post_raw_boost_percent": 100},
+    {"requested_iso": 800, "reported_iso": 800, "outside_advertised_range": false, "post_raw_boost_percent": 100}
+  ],
+  "static_characteristics": {
+    "sensitivity_range_iso": [100, 800],
+    "max_analog_sensitivity_iso": 800,
+    "post_raw_sensitivity_boost_range_percent": [100, 100]
+  },
+  "image_analysis": {
+    "pixels_saved": false,
+    "iso_100_luma_p95": 3,
+    "iso_100_result": "low-signal frame rejected before candidate analysis/enrollment (provisional p95 floor 32)",
+    "scene_limit": "The dark/covered scene is unsuitable for comparing image response across sensitivities; no calibration conclusion is drawn."
+  },
+  "cleanup": {
+    "temporary_package_removed": true,
+    "active_camera_clients": [],
+    "led_brightness": {"torch_0": 0, "torch_1": 0, "flash_0": 0, "flash_1": 0},
+    "camera_provider_processes_running": [
+      "cameraserver",
+      "android.hardware.camera.provider@2.4-service",
+      "mm-qcamera-daemon"
+    ],
+    "camera_inventory": 3
+  },
+  "interpretation": "Manual sensitivity requests and Camera2 result metadata track exactly from ISO 100 through 800 at fixed exposure, with no post-RAW boost. The ISO 4860 result observed earlier is specific to AE output, not the manual request/result path. The manual sweep does not verify physical analog gain because the available scene was near black and no raw image or sensor gain register was read.",
+  "publication": "local only; no commit, push, or PR"
+}

@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded AE-auto, IR-off YUV analysis capture from the Lumia 950 XL iris camera",
+  "camera": {
+    "id": "2",
+    "buffer": [1920, 1080],
+    "crop_rect": [0, 0, 1920, 1080],
+    "capture_frame": 215,
+    "capture_result_yuv_timestamp_match": true,
+    "timestamp_source": "UNKNOWN (Camera2 value 0)",
+    "exposure_ns": 75004280,
+    "sensitivity_iso_reported": 4860,
+    "sensitivity_outside_advertised_range": true,
+    "post_raw_sensitivity_boost_percent": 100,
+    "advertised_post_raw_sensitivity_boost_range_percent": [100, 100],
+    "frame_duration_ns": 75184080,
+    "advertised_sensitivity_range_iso": [100, 800]
+  },
+  "image_quality": {
+    "luma_p05_p50_p95": [30, 76, 142],
+    "mean_abs_gradient_horizontal_vertical": [1.59, 1.57],
+    "clipped_at_or_below_16_percent": 0.14,
+    "clipped_at_or_above_240_percent": 0.0,
+    "face_or_eye_pair_roi": "none",
+    "whole_frame_contrast_proposal": {
+      "candidate": true,
+      "center_sensor_pixels": [822, 552],
+      "proposed_pupil_radius": 72,
+      "proposed_iris_radius": 108,
+      "edge_strengths": [0.095, 0.016],
+      "use": "display-only; excluded from diagnostic enrollment and comparison"
+    },
+    "result": "The signal gate passed, but no face-derived eye ROI was found. The scene contrast heuristic is not iris localization."
+  },
+  "illumination": {
+    "mode": "IR off",
+    "pulse_count": 0,
+    "brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "cleanup": {
+    "temporary_package_removed": true,
+    "probe_processes_force_stopped": true,
+    "active_camera_clients": [],
+    "camera_provider_processes_running": [
+      "cameraserver",
+      "android.hardware.camera.provider@2.4-service",
+      "mm-qcamera-daemon"
+    ],
+    "camera_inventory": 3
+  },
+  "interpretation": "AE yielded more image signal than the 30 ms / ISO 100 baseline. The instrumented Camera2 result confirms sensitivity 4860 is outside the advertised [100, 800] range, while post-RAW sensitivity boost is 100% (the only advertised value), so digital boost does not explain the discrepancy. The open-source HAL result path copies CAM_INTF_META_SENSOR_SENSITIVITY directly to ANDROID_SENSOR_SENSITIVITY and reports ISP digital gain separately as post-RAW boost. This points to an upstream vendor sensor-sensitivity metadata or gain-scaling issue; it does not establish the actual analog gain. This capture is not calibrated matcher evidence.",
+  "limitations": [
+    "One still frame only; no saved pixels.",
+    "Full-frame crop only; no nonzero crop was observed.",
+    "The UNKNOWN sensor timestamp source does not support exposure timing against elapsed-realtime.",
+    "No emitter, matcher, enrollment or authentication path was exercised."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

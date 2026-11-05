@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-05",
+  "scope": "temporary IR-off preview attempt on the unlocked Lumia 950 XL cityman",
+  "package": {
+    "name": "com.lumia.irisprobe.localtest",
+    "source_apk": "/private/tmp/LumiaIrisProbe-localtest.apk",
+    "original_probe_packages_modified": false,
+    "temporary_package_removed": true
+  },
+  "camera": {
+    "selected_id": "2",
+    "metadata": "front-facing 1920x1088 sensor, orientation 90 degrees",
+    "request": "repeating preview at manual 29.996 ms, ISO 100, 33.442 ms frame duration",
+    "result_callbacks": "confirmed in the preview log; one-frame analysis button tap did not register",
+    "yuv_frame_analyzed": false,
+    "pixels_saved": false
+  },
+  "illumination": {
+    "enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_app_force_stopped_and_uninstalled": true,
+    "camera_devices_0_1_2": "closed",
+    "active_camera_sessions": 0,
+    "camera_service_processes": "cameraserver and mm-qcamera-daemon remained running",
+    "all_led_channels_zero": true
+  },
+  "interpretation": "This is only a preview-session check; it gives no new evidence about the image contents or whether the sensor area is obstructed.",
+  "publication": "local only; no commit, push, or PR"
+}

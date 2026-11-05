@@ -14,8 +14,8 @@ FIELDS = (
     "offAckElapsedRealtimeNs",
 )
 FIELD_RE = re.compile(r"(\w+)=(-?\d+)")
-FRAME_RE = re.compile(r"ONE-FRAME (SAVE|ANALYZE|COMPARE) RESULT\b")
-REQUEST_RE = re.compile(r"ONE-FRAME REQUEST\b")
+FRAME_RE = re.compile(r"ONE-FRAME (SAVE|ANALYZE|COMPARE|IR_ANALYZE) RESULT\b")
+REQUEST_RE = re.compile(r"(?:ONE-FRAME REQUEST|IR-ANALYZE REQUEST)\b")
 IMAGE_RE = re.compile(r"ONE-FRAME YUV IMAGE\b")
 HELPER_RE = re.compile(r"IR capture helper result:")
 

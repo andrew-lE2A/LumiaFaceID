@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-05",
+  "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+  "patches": [
+    "0003-lineage-iris-authenticator-properties.patch",
+    "0004-lineage-keyguard-class1-iris-result.patch",
+    "0005-lineage-iris-keyguard-request-api.patch",
+    "0006-lineage-iris-enrollment-query.patch"
+  ],
+  "method": "Applied in order to a disposable detached Git worktree at the pinned base revision.",
+  "result": {
+    "all_patches_applied": true,
+    "combined_git_diff_check": "passed",
+    "changed_paths": 5,
+    "insertions": 302,
+    "deletions": 5
+  },
+  "not_verified": [
+    "Android framework Java/AIDL compilation",
+    "runtime Keyguard lifecycle behavior",
+    "phone installation or biometric unlock"
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

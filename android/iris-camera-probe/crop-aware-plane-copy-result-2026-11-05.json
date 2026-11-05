@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-05",
+  "scope": "local source validation and one bounded attempt to reach the phone UI; no IR enabled",
+  "source_change": {
+    "live_analysis": "reads luma relative to Image.getCropRect() and preserves the crop-local coordinate system",
+    "saved_yuv": "packs each YUV plane using its row/pixel stride and crop origin; sidecar records output and source dimensions plus crop origin",
+    "cleanup": "temporary packed plane arrays are cleared; partially written frame and metadata files are deleted on failure",
+    "diagnostic_log": "reports buffer size and crop bounds without image pixels"
+  },
+  "host_checks": {
+    "command": "python3 -m unittest tests/test_iris_probe_host.py",
+    "result": "passed",
+    "coverage": [
+      "padded row stride and non-unit pixel stride",
+      "nonzero crop origin",
+      "plane-dimension bounds reject coordinates that would land in row padding",
+      "input ByteBuffer position remains unchanged",
+      "out-of-bounds crop is rejected"
+    ]
+  },
+  "android_compile": {
+    "sdk": "/tmp/android-sdk, platform 35 / build-tools 35.0.0",
+    "result": "aapt, javac, d8 and zipalign completed; unsigned APK aligned",
+    "warnings": "JDK source/target 8 deprecation and existing deprecated Android API notes"
+  },
+  "phone_attempt": {
+    "device": "Lumia 950 XL cityman, LineageOS 23.2 / Android 16",
+    "temporary_package_installed": true,
+    "foreground_blocker": "System UI remained on Keyguard; the probe activity did not open",
+    "camera_opened": false,
+    "frame_captured": false,
+    "temporary_package_removed": true,
+    "post_cleanup_active_camera_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "limitations": [
+    "The phone did not exercise Image.getCropRect() because Keyguard blocked the app before camera startup.",
+    "Synthetic plane tests do not validate the Cityman HAL's real Image.Plane buffer layout or chroma crop alignment."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

@@ -1,0 +1,48 @@
+{
+  "recorded_date_host": "2026-11-05",
+  "test": "bounded Camera2 preview and one manual sensitivity change; IR off",
+  "source": {
+    "path": "android/iris-camera-probe/src/com/lumia/irisprobe/IrisProbeActivity.java",
+    "build": "Android SDK platform 35 and build-tools 35.0.0; javac, D8, zipalign and apksigner succeeded",
+    "phone_package": "temporary com.lumia.irisprobe.localsmoke, signed for this local run",
+    "existing_probe_packages_modified": false
+  },
+  "device": {
+    "model": "Lumia 950 XL cityman",
+    "android_release": "16",
+    "transport": "USB",
+    "selected_camera_id": "2",
+    "camera": "front-facing IR0861, 1920x1088, sensor orientation 90 degrees"
+  },
+  "capture": {
+    "stream": "1920x1080 YUV_420_888 preview",
+    "manual_exposure_ns": 29995718,
+    "frame_duration_ns": 33441782,
+    "before_selector": {
+      "requested_sensitivity_iso": 100,
+      "capture_result_sensitivity_iso": 100
+    },
+    "selector_action": "one tap advanced to ISO 200",
+    "after_selector": {
+      "requested_sensitivity_iso": 200,
+      "capture_result_sensitivity_iso": 200
+    },
+    "callback_count_logged": 660,
+    "image_pixels_saved": false,
+    "one_frame_analysis_requested": false
+  },
+  "illumination": {
+    "enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_package_force_stopped_and_uninstalled": true,
+    "active_camera_clients_after_cleanup": [],
+    "all_four_led_channels_read_zero": true,
+    "existing_probe_packages_preserved": true
+  },
+  "note": "The first temporary-package launch crashed before opening the camera because its relative manifest activity name resolved under the test package suffix. The temporary manifest was corrected to the Java class's fully qualified name; the subsequent run succeeded. The ISO result validates Camera2 request/callback state, not physical analog-gain response or image quality."
+}

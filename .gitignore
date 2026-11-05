@@ -4,3 +4,4 @@ __pycache__/
 /reports/
 /artifacts/
 /cityman-iris-stream*.hex
+/local-firmware/*.ffu

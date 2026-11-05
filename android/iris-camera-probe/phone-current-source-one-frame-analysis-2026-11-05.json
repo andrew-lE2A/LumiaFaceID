@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-05",
+  "scope": "one bounded IR-off YUV analysis on the connected Lumia 950 XL cityman",
+  "device": {
+    "serial": "d7baece4",
+    "product": "lineage_cityman",
+    "os": "LineageOS 23.2 / Android 16"
+  },
+  "build": {
+    "source": "current workspace android/iris-camera-probe sources at test time",
+    "temporary_package": "com.lumia.irisprobe.sessionanalysis",
+    "apk_sha256": "1e66f6b30b1df2dc6294d2e115c73e0ae3c43222cc188515b8e4327b1f5b3a19",
+    "manifest_activity": "com.lumia.irisprobe.IrisProbeActivity",
+    "installed_as_separate_disposable_package": true
+  },
+  "camera": {
+    "selected_id": "2",
+    "metadata": "1920x1088, front-facing, sensor orientation 90 degrees",
+    "stream": "1920x1080 YUV_420_888 for the one-frame reader; preview at source-derived 30 ms / ISO 100 baseline",
+    "preview_result_callbacks": "confirmed; exposure 29,995,718 ns, ISO 100, frame duration 33,441,782 ns",
+    "analysis_action": "one in-memory frame request; no save or export",
+    "result": "frame delivered and processed; no frontal-face candidate; rejected for candidate analysis/enrollment because luma p95 was 1, below the provisional threshold 32",
+    "quality_metrics": {
+      "luma_p05": 0,
+      "luma_p50": 0,
+      "luma_p95": 1,
+      "mean_abs_gradient_horizontal": 0.11,
+      "mean_abs_gradient_vertical": 0.11,
+      "clipped_at_or_below_16_percent": 100.0,
+      "clipped_at_or_above_240_percent": 0.0,
+      "tile_stddev_min": 0.06,
+      "tile_stddev_max": 0.78,
+      "grid": "8x6"
+    },
+    "frame_bytes_saved_by_this_action": false
+  },
+  "illumination": {
+    "ir_requested": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "temporary_package_force_stopped_and_uninstalled": true,
+    "active_camera_clients_after_test": 0,
+    "camera_service_processes": "cameraserver, camera provider and mm-qcamera-daemon remained running",
+    "all_led_channels_read_back_zero": true
+  },
+  "interpretation": "The current-source one-frame YUV request and in-memory pipeline work end-to-end, but this trial produced an effectively black frame. It does not establish whether the iris optics, sensor signal, or lighting setup caused the low signal, and it does not validate iris matching or authentication.",
+  "publication": "local only; no commit, push or PR"
+}

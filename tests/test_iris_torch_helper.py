@@ -43,9 +43,12 @@ class IrisTorchHelperTests(unittest.TestCase):
             try:
                 self.pulse(process)
                 self.assertEqual(led.read_text().strip(), '14')
+                stop_started = time.monotonic()
                 process.stdin.write('STOP\n')
                 process.stdin.flush()
                 self.assertEqual(process.stdout.readline().strip(), 'OFF')
+                self.assertLess(time.monotonic() - stop_started, 0.75,
+                                'OFF acknowledgement waited for the watchdog deadline')
                 self.assertEqual(process.wait(timeout=2), 0)
                 self.assertEqual(led.read_text().strip(), '0')
             finally:
@@ -56,12 +59,9 @@ class IrisTorchHelperTests(unittest.TestCase):
             process, led = self.start_worker(directory)
             try:
                 self.pulse(process)
-                time.sleep(1.15)
+                self.assertEqual(process.wait(timeout=1.5), 0)
                 self.assertEqual(led.read_text().strip(), '0')
-                process.stdin.write('STOP\n')
-                process.stdin.flush()
                 self.assertEqual(process.stdout.readline().strip(), 'OFF')
-                self.assertEqual(process.wait(timeout=2), 0)
             finally:
                 self.dispose(process)
 

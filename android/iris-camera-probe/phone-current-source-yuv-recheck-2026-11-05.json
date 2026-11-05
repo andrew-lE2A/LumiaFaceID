@@ -1,0 +1,61 @@
+{
+  "recorded_date_host": "2026-11-05",
+  "test": "one current-source IR-off YUV frame analyzed in memory",
+  "source": {
+    "probe_source": "current local source represented by the 2026-11-05 15:55 local APK build",
+    "test_package": "com.lumia.irisprobe.localtest",
+    "install_method": "manifest package renamed in a temporary copy and signed with a temporary test key; original app/package data left intact",
+    "temporary_package_uninstalled": true
+  },
+  "device": {
+    "model": "Lumia 950 XL",
+    "product": "lineage_cityman",
+    "android_release": "16",
+    "android_sdk": 36,
+    "selected_camera_id": "2",
+    "sensor_orientation_degrees": 90,
+    "number_of_cameras": 3
+  },
+  "frame": {
+    "format": "YUV_420_888",
+    "buffer": "1920x1080",
+    "crop": "0,0-1920,1080",
+    "capture_result_frame_number": 396,
+    "capture_result_timestamp_ns": 65385709930885,
+    "image_timestamp_ns": 65385709930885,
+    "timestamp_match": true,
+    "sensor_timestamp_source": "UNKNOWN (Camera2 value 0)",
+    "exposure_ns": 29995718,
+    "sensitivity_iso": 100,
+    "frame_duration_ns": 33441782,
+    "image_saved_or_exported": false
+  },
+  "quality": {
+    "luma_p05": 0,
+    "luma_p50": 0,
+    "luma_p95": 1,
+    "mean_absolute_gradient_horizontal": 0.09,
+    "mean_absolute_gradient_vertical": 0.09,
+    "clipped_at_or_below_16_percent": 100.0,
+    "clipped_at_or_above_240_percent": 0.0,
+    "tile_stddev_min": 0.05,
+    "tile_stddev_max": 0.73,
+    "face_detector": "no frontal-face candidate at 180x320; not evidence that no eye is present",
+    "candidate_processing": "rejected by provisional luma p95 floor 32"
+  },
+  "illumination": {
+    "enabled": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "cleanup": {
+    "camera_closed": true,
+    "active_camera_clients_after_cleanup": [],
+    "all_led_channels_read_zero": true,
+    "original_probe_package_preserved": true
+  },
+  "interpretation": "This validates the current-source Camera2 one-frame YUV delivery, full-frame crop handling and capture-result/buffer timestamp equality. Image signal was too low for eye-region or matcher analysis; this result does not validate iris localization, matching, enrollment, illumination, or Android unlock.",
+  "publication": "local only; no commit, push, flash, or kernel change"
+}

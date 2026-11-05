@@ -42,7 +42,7 @@
  
  /**
   * A class that coordinates access to the iris authentication hardware.
-@@ -25,10 +35,87 @@
+@@ -25,10 +35,91 @@
   */
  @SystemService(Context.IRIS_SERVICE)
  public class IrisManager {
@@ -63,6 +63,7 @@
 +    /**
 +     * Requests iris authentication for Keyguard. This hidden API must not be used by applications
 +     * or to authorize cryptographic operations. The iris modality is Class 1 / Convenience only.
++     * @hide
 +     */
 +    @RequiresPermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
 +    public void authenticateForKeyguard(int userId, @Nullable CancellationSignal cancel,
@@ -123,7 +124,10 @@
 +        }
 +    }
 +
-+    /** Callback events for the Keyguard-only Convenience path. */
++    /**
++     * Callback events for the Keyguard-only Convenience path.
++     * @hide
++     */
 +    public abstract static class AuthenticationCallback {
 +        public void onAuthenticationSucceeded(int userId) { }
 +        public void onAuthenticationFailed() { }
@@ -232,7 +236,7 @@
      private final DevicePostureController mDevicePostureController;
      private final TaskStackChangeListeners mTaskStackChangeListeners;
      private final IActivityTaskManager mActivityTaskManager;
-@@ -1688,6 +1691,57 @@
+@@ -1688,6 +1691,61 @@
          }
      }
  
@@ -258,6 +262,10 @@
 +                    public void onAuthenticationSucceeded(int authenticatedUserId) {
 +                        if (mIrisAuthenticationCancelSignal != cancelSignal) return;
 +                        mIrisAuthenticationCancelSignal = null;
++                        if (authenticatedUserId != userId) {
++                            cancelSignal.cancel();
++                            return;
++                        }
 +                        onIrisAuthenticated(authenticatedUserId);
 +                    }
 +
@@ -300,7 +308,7 @@
          mTrustManager.clearAllBiometricRecognized(FINGERPRINT, unlockedUser);
 --- /dev/null
 +++ b/core/java/android/hardware/iris/IIrisServiceReceiver.aidl
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,26 @@
 +/*
 + * Copyright (C) 2026 The Android Open Source Project
 + *
@@ -318,7 +326,10 @@
 + */
 +package android.hardware.iris;
 +
-+/** Callback for a privileged Keyguard iris authentication request. */
++/**
++ * Callback for a privileged Keyguard iris authentication request.
++ * @hide
++ */
 +oneway interface IIrisServiceReceiver {
 +    void onAuthenticationSucceeded(int userId);
 +    void onAuthenticationFailed();

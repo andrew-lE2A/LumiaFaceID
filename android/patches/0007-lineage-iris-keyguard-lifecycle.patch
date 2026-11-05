@@ -1,0 +1,124 @@
+--- a/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
++++ b/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
+@@ -399,6 +399,9 @@
+     @Nullable
+     private DeviceEntryFaceAuthInteractor mFaceAuthInteractor;
+     @Nullable private CancellationSignal mIrisAuthenticationCancelSignal;
++    private int mIrisEnrollmentUserId = UserHandle.USER_NULL;
++    private boolean mIrisEnrollmentStateKnown;
++    private boolean mIrisEnrolled;
+     private final DevicePostureController mDevicePostureController;
+     private final TaskStackChangeListeners mTaskStackChangeListeners;
+     private final IActivityTaskManager mActivityTaskManager;
+@@ -1409,6 +1412,7 @@
+                 @Override
+                 public void onRunningStateChanged(boolean isRunning) {
+                     notifyFaceRunningStateChanged();
++                    updateIrisListeningState();
+                 }
+ 
+                 @Override
+@@ -1703,7 +1707,7 @@
+             return;
+         }
+         final IrisManager irisManager = mContext.getSystemService(IrisManager.class);
+-        if (irisManager == null || !irisManager.hasEnrolledTemplatesForKeyguard(userId)) return;
++        if (irisManager == null || !hasIrisEnrollmentForKeyguard(irisManager, userId)) return;
+ 
+         final CancellationSignal cancelSignal = new CancellationSignal();
+         mIrisAuthenticationCancelSignal = cancelSignal;
+@@ -1734,6 +1738,18 @@
+                         }
+                     }
+                 }, mHandler);
++    }
++
++    /** Caches the per-user query until AuthController reports an enrollment change. */
++    @MainThread
++    private boolean hasIrisEnrollmentForKeyguard(IrisManager irisManager, int userId) {
++        Assert.isMainThread();
++        if (!mIrisEnrollmentStateKnown || mIrisEnrollmentUserId != userId) {
++            mIrisEnrollmentUserId = userId;
++            mIrisEnrolled = irisManager.hasEnrolledTemplatesForKeyguard(userId);
++            mIrisEnrollmentStateKnown = true;
++        }
++        return mIrisEnrolled;
+     }
+ 
+     /** Cancels the current iris request. */
+@@ -2667,16 +2683,24 @@
+             @Override
+             public void onAllAuthenticatorsRegistered(
+                     @BiometricAuthenticator.Modality int modality) {
+-                mMainExecutor.execute(
+-                        () -> updateFingerprintListeningState(BIOMETRIC_ACTION_UPDATE));
++                mMainExecutor.execute(() -> {
++                    if (modality == BiometricAuthenticator.TYPE_IRIS) {
++                        mIrisEnrollmentStateKnown = false;
++                    }
++                    updateFingerprintListeningState(BIOMETRIC_ACTION_UPDATE);
++                });
+             }
+ 
+             @Override
+             public void onEnrollmentsChanged(@BiometricAuthenticator.Modality int modality) {
+                 mHandler.obtainMessage(MSG_BIOMETRIC_ENROLLMENT_STATE_CHANGED, modality, 0)
+                         .sendToTarget();
+-                mMainExecutor.execute(
+-                        () -> updateFingerprintListeningState(BIOMETRIC_ACTION_UPDATE));
++                mMainExecutor.execute(() -> {
++                    if (modality == BiometricAuthenticator.TYPE_IRIS) {
++                        mIrisEnrollmentStateKnown = false;
++                    }
++                    updateFingerprintListeningState(BIOMETRIC_ACTION_UPDATE);
++                });
+             }
+ 
+             @Override
+@@ -2684,6 +2708,7 @@
+                 // SysUI should give priority to the biometric prompt requesting FP instead of
+                 // taking over the fingerprint listening state.
+                 mBiometricPromptShowing = true;
++                updateIrisListeningState();
+             }
+ 
+             @Override
+@@ -2881,6 +2906,7 @@
+     }
+ 
+     private void updateFingerprintListeningState(int action) {
++        updateIrisListeningState();
+         // If this message exists, we should not authenticate again until this message is
+         // consumed by the handler
+         if (mHandler.hasMessages(MSG_BIOMETRIC_AUTHENTICATION_CONTINUE)) {
+@@ -2922,6 +2948,30 @@
+                 }
+             }
+             startListeningForFingerprint(runDetect);
++        }
++    }
++
++    /** Keeps the Class 1 iris request aligned with Keyguard visibility and device state. */
++    private void updateIrisListeningState() {
++        Assert.isMainThread();
++        final int userId = mSelectedUserInteractor.getSelectedUserId();
++        final boolean shouldListen = mIsSystemUser
++                && mDeviceInteractive
++                && isKeyguardVisible()
++                && !mGoingToSleep
++                && !mIsDreaming
++                && !mKeyguardGoingAway
++                && !mSwitchingUser
++                && !mBiometricPromptShowing
++                && !isFaceAuthOrDetectionRunning()
++                && !mHandler.hasMessages(MSG_BIOMETRIC_AUTHENTICATION_CONTINUE)
++                && !isUserInLockdown(userId)
++                && isUnlockingWithBiometricAllowed(IRIS);
++
++        if (shouldListen) {
++            startIrisAuthenticationForKeyguard();
++        } else {
++            stopIrisAuthenticationForKeyguard();
+         }
+     }
+ 

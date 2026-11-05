@@ -11,11 +11,14 @@
  }
 --- a/core/java/android/hardware/iris/IrisManager.java
 +++ b/core/java/android/hardware/iris/IrisManager.java
-@@ -103,6 +103,18 @@
+@@ -103,6 +103,21 @@
          }
      }
  
-+    /** Returns whether the iris authenticator has an enrollment for the given Keyguard user. */
++    /**
++     * Returns whether the iris authenticator has an enrollment for the given Keyguard user.
++     * @hide
++     */
 +    @RequiresPermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
 +    public boolean hasEnrolledTemplatesForKeyguard(int userId) {
 +        if (mService == null) return false;

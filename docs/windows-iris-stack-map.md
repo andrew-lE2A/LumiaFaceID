@@ -31,9 +31,9 @@ pinned package file. Neither DLL is included in this repository.
 
 ### Windows Mobile WinBio iris components recovered
 
-The same FFU's `MainOS` image contains a complete iris path beyond the camera
-and ARC components. The following extracted ARMv7 Thumb PE32 files remain
-outside Git in `/private/tmp`:
+The same FFU's `MainOS` image contains Windows Biometric Framework iris
+sensor/engine components beyond the camera and ARC paths. The following
+extracted ARMv7 Thumb PE32 files remain outside Git in `/private/tmp`:
 
 | Component | SHA-256 | Static evidence |
 | --- | --- | --- |
@@ -47,10 +47,80 @@ the recognition component boundary and available operations. They do not
 establish exact runtime call order, thresholds, liveness strength, template
 protection or recognition quality. The DLLs were not executed.
 
-The sensor adapter's strings name capture, export, push-to-engine, cancel,
-reset and calibration operations. The engine adapter's strings name sample
-acceptance, frame analysis, enrollment and identification workers, match-result
-reporting, spoof reporting and eye-info reporting. Together, this supports a
+The engine adapter's exact imports from `iris_mobile_v2.WindowsPhone.dll` are
+`irm2_on_frame`, `irm2_init_identification`,
+`irm2_get_identification_result`, `irm2_get_liveness_check_status`,
+`irm2_set_liveness_check`, `irm2_get_version`, `irm2_init_enrollment`,
+`irm2_get_ui_hints`, `irm2_get_enrollment_info`,
+`irm2_continue_enrollment`, `irm2_get_template`, `irm2_get_eye_info`, and
+`irm2_get_camera_control`. The algorithm DLL additionally exports
+`irm2_compare`, `irm2_get_capture_info`, `irm2_get_features`,
+`irm2_get_kind3_image`, `irm2_get_kind7_image`, `irm2_init_capture`,
+`irm2_init_feature_extraction`, `irm2_init_preview`, and `irm2_preview`.
+These names give a practical API inventory for future interface mapping; they
+do not reveal structure layouts or argument semantics.
+
+Static ARMv7 call-site tracing in `DeltaIrisEngineAdapter.dll` now locates
+separate engine paths for enrollment and identification. The enrollment path
+calls `irm2_init_enrollment` at `0x10007e54`,
+`irm2_continue_enrollment` at `0x100081b6`, and
+`irm2_get_template` at `0x100083cc`; a nearby enrollment-info path calls
+`irm2_get_enrollment_info` at `0x10008474`. The identification path calls
+`irm2_init_identification` at `0x10009d62` and
+`irm2_set_liveness_check` at `0x10009dca`. In the frame-processing path,
+`irm2_on_frame` is called at `0x1001bf5a`, and the result path calls
+`irm2_get_identification_result` at `0x1001c1f8`. These addresses are image
+addresses in the extracted adapter DLL. The call sites establish that the
+adapter has distinct enrollment and identification orchestration and submits
+frames to the imported engine; they do not recover the exact state machine,
+argument meanings, enrollment acceptance thresholds, liveness policy, or
+template protection.
+
+The enrollment call-site disassembly gives a few additional boundaries without
+exposing the proprietary state schema. `irm2_continue_enrollment` is called
+only on a branch where an adapter field at offset `0xdc` equals
+`0x0004001a`; the value's meaning is not established. A negative engine return
+is logged as an enrollment-update error, while the adapter subsequently
+queries enrollment status through its own helper. The separate
+`irm2_get_enrollment_info` call passes a 12-byte output area, but its fields
+and units are unresolved. Template retrieval uses `irm2_get_template` and has
+its own return-code handling. Thus Windows exposes progress/status and
+template retrieval as separate operations; the adapter trace does not justify
+assuming that every accepted frame immediately yields a committed template.
+
+The identification worker calls the imported `irm2_get_liveness_check_status`
+at `0x1000742e` with a four-byte output area, on a state-gated path after
+checking adapter fields at offsets `0x2d0` and the referenced state value.
+The return/status value is passed to diagnostic logging. This confirms a
+separate liveness-status query in the worker, but does not show what evidence
+the algorithm uses or whether it gates an identity result. Separately, the
+per-frame worker calls `GetTickCount64` immediately before and after
+`irm2_on_frame` and records/logs the elapsed processing time. That timing is
+algorithm latency, not a sensor exposure timestamp or a measure of LED/frame
+synchronization.
+
+`irm2_compare` is exported by the algorithm DLL but is not among the adapter's
+static imports. I traced the adapter's only visible `GetProcAddress` call:
+it loads `kernelbase.dll` and resolves `LocalFree` for buffer cleanup. There
+is no call-site evidence that this adapter dynamically resolves
+`irm2_compare`; its export alone does not show that WinBio calls it or explain
+its comparison semantics. The adapter's statically imported
+`irm2_get_identification_result` remains the confirmed result path.
+
+The sensor adapter's strings show a format-negotiation path: it queries the
+engine's preferred format, enumerates supported formats, selects one, then
+starts capture. Capture data is fetched through
+`IOCTL_BIOMETRIC_CAPTURE_DATA`, exported, and pushed to the engine. It also
+queries sensor status and calibration through separate biometric IOCTLs. This
+is stronger than a generic Camera2 preview contract: the Windows engine and
+sensor adapter agree on a biometric capture format before streaming. The
+actual format GUID and pixel layout are not visible from these strings and
+remain a key reverse-engineering target.
+
+Additional sensor-adapter labels cover cancel and reset; the engine adapter's
+labels cover sample acceptance, frame analysis, enrollment and identification
+workers, match-result reporting, spoof reporting and eye-info reporting.
+Together, this supports a
 component flow of sensor capture -> WinBio engine adapter -> `irm2_*` engine
 calls -> biometric result reporting; it does not prove the exact threading or
 buffer handoff sequence. The engine's validation strings require one or two
@@ -58,6 +128,312 @@ eyes and image dimensions of 640–10000 by 480–10000, and expose camera and
 nominal resolution parameters. These are input constraints from compiled
 assertions, not recommended capture settings. Pixel format, rotation values,
 enrollment quality policy and match thresholds remain unresolved.
+
+### Windows Mobile registry configuration recovered from the FFU
+
+The `MainOS` image's SYSTEM and SOFTWARE registry hives were extracted
+read-only. The extracted SYSTEM hive SHA-256 is
+`4ba9aa297e95764ef6b16ca3811f4b4e761f334f66fd2d944125b7b0211e7aec`; the
+SOFTWARE hive SHA-256 is
+`3a56f93210545cefa37ff2adf7799d4a5b50c0d18f26e7f339b57bf8d1e50f15`. Both
+hives remain outside Git in `/private/tmp`.
+
+In `SYSTEM\\ControlSet001\\Services\\WbioSrvc\\Service Providers\\Iris`,
+`BiometricType=16`. Microsoft's WinBio constants identify value 16 (`0x10`)
+as `WINBIO_TYPE_IRIS`. Under `Virtual Sensors`, GUID
+`{C690138D-2D36-4B72-9544-9DF240FA8222}` is named “Iris recognition sensor”
+and has `Capabilities=128` (`0x80`), `SensorMode=1`, and
+`SystemSensor=1`. Configuration 0 selects `IrisSensorAdapter.dll`,
+`DeltaIrisEngineAdapter.dll`, and `WinBioStorageAdapter.DLL`, with a
+16-millisecond capture interval, one-second presence lifetime, and database
+ID `3081A9DF-8B0A-456E-8F7F-F53467FB5A2E`. The global active configuration is
+`None`.
+
+Microsoft defines `0x80` as `WINBIO_CAPABILITY_VIRTUAL_SENSOR`: the sensor
+adapter manages its own connection to biometric hardware. The same persisted
+mask does not contain `WINBIO_CAPABILITY_SECURE_SENSOR` (`0x100`). This is
+evidence that this WinBio sensor registration did not advertise the secure
+sensor capability; it does not settle whether a separate platform component
+provided another protection mechanism. The recovered engine adapter's ordinary
+`irm2_*` imports and this registry record therefore do not establish a
+TPM-bound secure-match path. Microsoft's secure-sensor requirements describe
+the missing capability and its isolated matching, secure input, PAD and
+credential-release requirements ([WinBio biometric type constants](https://learn.microsoft.com/en-us/windows/win32/secbiomet/winbio-biometric-type-constants),
+[capability constants](https://learn.microsoft.com/en-us/windows/win32/secbiomet/winbio-capability-constants),
+[secure sensor requirements](https://learn.microsoft.com/en-us/windows/win32/secbiomet/sensor-requirements-for-secure-biometrics)).
+
+The SOFTWARE hive key `OEM\\MMO\\Iris\\Sensor` contains the following
+installed settings:
+
+| Value | Data |
+| --- | ---: |
+| `ColdPeriod` | 120000 |
+| `ExposureTargetAverage` | 70 |
+| `ExposureTimeLimitMax` | 20000 |
+| `InitExposureTime` | 20000 |
+| `InitIso` | 250 |
+| `IsoLimitMax` | 400 |
+| `MinimumBatteryTemperature` | 2682 |
+| `ViewportX`, `ViewportY` | 240, 570 |
+| `ViewportWidth`, `ViewportHeight` | 475, 300 |
+
+Static analysis now locates their consumer: `IrisSensorAdapter.dll` opens
+`Software\\OEM\\MMO\\Iris\\Sensor` and queries these named values through
+`RegQueryValueExW`. The adapter reads the exposure bounds, ISO bounds, target,
+initial exposure/ISO and viewport fields during sensor initialization and
+extended-info setup; the corresponding hive entries are all `REG_DWORD`.
+The initialization routine reads these fields at image addresses
+`0x100056ca`–`0x10005948`; it passes `InitExposureTime` and `InitIso` to
+`SetInitExposure` at `0x10007888`. Those raw values enter the initial exposure
+request, but their physical units cannot be inferred from the field names
+alone. The code divides `ExposureTargetAverage` by 100 when the value is at
+most 100; the installed value 70 therefore becomes a target fraction of 0.70.
+The viewport reads occur in the extended-info routine at
+`0x10006f88`–`0x100070ce`; all four integers are copied into its result
+structure and logged as `Viewport: x,y widthxheight`.
+
+This confirms that Windows consumes the persisted profile. It still does not
+establish exposure-time units or the viewport's coordinate space, so do not
+copy those numeric values directly into Android. `ColdPeriod` and
+`MinimumBatteryTemperature` are also read by the adapter's environment check,
+but their units and policy context remain unconfirmed and they are not safe
+illumination or thermal limits. `ExposureTimeLimitMin`, `IsoLimitMin`, and the
+bright-scene keys are queried by the adapter but are absent from this
+extracted SOFTWARE hive; the corresponding local fields are zero-initialized
+before the queries, so a missing value leaves zero at that point in the code.
+
+In a separate DLL, `CameraAuthentication.dll`, the same text
+`ExposureTargetAverage` occurs under the `Nips3A.Aec` trace category and is
+passed as a label through an indirect call in frame/AEC code. That is a
+diagnostic field and not the registry read described above.
+
+The SYSTEM hive also registers `Origa2Auth` as a demand-start kernel driver
+(`Start=3`, `Type=1`, image
+`\\SystemRoot\\System32\\drivers\\Origa2Auth.sys`). Its extracted ARM32
+binary is a 20-KiB ARMv7 NT-native driver with an embedded private PDB path
+ending in `Origa2Auth.pdb`. Its imports are `BCryptGenRandom`, pool allocation
+and release, Unicode-string copy, and WDF binding routines. The import table
+does not identify a TPM, biometric, or secure-world interface. That absence
+does not rule out dynamically resolved interfaces or a role mediated by
+another driver. The `Start=3` setting also means this registry record alone
+does not show that the driver was loaded during normal iris use. Its purpose
+remains unresolved, and the service name alone is not evidence that it
+authenticates iris matches.
+
+### WinBio framework contract and secure-sensor boundary
+
+Microsoft's generic WinBio documentation describes the sensor adapter as
+negotiating capture and forwarding a sample to the engine; the engine turns
+that raw sample into a feature set, supports enrollment, and identifies against
+stored templates. The generic enrollment workflow is
+`SensorAdapterStartCapture` -> `SensorAdapterFinishCapture` ->
+`SensorAdapterPushDataToEngine` / `EngineAdapterAcceptSampleData` ->
+`EngineAdapterUpdateEnrollment`; commit includes a duplicate check and
+`EngineAdapterCommitEnrollment`. The sensor capture IOCTL returns a
+`WINBIO_CAPTURE_DATA` payload containing a `WINBIO_BIR`; its vendor-specific
+data format is implementation-defined. These generic docs align with the
+adapter strings, but do not prove the exact Lumia implementation details
+([Microsoft adapter workflow](https://learn.microsoft.com/en-us/windows/win32/secbiomet/adapter-workflow),
+[capture IOCTL](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_ioctl/ni-winbio_ioctl-ioctl_biometric_capture_data),
+[capture payload structure](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_ioctl/ns-winbio_ioctl-_winbio_capture_data)).
+
+Microsoft separately defines secure biometric sensors as requiring matching
+inside an isolated environment, secure sample input that never exposes the
+sample to the normal OS, presentation-attack detection, and secure credential
+release. WinBio 4.0 adds `CreateKey` and `IdentifyFeatureSetSecure` for
+TPM-backed authorization. The Lumia binaries identified so far expose ordinary
+`irm2_*` frame, enrollment and identification calls. Static analysis of
+`DeltaIrisEngineAdapter.dll` resolves its WBF interface version: its exported
+`WbioQueryEngineInterface` returns the table at `0x10028040`, whose header is
+`Version={3,0}`, `Type=2`, and `Size=0xac`. Microsoft defines the version
+header as two 16-bit major/minor fields; WBF engine interface v4 adds
+`CreateKey` and `IdentifyFeatureSetSecure`. Thus this recovered engine table
+is v3.0 and does not expose the documented v4 TPM secure-match methods.
+Together with the registry's `Capabilities=0x80` mask (no `0x100` secure-sensor
+bit), this establishes that the registered WinBio iris path does not advertise
+or implement Microsoft's documented v4 secure-sensor protocol. It does not
+rule out a separate trusted mechanism outside this WBF interface; the role of
+`Origa2Auth.sys` remains unresolved. These requirements are an Android security
+bar, not evidence that Windows Hello used this exact secure interface
+([interface version structure](https://learn.microsoft.com/en-us/windows/win32/api/winbio_adapter/ns-winbio_adapter-winbio_adapter_interface_version),
+[engine interface](https://learn.microsoft.com/en-us/windows/win32/api/winbio_adapter/ns-winbio_adapter-winbio_engine_interface),
+[secure-sensor requirements](https://learn.microsoft.com/en-us/windows/win32/secbiomet/sensor-requirements-for-secure-biometrics)).
+
+The v3 engine's `QueryPreferredFormat` returns the registered-format pair
+`Owner=0x001b`, `Type=0x0601`. Static disassembly of
+`IrisSensorAdapter::QueryFormat` shows it calls that engine method, compares
+the returned owner/type pair against the sensor's supported-format list, and
+falls back to the same pair if no list entry matches. Microsoft defines this
+pair as the basic iris image format under INCITS 379 (CBEFF format type
+`0x0601`; owner `0x001b` is INCITS M1). This is a WinBio/BIR format
+negotiation, not a CSI-2 or Android `ImageFormat` declaration. The engine's
+`AcceptSampleData` implementation adds one detail: its internal routine reads
+`VendorDataBlock.Size` and `VendorDataBlock.Offset` (BIR fields at offsets
+`0x10` and `0x14`) and parses a vendor-defined record from that block.
+Microsoft's `WINBIO_BIR` definition assigns those fields to the optional
+vendor-data block. This shows that the standard owner/type negotiation is not
+itself the sensor-byte layout; the engine consumes a separate vendor record.
+The internal path checks that the vendor block is at least `0x24` bytes,
+reads DWORDs at vendor-block offsets `+4` and `+8`, checks their sum against
+`VendorDataBlock.Offset + VendorDataBlock.Size`, and passes a calculated
+pointer into that block as the second argument to the imported
+`irm2_on_frame` routine (adapter image addresses `0x1001bd84`, `0x1001bf5a`; import
+thunk for `irm2_on_frame` at `0x1001d190`). This directly ties the private
+vendor record to iris-algorithm input. The exact record schema and image
+payload remain unresolved. In particular, the binaries examined here do not
+yet establish the image dimensions, bit depth, byte order, or normalization.
+Accordingly, this finding identifies the Windows biometric-record contract
+but does not justify changing the Android RAW/YUV pixel interpretation
+([registered-format structure](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_registered_format),
+[BIR structure](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_bir),
+[NIST CBEFF format table](https://www.nist.gov/document/ansi-nist2007tilton-cbeffpdf)).
+
+At the adapter's `irm2_on_frame` call site (`0x1001bf5a`), the instruction
+sequence explicitly places the parser-returned pointer in `r1` and zero in
+`r2` immediately before the call. The adapter measures elapsed call time
+around this operation. The zero-valued third argument is a static call-site
+fact; its meaning is not identified, and it must not be treated as an image
+length, rotation value, or pixel-format flag without the engine's ABI.
+
+The aligned ARMv7 disassembly makes the pointer calculation explicit: it adds
+the BIR's `VendorDataBlock.Offset` to the DWORD at vendor-block offset `+4`,
+then passes that address to the algorithm; the DWORD at `+8` participates in
+the preceding range check. These are private vendor-record fields, not
+standard BIR members, so calling them a payload offset and payload length is
+still a working interpretation rather than a recovered schema.
+
+Using LLDB's ARMv7 decoder from the aligned address `0x10011690` (the export
+RVA `0x11691` carries the Thumb bit), static analysis of `irm2_on_frame` shows
+that a non-null frame argument enters a frame-preparation path. The routine
+reduces the context value at offset `0x118` modulo 360, converts it to a
+nearest quarter-turn index (add 45 degrees, divide by 90, then mask to 0..3),
+and uses the configured dimensions at context offsets `0x10` and `0x14` while
+preparing the frame. The resulting index is passed to the buffer helper below.
+This establishes that the Windows algorithm accounts for four right-angle
+orientations before processing. It does not establish the sensor's native
+rotation, whether the input is packed or planar, or how channel values are
+normalized; those still need to be recovered from the adapter's vendor record
+and the rest of the frame path. The decoder must start at the aligned address:
+starting at the odd Thumb-tagged export address produces misleading
+instruction boundaries.
+
+The rotation context value has a concrete initialization input. In the aligned
+`irm2_init_identification` disassembly (`0x10011014`), the routine reads a
+stack-passed settings pointer from entry `SP+8` (the third stack argument after
+`r0`–`r3`), validates the first DWORD as `0x28` or `0x2c`, copies that
+structure, then stores its DWORD at offset `+0x1c` into context offset
+`+0x118`.
+
+There is a static argument mismatch at the adapter callsite (`0x10009d62`,
+through import thunk `0x1001d184`, whose IAT slot is `0x1001f1c4`). The call
+setup explicitly writes the fifth and sixth arguments at outgoing `SP+0` and
+`SP+4`; the engine reads its settings pointer from outgoing `SP+8`. In this
+adapter function, the visible value left in `SP+8` is the earlier format-string
+pointer `0x10020a58`, which resolves to `"Template count: %d context size: %d"`,
+and there is no intervening store to that slot before the initializer call.
+Those bytes cannot pass the engine's `0x28`/`0x2c` header check. This is a
+disassembly-level inconsistency between these two binaries or their apparent
+calling convention; it is not a phone measurement and does not prove that the
+shipping Windows image fails. Verify the exact paired DLLs and ABI before
+using this path to assign a camera rotation. The semantic name of the
+settings-field `+0x1c` remains unproven.
+
+The same routine calls a private buffer helper at `0x10011884` and
+`0x100121a0` (helper address `0x1001055c`). The first call passes the original
+`irm2_on_frame` buffer pointer; the later call passes a stack scratch buffer
+at `sp+0x38`. Both pass the context dimensions from `+0x10` and `+0x14` and
+conditional buffer candidates from `+0xb4` and `+0xb8`. Bits in `+0xe4` and the
+presence of a value at `+0x108` determine which candidates are passed. An
+assertion string in the same DLL names the operation as
+`split_frame(pixels, ctx->width, ctx->height, ctx->pix[0], ctx->pix[1],
+overlap, quadrant)`, matching the first call's pointer, dimensions, two
+candidate buffers, and rounded orientation index. The caller sets per-view
+dimensions at context offsets `+0xec` and `+0xf0`: for even orientation
+indices, `(width + 300) / 2` by `height`; for odd indices, `width` by
+`(height + 300) / 2`. The helper copies one view from axis offset zero and the
+other from `(axis_length - s) / 2`, where `s = min(axis_length / 2, 300)`;
+for axis lengths of at least 600, the view extent agrees with the caller's
+`(axis_length + 300) / 2`, and the views overlap by 300 units. Below 600, the
+helper's clamp makes the copied extent smaller than the stored per-view
+dimension, so the meaning of those fields or the low-resolution path needs
+further tracing. Bit 1 reverses buffer ordering for indices 2 and 3. The
+subsequent enrollment/identification callsites pass `ctx->pix[i]` with these
+per-view dimensions to per-index frame processors. This supports a two-view
+split of one incoming frame (consistent with the code's two-eye processing
+path), not eye-boundary detection or validated eye crops. The helper's
+indirect calls go through the import-address-table entry at
+`0x10015000`, which the PE import table identifies as `MSVCR110.dll!memmove`.
+Its branches compute byte counts and offsets from the supplied dimensions and
+flags, then copy contiguous ranges or repeated row-sized ranges from the
+passed source buffer into the selected candidate buffers. Flag bit 0 selects
+the contiguous or row-by-row branch; bit 1 swaps the two candidate-buffer
+arguments. On the first call, the caller passes the rounded orientation index,
+so those bits select contiguous versus row-wise copying by index parity and
+swap the candidates for indices 2 and 3. On the later call, the argument is
+formed as `(value << 16) + 0x14`; its low two bits are zero, selecting row-wise
+copying without swapping. The helper's byte copies do not perform per-pixel
+channel arithmetic. Although the assertion signature includes an `overlap`
+argument, the helper body never reads its stack slot; its fixed 300 literal
+drives the copy bounds. The `split_frame` name and two indexed pixel buffers
+establish a two-view rectangular split, but do not identify the pixel format,
+bit depth, or color/channel layout. The helper computes row offsets and byte
+counts directly from the configured pixel dimensions, with no channel-count
+multiplier; that is consistent with a one-byte-per-pixel input at this stage,
+but does not prove whether the source is grayscale, a luma plane, or another
+representation. The numeric overlap is 300 in the caller/helper calculations;
+interpreting it as pixels follows from the engine's `image_width`/`image_height`
+settings, though the lower-resolution clamp mismatch remains unresolved. This
+also does not prove that this helper alone rotates or converts the image, and
+does not justify an Android-side YUV plane-order or conversion change.
+
+The sensor adapter's returned interface table is also version 3.0 (`Type=1`,
+`Size=0x7c`). Its `PushDataToEngine` entry resolves to `0x1000eef9`. Static
+disassembly shows that path reads the sample buffer and total byte count from
+its sensor context at offsets `0x6c` and `0x70`; its helper takes the sample
+length from buffer offset `0x10`, passes the sample beginning at buffer offset
+`0x14`, and calls the engine interface's `AcceptSampleData` slot. Thus the
+sensor adapter forwards a framed sample into the BIR parser; it does not
+construct the iris image payload in `PushDataToEngine`. Following the calls
+back from this handoff resolves both the writer and the prefix: the adapter's
+capture worker issues `DeviceIoControl` with `0x00440014`, the WBDI
+`IOCTL_BIOMETRIC_CAPTURE_DATA` control code, first using a four-byte output
+buffer to obtain the required size and then repeating the request with the
+allocated full buffer. The full request returns into the sample buffer held
+at sensor-context offset `0x6c`; the returned byte count is held at `0x70`.
+The `WINBIO_CAPTURE_DATA` layout is four 32-bit header fields at offsets
+`0x00` through `0x0c` (`PayloadSize`, `WinBioHresult`, `SensorStatus`, and
+`RejectDetail`), followed by `WINBIO_DATA` at offset `0x10`. Its `Size` is at
+`0x10`, and its `Data` begins at `0x14`. The sample bytes passed to
+`AcceptSampleData` are therefore a BIR beginning at byte `0x14`, not a raw
+pixel plane. The Windows header definitions match the disassembled offsets
+([capture IOCTL](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_ioctl/ni-winbio_ioctl-ioctl_biometric_capture_data),
+[capture-data structure](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_ioctl/ns-winbio_ioctl-_winbio_capture_data),
+[WINBIO_DATA structure](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_ioctl/ns-winbio_ioctl-_winbio_data),
+[sensor interface](https://learn.microsoft.com/en-us/windows/win32/api/winbio_adapter/ns-winbio_adapter-winbio_sensor_interface),
+[PushDataToEngine callback](https://learn.microsoft.com/en-us/windows/win32/api/winbio_adapter/nc-winbio_adapter-pibio_sensor_push_data_to_engine_fn)).
+
+A separate layout check against Microsoft's `WINBIO_BIR` definition confirms
+that its four `WINBIO_BIR_DATA` descriptors occur in order: header, standard
+data, vendor data and signature. Each descriptor carries a 32-bit size followed
+by a 32-bit offset, so the third descriptor is at BIR offsets `0x10` and
+`0x14`; the disassembly's reads at those positions are consistent with
+`VendorDataBlock.Size` and `VendorDataBlock.Offset`. This validates the outer
+BIR field mapping only. The private words at offsets `+4` and `+8` inside the
+vendor block remain vendor-defined, and their exact image-layout meaning is
+not established by the standard ([Microsoft `WINBIO_BIR`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_bir),
+[`WINBIO_BIR_DATA`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_bir_data)).
+
+The `StartCapture` table entry dispatches according to sensor-context mode and
+reaches the worker that performs the two-stage capture-data IOCTL. Its
+completion path stores the resulting buffer and size into the sensor context.
+`FinishCapture` then validates the returned capture record and its BIR vendor
+block, including sizes, offsets, dimensions and enclosing-buffer ranges,
+before returning the sample for `PushDataToEngine`. The indirect callback
+around this work is a C++ concurrency task wrapper: it constructs and destroys
+a `Concurrency::scoped_lock` around a task object's virtual operation. This
+resolves the handoff owner and the 20-byte prefix. The remaining Windows-side
+gap is the vendor BIR record schema and how its image bytes are normalized
+before `irm2_on_frame`.
 
 `LumiaSensorAlgorithmControl.dll` (SHA-256
 `4b6983f5f4177d6b113c06cbea8cd78e1418dd20cb1a8054e39f4d27b28154d6`) exports
@@ -67,6 +443,14 @@ iris processing are unknown. `Origa2Auth.sys` (SHA-256
 present; its exact role is unresolved. The adapter and engine PDB identities
 were checked against Microsoft's public symbol server and returned 404; no
 matching symbols or source were recovered.
+
+The CodeView GUID-age values are `cdc6fbf6-a3db-43de-b99c-d34290e94816-1`
+for `DeltaIrisEngineAdapter.dll`,
+`d90677b4-1031-47f6-bf8a-3c2245c8be67-1` for `IrisSensorAdapter.dll`, and
+`75196382-d6c2-4061-b78c-4c97580a2137-1` for
+`iris_mobile_v2.WindowsPhone.dll`. Their embedded PDB paths point to private
+build workspaces; exact public symbol-server lookups for these identities did
+not yield the PDBs.
 
 ### Windows Mobile retail FFU located
 
@@ -112,6 +496,20 @@ one CRT dependency: Mobile imports `MSVCR120.dll`, while WOA imports
 `LUVCR120.dll`. This is strong evidence that both builds share the same
 external capture/ARC interface. They are still distinct binaries; compare code
 and data before assuming identical behavior.
+
+A byte-level comparison of the recovered Mobile and WOA ARM32 files narrows
+that difference further. Both are 118,784 bytes, and exactly four file-byte
+positions differ: `0x150`-`0x151` in the PE checksum and `0x1a814`-`0x1a815`
+in the CRT import string (`MSVCR120.dll` versus `LUVCR120.dll`). Their
+`.text`, `.data`, `.pdata`, and `.reloc` sections are byte-identical; the only
+other difference in `.rdata` is that two-character dependency name. The
+capture/ARC implementation is therefore byte-identical between these copies
+after normalizing the PE checksum and CRT import label. This makes the Mobile
+call-flow analysis directly applicable to the WOA ARM32 module's machine code.
+It still does not prove that the two OS images used the same registry values,
+sensor firmware, Icaros implementation or runtime call sequence.
+The hashes, changed offsets and section comparison are recorded in
+[`windows-camera-auth-binary-comparison-2026-11-05.json`](windows-camera-auth-binary-comparison-2026-11-05.json).
 
 Read-only PE inspection identifies an ARMv7 Thumb PE32 DLL with a 2016-05-02
 timestamp. Its imports include `D3D11.dll`, `VCOMP120.dll` (OpenMP runtime),
@@ -193,6 +591,147 @@ eye coordinates supplied to the component. The meanings, units, defaults and
 runtime values still require tracing the corresponding code and configuration
 data. Do not copy those values into Android based only on their names.
 
+The ARM32 Thumb disassembly of the extracted Windows Mobile copy
+(`CameraAuthentication-mobile.dll`, SHA-256
+`3f81977708e9907f043053037fef87f013cf9d9a2cf92b634e949bec45679e95`) also
+resolves a narrow initialization boundary: the code path whose trace label is
+`CCameraConnection::SetExposureParametersForInitialization`, beginning at
+image address `0x10005dd0`, copies the first two 32-bit values from its input
+structure into the connection's frame-state fields at offsets `+0x16c` and
+`+0x170`. No
+arithmetic or unit conversion occurs in that setter. This confirms that the
+initial exposure/ISO pair is retained as supplied at this boundary, but does
+not identify their units or how later AEC processing converts them into
+sensor exposure and gain. In particular, `InitExposureTime=20000` must not yet
+be interpreted as 20 ms from this evidence alone.
+
+The same Mobile binary's `CCameraConnection::SetExposureParameters` method
+(image address `0x10008e20`) copies five consecutive 32-bit input fields
+unchanged into object offsets `+0x114` through `+0x124` and sets the byte at
+`+0x128` to 1. There is no arithmetic in that setter before the copy. This
+shows that the per-frame exposure update is queued as supplied at this API
+boundary; it still does not identify the fields' units or establish which
+later code turns them into sensor controls. A separate method named
+`CFrameHandler::UpdateSensorExposureParameters` is present in the binary, but
+the inspected portion at `0x1000c490` is dominated by property reads and
+diagnostic logging; it does not yet expose that conversion path.
+
+The illumination setters show how requests cross the capture component's
+first boundary. `CCameraConnection::SetPulsingMode` (Thumb entry
+`0x10005ab5`) forwards the mode through the `CFrameHandler` vtable at slot
+`+0x18`; `CCameraConnection::SetIrLedCurrent` (`0x10005b75`) forwards its
+value through slot `+0x20`. The receiving `CFrameHandler::SetPulsingMode`
+(`0x10008f11`) stores the mode at object offset `+0xa8` and marks it valid at
+`+0xac`. `CFrameHandler::SetIrLedCurrent` (`0x100090fd`) copies the supplied
+32-bit value into `+0xb0`. These handlers cache frame/capture settings; they
+do not issue `DeviceIoControl`, write PMIC registers, or toggle an LED.
+Together with the `FlashCtrlPulseUs` and `UseFlashOutOfFrame` configuration
+keys, this confirms the settings reach the frame handler. The later capture
+worker submits the completed per-frame result record to the camera KMD as
+described below. The KMD consumer and pulse edge relative to exposure remain
+unresolved. Do not treat this as proof that the Android helper's “LED on until
+buffer callback” timing matches Windows.
+
+The frame-result construction path then consumes those cached values. At
+`0x1000b98a`, pulsing mode `1` sets byte `+0x35` in its output record; the
+other mode values clear it. The cached current is narrowed to one byte and
+copied to record offset `+0x2c`, and the 0x88-byte result is passed onward.
+This proves Windows carries the requested pulse state and current into its
+per-frame camera-result path. It still does not identify the fields' units,
+the receiver of that result, or the actual PMIC transition time relative to
+exposure. See the capture-component observations in
+[`windows-flash-driver-analysis-2026-11-05.json`](windows-flash-driver-analysis-2026-11-05.json).
+
+The capture worker closes part of that gap. After forwarding a frame to the
+frame handler, it calls a helper that invokes the handler vtable at `+0x08`
+for a result pointer and byte count, then calls `DeviceIoControl` on the
+camera connection's device handle (`+0x04`). The IOCTL is `0x0023432A`:
+`FILE_DEVICE_VIDEO` (`0x23`), function `0x0CA`, `FILE_READ_ACCESS`, and
+`METHOD_OUT_DIRECT`. The result pointer and length are the input buffer and
+input length; the output buffer and length are null/zero. Thus the per-frame
+record containing the pulse flag and current is submitted to the camera KMD
+from the capture worker. The bytes returned by the call are logged on failure.
+This confirms the host-to-camera-KMD handoff, but the receiving IOCTL handler
+has not been located in the available binaries, so it does not prove that this
+IOCTL directly switches the PMIC flash or establish pulse timing against
+exposure. In particular, the separate KMD flash selector `0x26` is not proven
+to be the receiver's implementation. Evidence and addresses are recorded in
+the JSON analysis artifact.
+
+The numeric `0xCA` match is weaker after tracing the qccamavs branch. Its
+function at `0x40CC98` populates a property-result structure; selector `0xCA`
+calls a vtable accessor at object offset `+0x78` to fill output. The unknown
+selector trace resolves to `CCaptureFilter::PopulateNokiaCustomPropertyValue`.
+The separate `SetNokiaCustomPropExt` path has inspected setter cases for
+`0x65`–`0x69` and `0xCC`, but not `0xCA`. This does not match the DLL's
+input-only frame-result submission. CTL_CODE function numbers and property
+IDs are also distinct namespaces, so no link between these paths is
+established. The remaining task is to locate the actual IOCTL receiver and
+compare it with the DLL's `0x88`-byte input record. Details are in the JSON
+analysis artifact.
+
+The exact Windows Mobile FFU (`RM1085_1078.0053.10586.13169.12742.034EE8`,
+OS version `8.15.13169.318`) was searched locally. Its `CameraAuthentication.dll`
+matches the previously analyzed mobile binary by SHA-256, and its
+`qccamflashtertiary8994.sys` matches the pinned tertiary driver by SHA-256.
+The same MainOS partition contains `qccamavs8994.sys`, whose trace strings
+identify `SetFlashPulses_Flash`, flash-result fields such as `FlashCtrlPulseUs`
+and `UseHighPowerMode`, preflash start/completion callbacks, and frame dropping
+while preflash is active. This is direct evidence that the original Mobile
+camera KMD has a pulse/preflash scheduling surface. The embedded strings do
+not identify whether that surface consumes the iris result record or establish
+the pulse's phase relative to exposure; those links still need disassembly.
+Hashes and the limits of this firmware inspection are in
+[`windows-flash-driver-analysis-2026-11-05.json`](windows-flash-driver-analysis-2026-11-05.json).
+
+The pinned tertiary-flash binary (`qccamflashtertiary8994.sys`, SHA-256
+`58cf8c49d30756a5ddae896cf51aa1dd1ae2733217ee603aebacb44ce047c1c5`)
+provides one more lower-stack boundary. Its ARM32 `CameraKMDFlashEvtIoControl`
+dispatcher at image address `0x404c51` routes internal operation selector
+`0x26` through the branch logged as `CameraFlashDriver_WhiteLED_SetFlash`.
+That branch requires an associated configuration-size value of `0x2c`, copies
+the flash configuration fields, and calls a registered function pointer. The
+PMIC `Pmic_SetFlash` path at `0x4047b9` applies its own power validation, and
+the binary contains separate flash callback and work-item timer/watchdog paths.
+This confirms a camera-KMD callback route into the PMIC flash implementation;
+it does not prove that `CameraAuthentication.dll` directly submits selector
+`0x26`, identify the callback structure's field units, or show that the timer
+edge is aligned with sensor exposure. The hashes, inspected instructions and
+limits are captured in
+[`windows-flash-driver-analysis-2026-11-05.json`](windows-flash-driver-analysis-2026-11-05.json).
+
+Further disassembly of selector `0x26` shows that the dispatcher requires a
+`0x2c`-byte request and forwards the seven 32-bit words beginning at request
+offset `+0x10` as callback arguments. In the PMIC `Pmic_SetFlash` path, the
+32-bit word at configuration offset `+0x0c` must be in the range 1 through
+100. This is a structural bound only: its units and meaning are not recovered,
+so it is not an LED-current or eye-safety setting that can be copied to
+Android. The capture DLL-to-dispatcher link and the PMIC timer's phase against
+sensor exposure remain the key unknowns.
+
+The driver's indexed `FlashCallback` reads a signed schedule byte at entry
+offset `+0x44` and reports `Turning Flash On`, `Turning Flash Off`, or
+`Flash already ON, turning Flash Off`, while updating its internal ON/OFF
+state and schedule index. This demonstrates a scheduled pulse-state machine
+inside the flash driver. The callback body itself updates state and emits
+diagnostics; it does not reveal the electrical LED edge, so exposure
+synchronization still cannot be inferred from it.
+
+The same binary includes per-LED and aggregate power-limit checks, watchdog
+petting, accumulated heat-load accounting, and temperature/cooldown paths.
+Those are PMIC/thermal fault protections in the driver; neither their values
+nor the Windows driver's own current bounds are validated eye-safety limits.
+Static presence also does not show which guard paths ran on this device.
+
+The Mobile SOFTWARE hive also has `ExposureTargetAverage=70`, and the capture
+DLL contains the same text. Static disassembly places that literal immediately
+after the `Nips3A.Aec` trace category and shows it passed as a label through an
+indirect trace-style call in frame/AEC code. This is evidence for an AEC
+diagnostic field; it does not prove that the DLL reads the similarly named
+registry value. The OEM viewport/exposure key names are not present as plain
+strings in this DLL, so their consumer and units remain unlocated. Do not treat
+the registry values as an Android tuning recipe until that data flow is found.
+
 ### The separate Icaros ESP kernel path
 
 The open-source [`icaros_cam_esp` handler](https://github.com/WOA-Project/icaros_cam_esp/blob/73daf34734904dee9f27d7c5ed992353d92204bd/icaros_cam_esp/Icaros_KMD_ESP_Handler.c)
@@ -236,17 +775,30 @@ and evaluation.
 
 ## Next offline reverse-engineering pass
 
-1. Trace the WinBio adapter's `irm2_*` imports and frame/result buffers to map
-enrollment and identification call order, pixel format, rotation, liveness
-decisions and template lifecycle. Keep analysis static; do not execute the
-Windows binaries.
-2. Compare Mobile `CameraAuthentication.dll` and `Icaros.dll` call paths with
-WOA builds, separately from the WinBio iris algorithm path.
-3. Determine how the Windows adapters bind to kernel sensor/flash controls and
-which component owns template persistence and result protection.
-4. Compare the recovered API contract with Android's camera path. Keep
-experimental matching outside Keyguard until matching, liveness, protected
-storage/result delivery, cancellation and lockout are evaluated.
+1. Resolve the apparent `irm2_init_identification` stack-argument mismatch:
+   verify the adapter/engine pair and calling convention, then trace the
+   settings pointer and rotation field. Only after that, reconcile context
+   rotation `+0x118` with Android `SENSOR_ORIENTATION`. Trace the BIR
+   vendor-record fields from `AcceptSampleData` into `irm2_on_frame` and
+   `split_frame` to identify the image bytes and validate whether the
+   one-byte-per-pixel inference is correct before implementing the recovered
+   overlapping two-view geometry in the Android diagnostic. Then map
+   enrollment/identification call order, liveness decisions and template
+   lifecycle. Keep analysis static; do not execute the Windows binaries.
+2. Continue tracing the `IrisSensorAdapter.dll` registry values into sensor
+   controls and frame callbacks to establish exposure-time units, viewport
+   coordinate space, and their relationship to illumination requests. The
+   installed exposure target is confirmed as 0.70 after normalization.
+3. Compare Mobile `CameraAuthentication.dll` and `Icaros.dll` call paths with
+   WOA builds, separately from the WinBio iris algorithm path.
+4. Determine how the Windows adapters bind to kernel sensor/flash controls and
+   which component owns template persistence and result protection.
+5. Map `Origa2Auth.sys`'s WDF device callbacks and package binding before
+   assigning it a role; its service name and random-number import are
+   insufficient evidence.
+6. Compare the recovered API contract with Android's camera path. Keep
+   experimental matching outside Keyguard until matching, liveness, protected
+   storage/result delivery, cancellation and lockout are evaluated.
 
 The Mobile FFU, extracted ARM32 Icaros and WinBio iris components are available
 outside Git. The main static-analysis gap is tracing the WinBio adapter-to-

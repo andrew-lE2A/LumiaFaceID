@@ -1,0 +1,51 @@
+LumiaFaceID development checklist
+Device: Lumia 950 XL (cityman), unofficial LineageOS 23.2 / Android 16
+Updated: 2026-11-05
+
+DONE / VERIFIED
+[x] Identified the iris sensor as model 0x0861 and added it as a separate Android camera.
+[x] Android lists three cameras; iris is camera ID 2. The normal rear and front camera slots remain separate.
+[x] Fixed camera ordering so the stock camera app uses the normal front camera.
+[x] Opened the iris with Camera2 and received 1920x1080 YUV frames. Current-source checks matched image and capture-result timestamps and handled the reported crop.
+[x] Added probe controls for preview orientation/aspect ratio and manual exposure/sensitivity diagnostics.
+[x] Kept the Windows 10 Mobile FFU and private iris sensor profile locally. Firmware analysis and hashes are recorded; do not delete either file.
+[x] Mapped key Windows iris components, including the sensor driver, camera authentication capture path, WinBio adapter and iris engine interfaces.
+[x] Confirmed the sensor reports no strobe capability; sensor strobe is not the illumination path. Windows analysis points to host/camera-driver flash scheduling, whose exact IR-channel consumer and timing are unresolved.
+[x] Recorded one bounded minimum torch_0 pulse and an illuminated frame with higher signal. It did not establish a usable eye region, optical timing or eye-safe limits.
+[x] Verified camera teardown and LED cleanup after recorded tests; recent readback showed all cameras closed and all four LED channels at 0.
+[x] One latest IR-off frame arrived, but was nearly black (luma p95=2); it did not show usable iris detail.
+[x] Added a range-clamped manual exposure selector. IR-off phone validation confirmed Camera2 exposure results at 50, 75, 100, 200 and 300 ms; 300 ms / ISO 800 produced luma p95=47, but no face-derived eye ROI.
+[x] Reviewed Android 16 iris framework and Keyguard gaps against the installed phone and pinned Lineage source.
+[x] Drafted framework patches 0003-0007 for iris registration, Keyguard result/request plumbing and a gated Keyguard lifecycle hook. Patch application/diff checks passed on disposable source copies.
+
+IN PROGRESS
+[~] Capture repeatable, well-exposed iris frames with visible iris detail and a controlled diffuse target. Existing IR-off frames are too dark; the one recorded minimum-IR frame had no detected eye region.
+[~] Validate real-frame orientation, geometry, eye localization, image quality and exposure. Current detection/segmentation proposals are experimental and not validated on representative Lumia samples.
+[~] Continue static analysis of Windows: resolve the private BIR vendor image layout, adapter/engine argument discrepancy, and the camera KMD's per-frame IR request consumer and pulse timing.
+[~] Design a safe Android illumination route with a verified low current, frame synchronization, hard timeout and cleanup on every failure. Camera2 torch is not synchronized; the current iris slot has no camera flash endpoint.
+[~] Develop Android enrollment/authentication architecture. The framework lifecycle patches are source-only scaffolding; the service still returns HW_UNAVAILABLE and has no camera-backed authenticator.
+
+NOT DONE
+[ ] Reliable pupil/iris segmentation and quality gating on IR0861 frames.
+[ ] A Lumia-tested iris matcher, with measured false-accept/false-reject and presentation-attack performance.
+[ ] Credential-confirmed enrollment, per-user protected template storage, deletion, lockout and rate limiting.
+[ ] A camera provider/backend with arbitration against the normal front camera, which shares CSIPHY2.
+[ ] Compile and integrate the framework patches in the actual Lineage build; install and runtime-test them.
+[ ] Establish a trusted matching and result path suitable for Android biometric authentication. No protected matching/template storage or trusted result path is demonstrated.
+[ ] Demonstrate an iris match unlocking Android. No iris enrollment or iris unlock has been demonstrated.
+[ ] Validate emitter optical timing, thermal behavior and eye safety independently. Driver limits and software timestamps are not safety or optical measurements.
+
+NEXT CHECKPOINTS
+[ ] Obtain repeatable useful iris frames under a confirmed diffuse setup; avoid IR until the setup is safe and emitter channel is verified.
+[ ] Finish the Windows flash-request trace and use it to design a bounded, frame-synchronized Linux illumination path.
+[ ] Build and test the image pipeline and matcher on representative on-device frames before connecting any success result to Keyguard.
+[ ] Implement and compile the real Android camera authenticator, enrollment/removal, lockout and camera arbitration.
+[ ] Only after security and accuracy gates are met, test end-to-end enrollment and lock-screen unlock.
+
+WORKING RULES
+- Local work only. Do not push to GitHub or create a PR unless explicitly asked.
+- For kernel experiments, use temporary boot only; never flash a test kernel.
+- Never stream the iris and normal front camera together; they share CSIPHY2.
+- After any emitter test, stop capture and verify torch_0, torch_1, flash_0 and flash_1 are all off.
+- Never point IR at a person or eye; do not test inside a metal can or reflective enclosure. Use only a confirmed diffuse target and bounded pulses.
+- Keep the original FFU and private sensor profile.

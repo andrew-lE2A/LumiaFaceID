@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-05",
+  "scope": "local Camera2 source change and bounded phone integration check through a fake brightness file; no physical LED was enabled",
+  "change": {
+    "previous_stop_event": "ImageReader YUV buffer delivery",
+    "new_stop_event": "CameraCaptureSession.onCaptureCompleted for the one-shot still request, which reports capture completion after sensor exposure",
+    "analysis": "YUV buffer analysis remains independent and runs after the illumination stop; pixel data is still analyzed in memory and discarded",
+    "failure_cleanup": "capture failure, YUV reader exception, camera close, and the 850 ms app deadline still release the waiting helper; helper retains its one-second watchdog and exit cleanup"
+  },
+  "reason": "Bound illumination to the sensor capture result rather than downstream buffer delivery and CPU image analysis. The change may reduce on-time and gives a better frame boundary, but callback latency and optical LED switching latency are still unmeasured.",
+  "build": {
+    "sdk": "Android SDK platform 35 / build-tools 35.0.0",
+    "package": "com.lumia.irisprobe.callbackcheck",
+    "apk_sha256": "e718d206da5148877e04a1d901e62c7b1304313bad804926364950f607a9a5e5",
+    "signature_verification": "passed"
+  },
+  "phone_check": {
+    "device": "Lumia 950 XL cityman, LineageOS 23.2 / Android 16",
+    "camera_id": "2 (front-facing 1920x1088 iris sensor)",
+    "physical_leds": "all four brightness values stayed at 0",
+    "fake_helper_file": "temporary regular file substituted for torch_0 sysfs node",
+    "capture": {
+      "request_elapsed_realtime_ns": 74513938305934,
+      "capture_result_callback_elapsed_realtime_ns": 74514102895221,
+      "stop_request_elapsed_realtime_ns": 74514105928711,
+      "yuv_callback_elapsed_realtime_ns": 74514107305898,
+      "helper_off_ack_elapsed_realtime_ns": 74514107724128,
+      "exposure_ns": 29995718,
+      "frame_duration_ns": 33441782,
+      "sensor_timestamp_ns": 74514031745885,
+      "yuv_timestamp_matches_capture_result": true,
+      "stop_request_after_result_ms": 3.03,
+      "stop_request_before_yuv_callback_ms": 1.38
+    },
+    "cleanup": {
+      "temporary_package_uninstalled": true,
+      "temporary_helper_and_fake_file_removed": true,
+      "active_camera_clients_after_cleanup": [],
+      "torch_0_torch_1_flash_0_flash_1": [0, 0, 0, 0]
+    }
+  },
+  "limits": [
+    "Camera2 capture-result completion is not a measurement of the optical LED falling edge.",
+    "SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN prevents a proven cross-clock interval from helper timestamps to sensor exposure.",
+    "Brightness 14 is a previously observed minimum torch code, not a validated eye-safety limit.",
+    "The on-phone check used a regular fake brightness file, not the LED sysfs node; it verifies app/helper/callback ordering but not PMIC behavior or optical timing."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

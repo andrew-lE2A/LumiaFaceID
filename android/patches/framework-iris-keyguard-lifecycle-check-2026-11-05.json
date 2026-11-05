@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-05",
+  "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+  "patch": "0007-lineage-iris-keyguard-lifecycle.patch",
+  "scope": "static SystemUI lifecycle integration review; no framework build or phone installation",
+  "lifecycle_gates": [
+    "system Keyguard monitor and selected user",
+    "device interactive and Keyguard visible (not occluded)",
+    "not going to sleep, dreaming, or going away",
+    "not switching users or showing BiometricPrompt",
+    "face authentication/detection not running",
+    "no pending biometric continuation or user lockdown",
+    "IRIS policy and Class 1 strong-auth policy allow unlocking"
+  ],
+  "enrollment_query": "Per-user iris enrollment state is cached and invalidated on iris authenticator registration/enrollment callbacks, avoiding a synchronous enrollment Binder query on every Keyguard state update.",
+  "cancellation": "The request is stopped whenever the lifecycle gate becomes false; face-running transitions re-evaluate iris state.",
+  "validation": {
+    "patch_dry_run": "passed against a disposable copy of the local framework checkout containing patches 0003-0006",
+    "patch_application": "passed in a disposable single-file Git validation repo",
+    "git_diff_check": "passed",
+    "framework_java_aidl_compile": "not run; complete Android build tree unavailable",
+    "runtime_phone_test": "not run; installed framework unchanged"
+  },
+  "limits": [
+    "The IrisService still returns BIOMETRIC_ERROR_HW_UNAVAILABLE because there is no camera authenticator or matcher.",
+    "No enrollment, match, lockout/rate-limit implementation, template store, or trusted processing path exists.",
+    "The lifecycle request API is local source only and remains uncompiled and uninstalled.",
+    "Current request path is not validated against Android CDD Class 1 FAR/PAD and secure enrollment requirements.",
+    "This state gate is not a provider-level camera lock; cancellation latency could still overlap face-camera ownership until the backend adds arbitration."
+  ],
+  "publication": "local only; no commit, push, or PR",
+  "intent": "Drive the hidden Class 1 request/cancel API from Keyguard lifecycle and cancel iris when face-auth activity is reported."
+}

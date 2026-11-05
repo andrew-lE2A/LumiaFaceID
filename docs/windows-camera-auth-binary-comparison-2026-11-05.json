@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-05",
+  "scope": "offline byte comparison of the recovered Mobile FFU and WOA ARM32 CameraAuthentication.dll files",
+  "inputs": {
+    "mobile": {
+      "path": "/private/tmp/CameraAuthentication-mobile.dll",
+      "size": 118784,
+      "sha256": "3f81977708e9907f043053037fef87f013cf9d9a2cf92b634e949bec45679e95"
+    },
+    "woa": {
+      "path": "/private/tmp/CameraAuthentication.dll",
+      "size": 118784,
+      "sha256": "5e7be37803a0573727ea309a52d5f5e6569875485951ec56023f5d9175b5cd4e"
+    }
+  },
+  "comparison": {
+    "different_byte_offsets_hex": ["0x150", "0x151", "0x1a814", "0x1a815"],
+    "offsets_0x150_0x151": "PE checksum field",
+    "offsets_0x1a814_0x1a815": "CRT dependency string: MSVCR120.dll in Mobile, LUVCR120.dll in WOA",
+    "identical_sections": [".text", ".data", ".pdata", ".reloc"],
+    "interpretation": "The executable ARM32 capture/ARC code is byte-identical. The .rdata section differs only at the two-byte CRT dependency name."
+  },
+  "limitations": [
+    "This does not prove the two OS images use the same registry configuration or sensor firmware.",
+    "This does not compare the corresponding Icaros.dll builds or establish runtime call order."
+  ],
+  "method": "Byte-for-byte comparison and PE section-boundary checks; neither binary was executed.",
+  "publication": "local only; no commit, push, or PR"
+}

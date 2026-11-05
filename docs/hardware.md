@@ -106,6 +106,29 @@ that build must capture event logs in place of relying on the post-test raw
 status snapshot and must balance the existing disabled IRQ depth. No such IRQ
 behavior change has been made or tested yet.
 
+## Android Camera2 illumination and frame evidence
+
+With the current Android camera slot, an exclusive camera-2 session now
+delivered a full-crop 1920×1080 YUV frame during one `torch_0` pulse at
+brightness 14 (the prior driver-mapped lowest nonzero request). At 30 ms / ISO
+100, the buffer timestamp exactly matched the capture-result timestamp and
+the buffer arrived about 1.13 ms before the app sent STOP. The analyzer
+reported luma p95=212, compared with p95=1 in the preceding IR-off run, and
+rejected the frame for face-derived ROI analysis; its whole-frame contrast
+proposal is display-only and is not iris localization. The comparison is not
+a controlled same-scene A/B, since the owner-reported white thin box may have
+changed the optical scene. The box reflectance, actual LED current, optical
+power, and exposure overlap were not measured. The frame was analyzed in
+memory and discarded. After cleanup the helper and temporary app were removed,
+camera clients were zero, and all four flash/torch channels read zero. See
+[`phone-min-current-ir-analysis`](../android/iris-camera-probe/phone-min-current-ir-analysis-2026-11-05.json).
+
+This advances Android frame acquisition and shows a high-signal illuminated
+frame, but does not yet establish a usable iris image, an eye ROI, or safe
+illumination for a face. Repeat or eye-facing tests need a verified diffuse
+setup and independent eye-safety validation; the single minimum-code pulse is
+not such validation.
+
 ## Original firmware descriptions
 
 [`WOA-Project/Lumia950XLPkg` DSDT](https://github.com/WOA-Project/Lumia950XLPkg/blob/cfc68a4d19fc7e8645bff6d8fce7308ad8494a76/AcpiTables/8994/src/DSDT.asl)
