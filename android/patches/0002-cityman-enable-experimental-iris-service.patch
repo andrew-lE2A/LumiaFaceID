@@ -1,0 +1,25 @@
+diff --git a/device.mk b/device.mk
+index ba842b9..0ae0bde 100644
+--- a/device.mk
++++ b/device.mk
+@@ -51,6 +51,7 @@ PRODUCT_COPY_FILES += \
+     frameworks/native/data/etc/android.hardware.camera.front.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.camera.front.xml \
+     frameworks/native/data/etc/android.hardware.camera.full.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.camera.full.xml \
+     frameworks/native/data/etc/android.hardware.camera.raw.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.camera.raw.xml \
++    frameworks/native/data/etc/android.hardware.iris.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.iris.xml \
+     frameworks/native/data/etc/android.hardware.location.gps.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.location.gps.xml \
+     frameworks/native/data/etc/android.hardware.wifi.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.wifi.xml \
+     frameworks/native/data/etc/android.hardware.wifi.direct.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/android.hardware.wifi.direct.xml \
+diff --git a/overlay/frameworks/base/core/res/res/values/config.xml b/overlay/frameworks/base/core/res/res/values/config.xml
+index 3836525..4befe33 100644
+--- a/overlay/frameworks/base/core/res/res/values/config.xml
++++ b/overlay/frameworks/base/core/res/res/values/config.xml
+@@ -427,4 +427,8 @@
+     <item name="config_highResTaskSnapshotScale" format="float" type="dimen">0.6</item>
+     <item name="config_lowResTaskSnapshotScale" format="float" type="dimen">0.3</item>
+     <bool name="config_use16BitTaskSnapshotPixelFormat">true</bool>
++    <!-- Experimental cityman IR0861 registration. Class 1 / Convenience only. -->
++    <string-array name="config_biometric_sensors" translatable="false">
++        <item>2:4:4095</item>
++    </string-array>
+ </resources>

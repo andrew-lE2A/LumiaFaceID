@@ -1,0 +1,118 @@
+diff --git a/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java b/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
+index 6aba55bd..fd7d2bae 100644
+--- a/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
++++ b/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
+@@ -34,6 +34,7 @@ import static android.hardware.biometrics.BiometricFaceConstants.FACE_ERROR_HW_U
+ import static android.hardware.biometrics.BiometricFaceConstants.FACE_ERROR_LOCKOUT_PERMANENT;
+ import static android.hardware.biometrics.BiometricSourceType.FACE;
+ import static android.hardware.biometrics.BiometricSourceType.FINGERPRINT;
++import static android.hardware.biometrics.BiometricSourceType.IRIS;
+ import static android.os.BatteryManager.BATTERY_STATUS_UNKNOWN;
+ import static android.os.BatteryManager.CHARGING_POLICY_DEFAULT;
+ import static android.security.Flags.secureLockDevice;
+@@ -508,6 +509,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
+ 
+     @VisibleForTesting
+     SparseArray<BiometricAuthenticated> mUserFingerprintAuthenticated = new SparseArray<>();
++    private final SparseArray<BiometricAuthenticated> mUserIrisAuthenticated = new SparseArray<>();
+ 
+     @Override
+     public void onTrustChanged(boolean enabled, boolean newlyUnlocked, int userId, int flags,
+@@ -1488,11 +1490,14 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
+      */
+     public boolean getUserUnlockedWithBiometric(int userId) {
+         BiometricAuthenticated fingerprint = mUserFingerprintAuthenticated.get(userId);
++        BiometricAuthenticated iris = mUserIrisAuthenticated.get(userId);
+         boolean fingerprintAllowed = fingerprint != null && fingerprint.mAuthenticated
+                 && isUnlockingWithBiometricAllowed(fingerprint.mIsStrongBiometric);
++        boolean irisAllowed = iris != null && iris.mAuthenticated
++                && isUnlockingWithBiometricAllowed(IRIS);
+         boolean unlockedByFace = isCurrentUserUnlockedWithFace() && isUnlockingWithBiometricAllowed(
+                 FACE);
+-        return fingerprintAllowed || unlockedByFace;
++        return fingerprintAllowed || irisAllowed || unlockedByFace;
+     }
+ 
+ 
+@@ -1627,11 +1632,62 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
+                 return getFaceAuthInteractor() != null
+                         && isUnlockingWithBiometricAllowed(
+                         getFaceAuthInteractor().isFaceAuthStrong());
++            case IRIS:
++                return !isIrisDisabledByPolicy(mSelectedUserInteractor.getSelectedUserId())
++                        && isUnlockingWithBiometricAllowed(false /* isStrongBiometric */);
+             default:
+                 return false;
+         }
+     }
+ 
++    private boolean isIrisDisabledByPolicy(int userId) {
++        return (mDevicePolicyManager.getKeyguardDisabledFeatures(null /* admin */, userId)
++                & (DevicePolicyManager.KEYGUARD_DISABLE_IRIS
++                | DevicePolicyManager.KEYGUARD_DISABLE_BIOMETRICS)) != 0;
++    }
++
++    /** Called only after a privileged iris authenticator reports a successful match. */
++    public void onIrisAuthenticated(int userId) {
++        Assert.isMainThread();
++        Trace.beginSection("KeyguardUpdateMonitor#onIrisAuthenticated");
++        try {
++            if (mGoingToSleep || userId != mSelectedUserInteractor.getSelectedUserId()
++                    || !isUnlockingWithBiometricAllowed(IRIS)) {
++                return;
++            }
++            mUserIrisAuthenticated.put(userId,
++                    new BiometricAuthenticated(true, false /* isStrongBiometric */));
++            if (getUserCanSkipBouncer(userId)) {
++                mTrustManager.unlockedByBiometricForUser(userId, IRIS);
++            }
++            for (int i = 0; i < mCallbacks.size(); i++) {
++                KeyguardUpdateMonitorCallback cb = mCallbacks.get(i).get();
++                if (cb != null) {
++                    cb.onBiometricAuthenticated(userId, IRIS, false /* isStrongBiometric */);
++                }
++            }
++            if (secureLockDevice() && isSecureLockDeviceStrongBiometricAuthFlagSet(userId)) {
++                Log.d(TAG, "onIrisAuthenticated(): strong biometric confirmation is required; "
++                        + "skipping convenience iris unlock.");
++                return;
++            }
++            reportSuccessfulBiometricUnlock(false /* isStrongBiometric */, userId);
++        } finally {
++            Trace.endSection();
++        }
++    }
++
++    /** Reports a failed iris comparison to Keyguard listeners. */
++    public void onIrisAuthenticationFailed() {
++        Assert.isMainThread();
++        for (int i = 0; i < mCallbacks.size(); i++) {
++            KeyguardUpdateMonitorCallback cb = mCallbacks.get(i).get();
++            if (cb != null) {
++                cb.onBiometricAuthFailed(IRIS);
++            }
++        }
++    }
++
+     /**
+      * Whether the user locked down the device. This doesn't include device policy manager lockdown.
+      */
+@@ -3320,6 +3376,8 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
+             biometricSourceType = FINGERPRINT;
+         } else if (modality == TYPE_FACE) {
+             biometricSourceType = FACE;
++        } else if (modality == BiometricAuthenticator.TYPE_IRIS) {
++            biometricSourceType = IRIS;
+         } else {
+             return;
+         }
+@@ -3977,7 +4035,9 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
+     private void clearFingerprintRecognized(int unlockedUser) {
+         Assert.isMainThread();
+         mUserFingerprintAuthenticated.clear();
++        mUserIrisAuthenticated.clear();
+         mTrustManager.clearAllBiometricRecognized(FINGERPRINT, unlockedUser);
++        mTrustManager.clearAllBiometricRecognized(IRIS, unlockedUser);
+         mLogger.d("clearFingerprintRecognized");
+ 
+         for (int i = 0; i < mCallbacks.size(); i++) {

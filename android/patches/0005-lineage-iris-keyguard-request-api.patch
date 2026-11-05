@@ -1,0 +1,326 @@
+--- a/core/java/android/hardware/iris/IIrisService.aidl
++++ b/core/java/android/hardware/iris/IIrisService.aidl
+@@ -16,6 +16,7 @@
+ package android.hardware.iris;
+ 
+ import android.hardware.biometrics.SensorPropertiesInternal;
++import android.os.IBinder;
+ 
+ /**
+  * Communication channel from client to the iris service. These methods are all require the
+@@ -28,4 +29,12 @@
+     // hidlSensors must be non-null and empty. See AuthService.java
+     @EnforcePermission("USE_BIOMETRIC_INTERNAL")
+     void registerAuthenticators(in List<SensorPropertiesInternal> hidlSensors);
++
++    // Direct Keyguard modality path. Convenience iris sensors stay outside public PromptInfo APIs.
++    @EnforcePermission("USE_BIOMETRIC_INTERNAL")
++    long authenticateForKeyguard(IBinder token, int userId, IIrisServiceReceiver receiver,
++            String opPackageName);
++
++    @EnforcePermission("USE_BIOMETRIC_INTERNAL")
++    void cancelAuthenticationForKeyguard(IBinder token, String opPackageName, long requestId);
+ }
+--- a/core/java/android/hardware/iris/IrisManager.java
++++ b/core/java/android/hardware/iris/IrisManager.java
+@@ -16,8 +16,18 @@
+ 
+ package android.hardware.iris;
+ 
++import android.annotation.NonNull;
++import android.annotation.Nullable;
++import android.annotation.RequiresPermission;
+ import android.annotation.SystemService;
+ import android.content.Context;
++import android.hardware.biometrics.BiometricConstants;
++import android.os.Binder;
++import android.os.CancellationSignal;
++import android.os.Handler;
++import android.os.Looper;
++import android.os.RemoteException;
++import android.util.Slog;
+ 
+ /**
+  * A class that coordinates access to the iris authentication hardware.
+@@ -25,10 +35,87 @@
+  */
+ @SystemService(Context.IRIS_SERVICE)
+ public class IrisManager {
++    private static final String TAG = "IrisManager";
+ 
++    private final Context mContext;
++    private final IIrisService mService;
++    private final Binder mToken = new Binder();
++
+     /**
+      * @hide
+      */
+     public IrisManager(Context context, IIrisService service) {
++        mContext = context;
++        mService = service;
+     }
++
++    /**
++     * Requests iris authentication for Keyguard. This hidden API must not be used by applications
++     * or to authorize cryptographic operations. The iris modality is Class 1 / Convenience only.
++     */
++    @RequiresPermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
++    public void authenticateForKeyguard(int userId, @Nullable CancellationSignal cancel,
++            @NonNull AuthenticationCallback callback, @Nullable Handler handler) {
++        if (callback == null) {
++            throw new IllegalArgumentException("Must supply an authentication callback");
++        }
++        if (cancel != null && cancel.isCanceled()) {
++            return;
++        }
++
++        final Handler callbackHandler = handler != null
++                ? handler : new Handler(Looper.getMainLooper());
++        if (mService == null) {
++            callbackHandler.post(() -> callback.onAuthenticationError(
++                    BiometricConstants.BIOMETRIC_ERROR_HW_UNAVAILABLE, 0));
++            return;
++        }
++
++        final String opPackageName = mContext.getOpPackageName();
++        final IIrisServiceReceiver receiver = new IIrisServiceReceiver.Stub() {
++            @Override
++            public void onAuthenticationSucceeded(int authenticatedUserId) {
++                callbackHandler.post(() -> callback.onAuthenticationSucceeded(
++                        authenticatedUserId));
++            }
++
++            @Override
++            public void onAuthenticationFailed() {
++                callbackHandler.post(callback::onAuthenticationFailed);
++            }
++
++            @Override
++            public void onError(int errorCode, int vendorCode) {
++                callbackHandler.post(() -> callback.onAuthenticationError(errorCode, vendorCode));
++            }
++        };
++
++        try {
++            final long requestId = mService.authenticateForKeyguard(mToken, userId, receiver,
++                    opPackageName);
++            if (cancel != null) {
++                cancel.setOnCancelListener(() -> cancelAuthentication(requestId, opPackageName));
++            }
++        } catch (RemoteException e) {
++            Slog.w(TAG, "Remote exception while authenticating for Keyguard", e);
++            callbackHandler.post(() -> callback.onAuthenticationError(
++                    BiometricConstants.BIOMETRIC_ERROR_HW_UNAVAILABLE, 0));
++        }
++    }
++
++    private void cancelAuthentication(long requestId, String opPackageName) {
++        if (mService == null) return;
++        try {
++            mService.cancelAuthenticationForKeyguard(mToken, opPackageName, requestId);
++        } catch (RemoteException e) {
++            Slog.w(TAG, "Remote exception while canceling Keyguard iris authentication", e);
++        }
++    }
++
++    /** Callback events for the Keyguard-only Convenience path. */
++    public abstract static class AuthenticationCallback {
++        public void onAuthenticationSucceeded(int userId) { }
++        public void onAuthenticationFailed() { }
++        public void onAuthenticationError(int errorCode, int vendorCode) { }
++    }
+ }
+--- a/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java
++++ b/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java
+@@ -18,6 +18,7 @@
+ 
+ import static android.Manifest.permission.USE_BIOMETRIC_INTERNAL;
+ import static android.hardware.biometrics.BiometricAuthenticator.TYPE_IRIS;
++import static android.hardware.biometrics.BiometricConstants.BIOMETRIC_ERROR_HW_UNAVAILABLE;
+ 
+ import android.annotation.NonNull;
+ import android.content.Context;
+@@ -25,7 +26,9 @@
+ import android.hardware.biometrics.IBiometricService;
+ import android.hardware.biometrics.SensorPropertiesInternal;
+ import android.hardware.iris.IIrisService;
++import android.hardware.iris.IIrisServiceReceiver;
+ import android.os.Handler;
++import android.os.IBinder;
+ import android.os.Process;
+ import android.os.RemoteException;
+ import android.os.ServiceManager;
+@@ -36,6 +39,7 @@
+ import com.android.server.biometrics.Utils;
+ 
+ import java.util.List;
++import java.util.concurrent.atomic.AtomicLong;
+ 
+ /**
+  * A service to manage multiple clients that want to access the Iris HAL API.
+@@ -50,6 +54,7 @@
+     private static final String TAG = "IrisService";
+ 
+     private final IrisServiceWrapper mServiceWrapper;
++    private final AtomicLong mNextKeyguardRequestId = new AtomicLong(1);
+ 
+     /**
+      * Receives the incoming binder calls from IrisManager.
+@@ -90,6 +95,39 @@
+                 }
+             });
+         }
++
++        @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
++        @Override
++        public long authenticateForKeyguard(IBinder token, int userId,
++                @NonNull IIrisServiceReceiver receiver, String opPackageName) {
++            super.authenticateForKeyguard_enforcePermission();
++            enforceKeyguardCaller(opPackageName);
++
++            final long requestId = mNextKeyguardRequestId.getAndIncrement();
++            // Fail closed until a real camera provider and matcher are installed. In particular,
++            // never turn a missing backend into an authentication success.
++            Slog.w(TAG, "Rejecting Keyguard iris request: camera authenticator is unavailable");
++            try {
++                receiver.onError(BIOMETRIC_ERROR_HW_UNAVAILABLE, 0 /* vendorCode */);
++            } catch (RemoteException e) {
++                Slog.w(TAG, "Unable to report unavailable iris hardware", e);
++            }
++            return requestId;
++        }
++
++        @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
++        @Override
++        public void cancelAuthenticationForKeyguard(IBinder token, String opPackageName,
++                long requestId) {
++            super.cancelAuthenticationForKeyguard_enforcePermission();
++            enforceKeyguardCaller(opPackageName);
++        }
++
++        private void enforceKeyguardCaller(String opPackageName) {
++            if (!Utils.isKeyguard(getContext(), opPackageName)) {
++                throw new SecurityException("Iris authentication is restricted to Keyguard");
++            }
++        }
+     }
+ 
+     public IrisService(@NonNull Context context) {
+--- a/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
++++ b/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
+@@ -83,6 +83,7 @@
+ import android.hardware.fingerprint.FingerprintManager.AuthenticationResult;
+ import android.hardware.fingerprint.FingerprintSensorPropertiesInternal;
+ import android.hardware.fingerprint.IFingerprintAuthenticatorsRegisteredCallback;
++import android.hardware.iris.IrisManager;
+ import android.hardware.usb.UsbManager;
+ import android.nfc.NfcAdapter;
+ import android.os.BatteryManager;
+@@ -92,6 +93,7 @@
+ import android.os.Message;
+ import android.os.PowerManager;
+ import android.os.RemoteException;
++import android.os.ServiceManager;
+ import android.os.Trace;
+ import android.os.UserHandle;
+ import android.os.UserManager;
+@@ -396,6 +398,7 @@
+     private final BiometricManager mBiometricManager;
+     @Nullable
+     private DeviceEntryFaceAuthInteractor mFaceAuthInteractor;
++    @Nullable private CancellationSignal mIrisAuthenticationCancelSignal;
+     private final DevicePostureController mDevicePostureController;
+     private final TaskStackChangeListeners mTaskStackChangeListeners;
+     private final IActivityTaskManager mActivityTaskManager;
+@@ -1688,6 +1691,57 @@
+         }
+     }
+ 
++    /** Starts a system-only iris request when Keyguard's controller asks for one. */
++    @MainThread
++    public void startIrisAuthenticationForKeyguard() {
++        Assert.isMainThread();
++        if (mIrisAuthenticationCancelSignal != null || mGoingToSleep) return;
++
++        final int userId = mSelectedUserInteractor.getSelectedUserId();
++        if (!isUnlockingWithBiometricAllowed(IRIS)
++                || ServiceManager.checkService(Context.IRIS_SERVICE) == null) {
++            return;
++        }
++        final IrisManager irisManager = mContext.getSystemService(IrisManager.class);
++        if (irisManager == null) return;
++
++        final CancellationSignal cancelSignal = new CancellationSignal();
++        mIrisAuthenticationCancelSignal = cancelSignal;
++        irisManager.authenticateForKeyguard(userId, cancelSignal,
++                new IrisManager.AuthenticationCallback() {
++                    @Override
++                    public void onAuthenticationSucceeded(int authenticatedUserId) {
++                        if (mIrisAuthenticationCancelSignal != cancelSignal) return;
++                        mIrisAuthenticationCancelSignal = null;
++                        onIrisAuthenticated(authenticatedUserId);
++                    }
++
++                    @Override
++                    public void onAuthenticationFailed() {
++                        if (mIrisAuthenticationCancelSignal == cancelSignal) {
++                            onIrisAuthenticationFailed();
++                        }
++                    }
++
++                    @Override
++                    public void onAuthenticationError(int errorCode, int vendorCode) {
++                        if (mIrisAuthenticationCancelSignal == cancelSignal) {
++                            mIrisAuthenticationCancelSignal = null;
++                        }
++                    }
++                }, mHandler);
++    }
++
++    /** Cancels the current iris request. */
++    @MainThread
++    public void stopIrisAuthenticationForKeyguard() {
++        Assert.isMainThread();
++        if (mIrisAuthenticationCancelSignal != null) {
++            mIrisAuthenticationCancelSignal.cancel();
++            mIrisAuthenticationCancelSignal = null;
++        }
++    }
++
+     /**
+      * Whether the user locked down the device. This doesn't include device policy manager lockdown.
+      */
+@@ -4034,6 +4088,7 @@
+ 
+     private void clearFingerprintRecognized(int unlockedUser) {
+         Assert.isMainThread();
++        stopIrisAuthenticationForKeyguard();
+         mUserFingerprintAuthenticated.clear();
+         mUserIrisAuthenticated.clear();
+         mTrustManager.clearAllBiometricRecognized(FINGERPRINT, unlockedUser);
+--- /dev/null
++++ b/core/java/android/hardware/iris/IIrisServiceReceiver.aidl
+@@ -0,0 +1,23 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package android.hardware.iris;
++
++/** Callback for a privileged Keyguard iris authentication request. */
++oneway interface IIrisServiceReceiver {
++    void onAuthenticationSucceeded(int userId);
++    void onAuthenticationFailed();
++    void onError(int errorCode, int vendorCode);
++}

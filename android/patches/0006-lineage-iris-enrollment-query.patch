@@ -1,0 +1,93 @@
+--- a/core/java/android/hardware/iris/IIrisService.aidl
++++ b/core/java/android/hardware/iris/IIrisService.aidl
+@@ -36,5 +36,8 @@
+             String opPackageName);
+ 
+     @EnforcePermission("USE_BIOMETRIC_INTERNAL")
++    boolean hasEnrolledTemplatesForKeyguard(int userId, String opPackageName);
++
++    @EnforcePermission("USE_BIOMETRIC_INTERNAL")
+     void cancelAuthenticationForKeyguard(IBinder token, String opPackageName, long requestId);
+ }
+--- a/core/java/android/hardware/iris/IrisManager.java
++++ b/core/java/android/hardware/iris/IrisManager.java
+@@ -103,6 +103,18 @@
+         }
+     }
+ 
++    /** Returns whether the iris authenticator has an enrollment for the given Keyguard user. */
++    @RequiresPermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
++    public boolean hasEnrolledTemplatesForKeyguard(int userId) {
++        if (mService == null) return false;
++        try {
++            return mService.hasEnrolledTemplatesForKeyguard(userId, mContext.getOpPackageName());
++        } catch (RemoteException e) {
++            Slog.w(TAG, "Remote exception while checking Keyguard iris enrollment", e);
++            return false;
++        }
++    }
++
+     private void cancelAuthentication(long requestId, String opPackageName) {
+         if (mService == null) return;
+         try {
+--- a/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java
++++ b/services/core/java/com/android/server/biometrics/sensors/iris/IrisService.java
+@@ -39,6 +39,7 @@
+ import com.android.server.biometrics.Utils;
+ 
+ import java.util.List;
++import java.util.concurrent.CopyOnWriteArrayList;
+ import java.util.concurrent.atomic.AtomicLong;
+ 
+ /**
+@@ -54,6 +55,7 @@
+     private static final String TAG = "IrisService";
+ 
+     private final IrisServiceWrapper mServiceWrapper;
++    private final List<IrisAuthenticator> mAuthenticators = new CopyOnWriteArrayList<>();
+     private final AtomicLong mNextKeyguardRequestId = new AtomicLong(1);
+ 
+     /**
+@@ -86,6 +88,7 @@
+                                     hidlSensor.sensorStrength);
+                     final IrisAuthenticator authenticator = new IrisAuthenticator(mServiceWrapper,
+                             hidlSensor);
++                    mAuthenticators.add(authenticator);
+                     try {
+                         biometricService.registerAuthenticator(sensorId, TYPE_IRIS, strength,
+                                 authenticator);
+@@ -117,6 +120,23 @@
+ 
+         @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
+         @Override
++        public boolean hasEnrolledTemplatesForKeyguard(int userId, String opPackageName) {
++            super.hasEnrolledTemplatesForKeyguard_enforcePermission();
++            enforceKeyguardCaller(opPackageName);
++            for (IrisAuthenticator authenticator : mAuthenticators) {
++                try {
++                    if (authenticator.hasEnrolledTemplates(userId, opPackageName)) {
++                        return true;
++                    }
++                } catch (RemoteException e) {
++                    Slog.w(TAG, "Unable to query iris enrollment", e);
++                }
++            }
++            return false;
++        }
++
++        @android.annotation.EnforcePermission(android.Manifest.permission.USE_BIOMETRIC_INTERNAL)
++        @Override
+         public void cancelAuthenticationForKeyguard(IBinder token, String opPackageName,
+                 long requestId) {
+             super.cancelAuthenticationForKeyguard_enforcePermission();
+--- a/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
++++ b/packages/SystemUI/src/com/android/keyguard/KeyguardUpdateMonitor.java
+@@ -1703,7 +1703,7 @@
+             return;
+         }
+         final IrisManager irisManager = mContext.getSystemService(IrisManager.class);
+-        if (irisManager == null) return;
++        if (irisManager == null || !irisManager.hasEnrolledTemplatesForKeyguard(userId)) return;
+ 
+         final CancellationSignal cancelSignal = new CancellationSignal();
+         mIrisAuthenticationCancelSignal = cancelSignal;
