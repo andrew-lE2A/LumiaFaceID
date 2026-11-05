@@ -103,8 +103,13 @@ vtable at offset `+4` at `0x100101c6`. It subsequently queries static
 `IARCEngine::Release` and `Generation` functions, and a cleanup path calls
 `IARCEngine::Delete`. The virtual method's name and arguments are not exposed
 by the import table; the engine's `FeedImage` task path is the next useful
-call-flow target. These addresses refer to the extracted Mobile DLL, not to
-runtime measurements.
+call-flow target. A later call at `0x10010290` dispatches through the same
+object's vtable at offset `+0x14`, passing a pointer to a structure at
+`this + 8` and the routine's second input argument. Since Icaros also contains the `CARCEngine::FeedImage` diagnostic name, this
+is a plausible `FeedImage` slot
+mapping; it remains an inference until the object's vtable and the frame
+structure are fully resolved. These addresses refer to the extracted Mobile
+DLL, not to runtime measurements.
 
 Sources: [LumiaDB RM-1085 firmware listing](https://lumiadb.com/?model=RM-1085)
 and [LumiaDB API documentation](https://lumiadb.com/developers). The original
