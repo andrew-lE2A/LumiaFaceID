@@ -54,7 +54,13 @@ dimensions and output dimensions. Live luma analysis uses the same crop origin
 so detector and ROI coordinates refer to the pixels actually analyzed. The
 frame is not an enrollment template and is not uploaded or written to shared
 storage. Camera2 metadata identifies the sensor orientation; the pixel buffer
-itself remains in sensor orientation. On launch,
+itself remains in sensor orientation. The saved `.yuv` file is raw planar I420
+(`Y`, then `U`, then `V`), not a PNG or
+JPEG and not a screenshot of the probe UI. ROI graphics are drawn only over the
+live preview. A green or purple appearance when opening that raw file with a
+generic image viewer can come from interpreting the planar data with the wrong
+format or dimensions; it does not by itself establish a sensor color defect.
+The app does not apply a color correction to this diagnostic data. On launch,
 the probe reports aggregate Y/U/V means, spread and ranges plus luma
 percentiles, horizontal/vertical mean absolute gradients, clipping fractions,
 and an 8×6 grid's local standard-deviation range for the latest private frame.

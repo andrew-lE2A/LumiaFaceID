@@ -36,6 +36,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -222,6 +223,18 @@ public final class IrisProbeActivity extends Activity {
         analyzeButton.setOnClickListener(v -> analyzeOneLiveFrame());
         root.addView(analyzeButton, new LinearLayout.LayoutParams(-1, -2));
 
+        Button diagnosticsToggle = new Button(this);
+        LinearLayout diagnostics = new LinearLayout(this);
+        diagnostics.setOrientation(LinearLayout.VERTICAL);
+        diagnostics.setVisibility(View.GONE);
+        diagnosticsToggle.setText("Show advanced controls");
+        diagnosticsToggle.setOnClickListener(v -> {
+            boolean show = diagnostics.getVisibility() != View.VISIBLE;
+            diagnostics.setVisibility(show ? View.VISIBLE : View.GONE);
+            diagnosticsToggle.setText(show ? "Hide advanced controls" : "Show advanced controls");
+        });
+        root.addView(diagnosticsToggle, new LinearLayout.LayoutParams(-1, -2));
+
         selectRoiButton = new Button(this);
         selectRoiButton.setText("Select eye ROI (tap preview)");
         selectRoiButton.setEnabled(false);
@@ -235,36 +248,37 @@ public final class IrisProbeActivity extends Activity {
             selectRoiButton.setText("Tap the center of one iris");
             logLine("Manual ROI selection active. Tap the preview center of one eye; coordinates stay in RAM only.");
         });
-        root.addView(selectRoiButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(selectRoiButton, new LinearLayout.LayoutParams(-1, -2));
 
         enrollButton = new Button(this);
         enrollButton.setText("Start 3-frame diagnostic enrollment (RAM only)");
         enrollButton.setOnClickListener(v -> startDiagnosticEnrollment());
-        root.addView(enrollButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(enrollButton, new LinearLayout.LayoutParams(-1, -2));
 
         compareButton = new Button(this);
         compareButton.setText("Compare next frame (no threshold)");
         compareButton.setEnabled(false);
         compareButton.setOnClickListener(v -> compareOneLiveFrame());
-        root.addView(compareButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(compareButton, new LinearLayout.LayoutParams(-1, -2));
 
         exposureButton = new Button(this);
         exposureButton.setText("Use manual 30 ms / ISO 100 baseline");
         exposureButton.setEnabled(false);
         exposureButton.setOnClickListener(v -> toggleExposureMode());
-        root.addView(exposureButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(exposureButton, new LinearLayout.LayoutParams(-1, -2));
 
         exposureStepButton = new Button(this);
         exposureStepButton.setText("Manual exposure 30 ms (tap to change)");
         exposureStepButton.setEnabled(false);
         exposureStepButton.setOnClickListener(v -> cycleManualExposure());
-        root.addView(exposureStepButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(exposureStepButton, new LinearLayout.LayoutParams(-1, -2));
 
         sensitivityButton = new Button(this);
         sensitivityButton.setText("Manual ISO 100 (tap to increase)");
         sensitivityButton.setEnabled(false);
         sensitivityButton.setOnClickListener(v -> cycleManualSensitivity());
-        root.addView(sensitivityButton, new LinearLayout.LayoutParams(-1, -2));
+        diagnostics.addView(sensitivityButton, new LinearLayout.LayoutParams(-1, -2));
+        root.addView(diagnostics, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout controls = new LinearLayout(this);
         rotateButton = new Button(this);
@@ -277,9 +291,8 @@ public final class IrisProbeActivity extends Activity {
         });
         controls.addView(rotateButton, new LinearLayout.LayoutParams(0, -2, 1));
         irButton = new Button(this);
-        irButton.setText("IR + analyze (min, ≤1 s)");
+        irButton.setText("IR off for this scan");
         irButton.setEnabled(false);
-        irButton.setOnClickListener(v -> pulseAndCaptureOnce());
         controls.addView(irButton, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(controls);
 
@@ -1868,8 +1881,6 @@ public final class IrisProbeActivity extends Activity {
             @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest r,
                                                     android.hardware.camera2.TotalCaptureResult result) {
                 int n = completedFrames.incrementAndGet();
-                if (n == 1 && irButton != null && !pulseUsed)
-                    runOnUiThread(() -> irButton.setEnabled(true));
                 if (n == 1 || n % 30 == 0) {
                     Long exposureNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
                     Integer sensitivityIso = result.get(CaptureResult.SENSOR_SENSITIVITY);

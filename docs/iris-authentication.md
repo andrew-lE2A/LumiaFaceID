@@ -40,6 +40,44 @@ units and have not been validated as eye-safety limits. Linux `torch_0`
 brightness 14 (hardware current code 1) was observed as a faint red glow, but
 that observation does not establish an eye-safe exposure.
 
+### Recovered Windows illumination states and bounds (static analysis)
+
+The latest `leojukic03/lumia-iris-notes` findings (checkout
+`e6a3b02`, `FINDINGS.md` sections 5 and 24) distinguish **three illumination
+modes**—`None`, `Pulsing`, and `ContinuousLED`—from the driver's **four accepted
+assist-power settings**: 13%, 20%, 30%, and 100%. The decompiled LED-7 mapping
+is respectively current codes 10, 15, 23, and 22. The notes do not establish
+the units of those codes. The mode-number-to-name mapping is also unresolved.
+So “three power states” is not quite what the binary evidence says: it is
+three named modes plus four accepted power values.
+
+The same analysis reports pulse-length caps of 80,000 for modes 1/2 and 40,000
+for mode 3, likely microseconds, and a lower validation branch at 1,000. It
+also finds per-LED request `<25`, aggregate request `<49` (units unknown), and
+a heat-load cooldown above 2,000 ms accumulated on-time. These are Windows
+driver guard rails, not validated optical or eye-safety limits.
+
+**Port boundary:** do not translate Windows current codes 10/15/23/22 into
+Linux LED brightness values. Linux `torch_0` brightness 14 maps to hardware
+code 1 on this build; the two scales have no established conversion. Nor can
+the 13/20/30/100 values be copied into Android's current field until the
+Windows LED-7 code units and result-record-to-PMIC consumer are resolved. The
+duration caps are useful source-derived ceilings for a future iris-specific
+pulse controller, but modes 1/2/3 are not yet mapped to the Android operation.
+Keep the existing one-shot control disabled until a bounded, iris-only path
+enforces a hard off timeout and its actual current is known. The Windows
+thermal thresholds do not fill that safety gap.
+
+A follow-up read of the Windows disassembly confirms the LED-7 mapping function
+returns those codes to a PMIC configuration helper, but does not expose a unit
+conversion in the caller. In this Linux tree the user brightness for `torch_0`
+is requested milliamps: nonzero values below 13 are clamped to 13, and the
+current register is programmed as `requested_mA * 15 / configured_max_mA`.
+Thus brightness 14 requests 14 mA and quantizes to register code 1 with the
+current 200 mA maximum. This makes the Linux scale explicit, but still does
+not establish whether Windows codes 10/15/23/22 are milliamps or how those
+values relate to Linux's 0–15 register code. No conversion is safe to port yet.
+
 The new one-frame Android YUV capture is **not** the original Windows Hello
 enrollment or authentication algorithm. It only checks the camera-to-frame
 stage. The Windows Mobile FFU now provides the original algorithm DLL and
@@ -225,9 +263,13 @@ sensor) and omits `0x100` (secure sensor), while static analysis of
 `DeltaIrisEngineAdapter.dll` shows its exported WBF engine interface is v3.0.
 Microsoft's documented TPM secure-match methods are v4.0, so the recovered
 WinBio iris path does not expose that protocol. A separate Lumia trusted path
-is not ruled out; `Origa2Auth.sys` remains unresolved. The Android port still
-has no iris biometric service or trusted matcher, so an app-side matcher cannot
-be promoted to lock-screen authentication based on this Windows configuration.
+is not ruled out, but current `Origa2Auth.sys` evidence does not support one:
+its WDF GUIDs match values under Qualcomm's `qcbifbattdrv\\AuthLibrary`
+configuration, associated in the SYSTEM hive with a BIF battery driver. The
+interface consumers remain unresolved, so Origa2Auth should not be treated as
+evidence of trusted iris matching. The Android port still has no iris
+biometric service or trusted matcher, so an app-side matcher cannot be
+promoted to lock-screen authentication based on this Windows configuration.
 
 The next gates are:
 

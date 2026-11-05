@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-05",
+  "scope": "offline static ARM32 Thumb disassembly of the recovered Windows Mobile Origa2Auth.sys",
+  "input": {
+    "path": "/private/tmp/Origa2Auth.sys",
+    "sha256": "0b8fcbe9a420d660a69d9396fe49e0a565844ffba2c3f83208f36201ef851e4d",
+    "architecture": "ARMv7 Thumb PE32, NT native",
+    "disassembly": "/private/tmp/Origa2Auth.dis"
+  },
+  "wdf_bind_info": {
+    "image_address": "0x405008",
+    "component": "KmdfLibrary",
+    "version": {
+      "major": 1,
+      "minor": 15,
+      "build": 0
+    },
+    "function_count": 444,
+    "function_table_pointer": "0x405094",
+    "interpretation": "Embedded WDF_BIND_INFO v1 metadata identifies the driver target as KMDF 1.15; this permits matching slots against the 1.15 enum."
+  },
+  "system_hive_correlation": {
+    "source": "/private/tmp/cityman-system.hiv",
+    "source_sha256": "4ba9aa297e95764ef6b16ca3811f4b4e761f334f66fd2d944125b7b0211e7aec",
+    "auth_library_registry_path": "ControlSet001\\Services\\qcbifbattdrv\\AuthLibrary",
+    "auth_library_guid": "{54F544B9-B075-42B1-B170-3F3B3A433D91}",
+    "auth_interface_guid": "{3BD43166-179A-4FE6-90D6-916ED84D7D3C}",
+    "auth_interface_version": "0x00010000",
+    "qc_auth_lib_in_use": false,
+    "associated_service": "qcbifbattdrv",
+    "associated_package": "qcbifbattdrv8994.inf_arm_6d988c64d95be469",
+    "associated_package_description": "Qualcomm BIF Battery Device",
+    "origa2auth_package": {
+      "name": "origa2auth.inf_arm_47fe280940f85414",
+      "provider": "MMO",
+      "hardware_id": "ACPI\\MSHW1002",
+      "service": "Origa2Auth"
+    },
+    "interpretation": "Both GUIDs used by Origa2Auth are configured under qcbifbattdrv\\AuthLibrary. The matching suggests a shared interface with the Qualcomm BIF battery stack, not an established iris/Hello role. Installed hive records do not prove runtime use."
+  },
+  "observations": [
+    {
+      "image_address": "0x408000",
+      "table_byte_offset": "0x1d0",
+      "published_kmdf_slot": 116,
+      "published_name": "WdfDriverCreate",
+      "interpretation": "INIT routine invokes the framework table at this slot while constructing WDF driver configuration and object attributes."
+    },
+    {
+      "image_address": "0x407000",
+      "table_byte_offset": "0x12c",
+      "published_kmdf_slot": 75,
+      "published_name": "WdfDeviceCreate",
+      "interpretation": "PAGE routine passes initialized descriptor/attribute structures and receives a device object."
+    },
+    {
+      "image_address": "0x407000",
+      "table_byte_offsets": ["0x328", "0x334"],
+      "published_kmdf_slots": [202, 205],
+      "published_names": ["WdfObjectGetTypedContextWorker", "WdfObjectReferenceActual"],
+      "interpretation": "The path uses typed object context and object reference operations after device creation."
+    },
+    {
+      "image_address": "0x407000",
+      "table_byte_offset": "0x134",
+      "published_kmdf_slot": 77,
+      "published_name": "WdfDeviceCreateDeviceInterface",
+      "interface_guid": "{54F544B9-B075-42B1-B170-3F3B3A433D91}",
+      "interface_guid_image_address": "0x404048",
+      "reference_string": null,
+      "interpretation": "The PAGE routine registers a device interface with this GUID and no reference string. Its consumer is not identified yet."
+    },
+    {
+      "image_address": "0x4017f6",
+      "table_byte_offset": "0x390",
+      "published_kmdf_slot": 228,
+      "published_name": "WdfDeviceAddQueryInterface",
+      "interface_guid": "{3BD43166-179A-4FE6-90D6-916ED84D7D3C}",
+      "interface_guid_image_address": "0x404058",
+      "configuration_builder": "0x401794",
+      "interpretation": "A second WDF query interface is added using the GUID that the SYSTEM hive labels AuthInterfaceGuid. The query-interface callbacks and consumer are not identified."
+    },
+    {
+      "image_address": "0x403be0",
+      "table_byte_offset": "0x324",
+      "published_kmdf_slot": 201,
+      "published_name": "WdfDriverMiniportUnload",
+      "interpretation": "The device-add-like path reads and stores this table entry while preparing callback/configuration records; its role in this driver is unresolved."
+    }
+  ],
+  "enum_reference": "https://github.com/microsoft/Windows-Driver-Frameworks/blob/main/src/publicinc/wdf/kmdf/1.15/wdffuncenum.h",
+  "limits": [
+    "The slot names match the published KMDF 1.15 function enum and the embedded bind metadata; identifying the device-interface call does not reveal its consumer or establish a biometric role.",
+    "This establishes WDF driver/device setup and object-context use, not a biometric match path, credential release, TPM call, secure-world interface, or actual runtime loading.",
+    "Callback-record semantics, both interface consumers, IOCTL definitions/consumers, and package binding remain unresolved. Exact public string searches for the recovered GUIDs returned no matches.",
+    "No Windows binary was executed and no phone state was changed."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

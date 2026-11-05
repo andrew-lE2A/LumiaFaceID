@@ -10,7 +10,9 @@ DONE / VERIFIED
 [x] Added probe controls for preview orientation/aspect ratio and manual exposure/sensitivity diagnostics.
 [x] Kept the Windows 10 Mobile FFU and private iris sensor profile locally. Firmware analysis and hashes are recorded; do not delete either file.
 [x] Mapped key Windows iris components, including the sensor driver, camera authentication capture path, WinBio adapter and iris engine interfaces.
+[x] Added a static WDF call-flow map for Origa2Auth.sys: KMDF 1.15, device-interface/query-interface registration and GUIDs are identified; the matching configuration is under qcbifbattdrv's battery-auth service, so Origa2Auth's iris/security role remains unproven.
 [x] Confirmed the sensor reports no strobe capability; sensor strobe is not the illumination path. Windows analysis points to host/camera-driver flash scheduling, whose exact IR-channel consumer and timing are unresolved.
+[x] Recovered the Windows flash driver's accepted assist levels (13/20/30/100%, LED-7 codes 10/15/23/22), pulse caps (80/40 ms, likely), and heat-load guards from static analysis. These values are not Android brightness conversions or eye-safety limits.
 [x] Recorded one bounded minimum torch_0 pulse and an illuminated frame with higher signal. It did not establish a usable eye region, optical timing or eye-safe limits.
 [x] Verified camera teardown and LED cleanup after recorded tests; recent readback showed all cameras closed and all four LED channels at 0.
 [x] One latest IR-off frame arrived, but was nearly black (luma p95=2); it did not show usable iris detail.
@@ -21,7 +23,8 @@ DONE / VERIFIED
 IN PROGRESS
 [~] Capture repeatable, well-exposed iris frames with visible iris detail and a controlled diffuse target. Existing IR-off frames are too dark; the one recorded minimum-IR frame had no detected eye region.
 [~] Validate real-frame orientation, geometry, eye localization, image quality and exposure. Current detection/segmentation proposals are experimental and not validated on representative Lumia samples.
-[~] Continue static analysis of Windows: resolve the private BIR vendor image layout, adapter/engine argument discrepancy, and the camera KMD's per-frame IR request consumer and pulse timing.
+[~] Continue static analysis of Windows: resolve the private BIR vendor image layout, adapter/engine argument discrepancy, and the camera KMD's per-frame IR request consumer and pulse timing. The accepted flash levels are known, but their current-code units and mapping to the PMIC request remain unresolved.
+[~] Continue Origa2Auth.sys analysis: both WDF GUIDs match values under qcbifbattdrv\\AuthLibrary; Origa2Auth binds ACPI\\MSHW1002, while qcbifbattdrv is Qualcomm's BIF battery service. This points toward a battery-auth interface, not proven iris use. Trace consumers/callbacks and validate the package connection before assigning a role.
 [~] Design a safe Android illumination route with a verified low current, frame synchronization, hard timeout and cleanup on every failure. Camera2 torch is not synchronized; the current iris slot has no camera flash endpoint.
 [~] Develop Android enrollment/authentication architecture. The framework lifecycle patches are source-only scaffolding; the service still returns HW_UNAVAILABLE and has no camera-backed authenticator.
 
@@ -47,5 +50,6 @@ WORKING RULES
 - For kernel experiments, use temporary boot only; never flash a test kernel.
 - Never stream the iris and normal front camera together; they share CSIPHY2.
 - After any emitter test, stop capture and verify torch_0, torch_1, flash_0 and flash_1 are all off.
-- Never point IR at a person or eye; do not test inside a metal can or reflective enclosure. Use only a confirmed diffuse target and bounded pulses.
+- Never point IR at a person or eye; do not perform eye-directed tests. Windows operation does not establish that Android test conditions are eye-safe: Android pulse timing/current and optical exposure have not been independently validated. Do not treat driver limits or software timestamps as safety evidence.
+- Do not test inside a metal can or reflective enclosure. Any bounded emitter check must use a confirmed diffuse target with no person or animal in the direct or reflected path.
 - Keep the original FFU and private sensor profile.

@@ -220,6 +220,57 @@ does not show that the driver was loaded during normal iris use. Its purpose
 remains unresolved, and the service name alone is not evidence that it
 authenticates iris matches.
 
+Parsing the SYSTEM hive's DriverDatabase narrows the package binding:
+`Origa2Auth.inf` is supplied by provider `MMO` and binds `ACPI\\MSHW1002` to
+service `Origa2Auth`. Separately, Qualcomm's `qcbifbattdrv8994.inf` describes a
+“Qualcomm BIF Battery Device” and installs service `qcbifbattdrv` for its PMIC
+configuration. The values `AuthLibraryGuid`, `AuthInterfaceGuid`,
+`AuthInterfaceVersion=0x00010000` and `QCAuthLibInUse=0` are specifically under
+`ControlSet001\\Services\\qcbifbattdrv\\AuthLibrary`, not under the
+`Origa2Auth` service key. This is a material lead that the matching GUIDs are
+part of the BIF battery authentication configuration. It does not yet prove
+that Origa2Auth services that battery driver, nor that either component is
+part of iris capture or Windows Hello. These are installed registry/package
+records, not evidence of runtime activity.
+
+Static ARM32 Thumb disassembly adds a narrow WDF call-flow boundary. The
+`INIT` routine at image address `0x408000` calls the framework function table
+at byte offset `0x1d0` (slot 116 in Microsoft's published KMDF function enum),
+consistent with `WdfDriverCreate`. The `PAGE` routine at `0x407000` calls
+table offset `0x12c` (slot 75, `WdfDeviceCreate`), then offsets `0x328` and
+`0x334` (slots 202 and 205 in that enum, typed-context lookup and object
+reference). The same `PAGE` routine calls table offset `0x134` (slot 77,
+`WdfDeviceCreateDeviceInterface`), so it registers a WDF device interface;
+the call passes GUID `{54F544B9-B075-42B1-B170-3F3B3A433D91}` from image
+address `0x404048` and a null reference string. A public exact-string search
+found no match. The recovered SYSTEM hive contains an `AuthLibraryGuid` value
+with this exact GUID, as well as a separate `AuthInterfaceGuid` value
+`{3BD43166-179A-4FE6-90D6-916ED84D7D3C}` and the names `AuthInterfaceVersion`
+and `QCAuthLibInUse` in the `qcbifbattdrv\\AuthLibrary` key. A second setup
+routine at `0x401794` calls
+`WdfDeviceAddQueryInterface` (slot 228, table offset `0x390`) with the distinct
+GUID `{3BD43166-179A-4FE6-90D6-916ED84D7D3C}`, matching `AuthInterfaceGuid`.
+Thus Origa2Auth registers the same `AuthLibraryGuid` and `AuthInterfaceGuid`
+used by the separate Qualcomm BIF battery driver configuration. This points
+more strongly to an authentication-library interface shared with that battery
+stack than to the iris path, though the consumer and contract remain
+unresolved. Neither GUID match alone proves biometric function. The device-add
+path at `0x403be0` also constructs callback/config records and refers to a
+framework table slot at offset `0x324` (slot 201).
+This establishes a KMDF-style driver/device object setup and context handling;
+it does not reveal a biometric match result, a trusted credential release, or
+even the driver's device-interface consumer. The semantics of the callback
+records and the interface consumer have not yet been recovered. The
+embedded `WDF_BIND_INFO` at `0x405008` gives version major 1, minor 15, build 0,
+and function count 444; the slot names are therefore checked against the
+matching KMDF 1.15 enum. The call at slot 201 is `WdfDriverMiniportUnload`, but
+its use in this driver's callback/config path remains unclear. This version
+metadata strengthens the API mapping, not a claim about biometric or runtime
+behavior. No driver was executed.
+
+The mapped calls and offsets are recorded in
+[`origa2auth-wdf-static-map-2026-11-05.json`](origa2auth-wdf-static-map-2026-11-05.json).
+
 ### WinBio framework contract and secure-sensor boundary
 
 Microsoft's generic WinBio documentation describes the sensor adapter as
@@ -439,10 +490,12 @@ before `irm2_on_frame`.
 `4b6983f5f4177d6b113c06cbea8cd78e1418dd20cb1a8054e39f4d27b28154d6`) exports
 open/close/speed/speed-mode controls, but their semantics and connection to
 iris processing are unknown. `Origa2Auth.sys` (SHA-256
-`0b8fcbe9a420d660a69d9396fe49e0a565844ffba2c3f83208f36201ef851e4d`) is also
-present; its exact role is unresolved. The adapter and engine PDB identities
-were checked against Microsoft's public symbol server and returned 404; no
-matching symbols or source were recovered.
+`0b8fcbe9a420d660a69d9396fe49e0a565844ffba2c3f83208f36201ef851e4d`) registers
+WDF interfaces whose GUIDs match `qcbifbattdrv\\AuthLibrary` values in the
+SYSTEM hive. That points toward a BIF battery-auth interface; no iris-stack
+consumer or trusted iris result path has been found. The adapter and engine PDB
+identities were checked against Microsoft's public symbol server and returned
+404; no matching symbols or source were recovered.
 
 The CodeView GUID-age values are `cdc6fbf6-a3db-43de-b99c-d34290e94816-1`
 for `DeltaIrisEngineAdapter.dll`,
@@ -793,9 +846,10 @@ and evaluation.
    WOA builds, separately from the WinBio iris algorithm path.
 4. Determine how the Windows adapters bind to kernel sensor/flash controls and
    which component owns template persistence and result protection.
-5. Map `Origa2Auth.sys`'s WDF device callbacks and package binding before
-   assigning it a role; its service name and random-number import are
-   insufficient evidence.
+5. Continue mapping `Origa2Auth.sys`'s WDF device callbacks, interface GUIDs,
+   IOCTLs and package binding. KMDF 1.15 driver/device construction and object
+   context use are confirmed; do not assign it a biometric or secure-match role
+   without a consumer path.
 6. Compare the recovered API contract with Android's camera path. Keep
    experimental matching outside Keyguard until matching, liveness, protected
    storage/result delivery, cancellation and lockout are evaluated.
