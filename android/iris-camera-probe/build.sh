@@ -8,15 +8,18 @@ set -eu
 : "${PROBE_KEY_PASSWORD:?Set PROBE_KEY_PASSWORD}"
 
 APP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROBE_MANIFEST=${PROBE_MANIFEST:-$APP_DIR/AndroidManifest.xml}
 PLATFORM="$ANDROID_SDK_ROOT/platforms/android-35/android.jar"
 BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
 OUT="$APP_DIR/build"
 CLASSES="$OUT/classes"
 DEX="$OUT/dex"
+MANIFEST_DIR="$OUT/manifest"
 
-rm -rf "$CLASSES" "$DEX"
-mkdir -p "$CLASSES" "$DEX"
-"$BUILD_TOOLS/aapt" package -f -M "$APP_DIR/AndroidManifest.xml" \
+rm -rf "$CLASSES" "$DEX" "$MANIFEST_DIR"
+mkdir -p "$CLASSES" "$DEX" "$MANIFEST_DIR"
+cp "$PROBE_MANIFEST" "$MANIFEST_DIR/AndroidManifest.xml"
+"$BUILD_TOOLS/aapt" package -f -M "$MANIFEST_DIR/AndroidManifest.xml" \
     -I "$PLATFORM" -F "$OUT/unsigned.apk" \
     --min-sdk-version 26 --target-sdk-version 28
 javac -source 8 -target 8 -classpath "$PLATFORM" -d "$CLASSES" \

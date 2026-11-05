@@ -13,6 +13,20 @@ adb shell 'nohup sh /data/local/tmp/iris-torch-server.sh >/data/local/tmp/iris-t
 
 The helper binds only to `127.0.0.1`, rejects all commands except `PULSE`, writes brightness 14 and replies `ON`, then waits for `STOP` for at most one second. It writes 0 and replies `OFF` when stopped, disconnected or timed out. No background watchdog process is needed; its exit/signal trap also writes 0. It is temporary and stops when the phone reboots. Check `/sys/class/leds/led:torch_0/brightness` is `0` after use. Do not use the sensor-strobe path. The software helper's one-second bound is not an eye-safety limit.
 
+For the installed feedback build, start the complete on-device demo from the repository root with:
+
+```sh
+android/iris-camera-probe/demo-on-phone.sh [adb-serial]
+```
+
+It requires `build/LumiaIrisProbe.apk`, refuses to start while any camera client is active, resets all four LED brightness nodes to zero, installs/launches the feedback app, and starts the idle localhost helper plus ADB port forward. In the app, open the iris preview and tap **Start iris enrollment**, then tap that same button three more times to collect three usable samples. Each IR sample pauses repeating preview, turns on minimum torch_0, requests one still frame, and switches illumination off on the Camera2 capture-result callback before resuming the preview. The repeating live preview remains IR-off; matching Windows' per-frame illumination requires camera/KMD synchronization that this Android app does not currently have. The in-memory matcher then enables **Demo unlock**, which requests another IR-assisted frame and reports an experimental score plus a demo-only locked/unlocked state. The score threshold is provisional and unvalidated; no template is persisted and Android itself is never unlocked. The advanced controls include the IR-off analyzer, manual ROI selector, manual exposure and saved-frame diagnostic. To stop the app, helper and forwarding and force all LED nodes off, run:
+
+```sh
+android/iris-camera-probe/demo-off-phone.sh [adb-serial]
+```
+
+The on-phone demo remains a capture/illumination diagnostic, not Android iris authentication. Do not aim the emitter at anyone or use it with an eye in the reflected path; the one-second software timeout is not an eye-safety limit.
+
 For a future safe, uncovered-target run, the app logs elapsed-realtime
 timestamps immediately before sending `PULSE` and `STOP`, when it receives
 `ON` and `OFF`, when it submits the one-frame request, when the capture-result

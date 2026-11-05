@@ -73,6 +73,9 @@ public final class IrisProbeActivity extends Activity {
     private static final long WINDOWS_BASELINE_FRAME_DURATION_NS = 33_500_000L;
     private static final long FRAME_READOUT_MARGIN_NS = 3_500_000L;
     private static final int WINDOWS_BASELINE_SENSITIVITY_ISO = 100;
+    // Demonstration-only operating point; it is not calibrated for identity or security.
+    private static final double DEMO_UNLOCK_DISTANCE_THRESHOLD = 0.30;
+    private static final double DEMO_UNLOCK_MIN_OVERLAP = 0.60;
     private static final int[] MANUAL_SENSITIVITY_STEPS_ISO = {100, 200, 400, 800};
     private static final long[] MANUAL_EXPOSURE_STEPS_NS = {
             5_000_000L, 10_000_000L, 20_000_000L, 30_000_000L,
@@ -107,7 +110,8 @@ public final class IrisProbeActivity extends Activity {
     private volatile long manualExposureNs = WINDOWS_BASELINE_EXPOSURE_NS;
     private int previewRotationOffset;
     private Button irButton;
-    private boolean pulseUsed;
+    private LinearLayout irFeedbackPanel;
+    private TextView irFeedbackPrompt;
     private Button rotateButton;
     private Button captureButton;
     private Button analyzeButton;
@@ -117,6 +121,7 @@ public final class IrisProbeActivity extends Activity {
     private Button exposureButton;
     private Button exposureStepButton;
     private Button sensitivityButton;
+    private TextView demoUnlockStatus;
     private volatile int manualSensitivityIso = WINDOWS_BASELINE_SENSITIVITY_ISO;
     private volatile boolean saveNextFrame;
     private volatile boolean analyzeNextFrame;
@@ -161,7 +166,7 @@ public final class IrisProbeActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
 
         TextView title = new TextView(this);
-        title.setText("Lumia iris diagnostic — no system unlock");
+        title.setText("Lumia iris enroll & demo unlock — app only");
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER_VERTICAL);
         title.setPadding(12, 8, 12, 8);
@@ -213,7 +218,6 @@ public final class IrisProbeActivity extends Activity {
         captureButton.setEnabled(false);
         captureButton.setOnClickListener(v -> captureOneFrame());
         buttons.addView(start, new LinearLayout.LayoutParams(0, -2, 1));
-        buttons.addView(captureButton, new LinearLayout.LayoutParams(0, -2, 1));
         buttons.addView(stop, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(buttons);
 
@@ -221,7 +225,20 @@ public final class IrisProbeActivity extends Activity {
         analyzeButton.setText("Analyze one live frame (no save)");
         analyzeButton.setEnabled(false);
         analyzeButton.setOnClickListener(v -> analyzeOneLiveFrame());
-        root.addView(analyzeButton, new LinearLayout.LayoutParams(-1, -2));
+        enrollButton = new Button(this);
+        enrollButton.setText("Start iris enrollment (3 IR frames, RAM only)");
+        enrollButton.setOnClickListener(v -> {
+            if (diagnosticEnrollment == null) startDiagnosticEnrollment();
+            else pulseAndCaptureOnce(false);
+        });
+        irButton = enrollButton;
+        root.addView(enrollButton, new LinearLayout.LayoutParams(-1, -2));
+
+        compareButton = new Button(this);
+        compareButton.setText("Demo unlock (one IR frame)");
+        compareButton.setEnabled(false);
+        compareButton.setOnClickListener(v -> compareOneLiveFrame());
+        root.addView(compareButton, new LinearLayout.LayoutParams(-1, -2));
 
         Button diagnosticsToggle = new Button(this);
         LinearLayout diagnostics = new LinearLayout(this);
@@ -250,16 +267,18 @@ public final class IrisProbeActivity extends Activity {
         });
         diagnostics.addView(selectRoiButton, new LinearLayout.LayoutParams(-1, -2));
 
-        enrollButton = new Button(this);
-        enrollButton.setText("Start 3-frame diagnostic enrollment (RAM only)");
-        enrollButton.setOnClickListener(v -> startDiagnosticEnrollment());
-        diagnostics.addView(enrollButton, new LinearLayout.LayoutParams(-1, -2));
-
-        compareButton = new Button(this);
-        compareButton.setText("Compare next frame (no threshold)");
-        compareButton.setEnabled(false);
-        compareButton.setOnClickListener(v -> compareOneLiveFrame());
-        diagnostics.addView(compareButton, new LinearLayout.LayoutParams(-1, -2));
+        captureButton.setText("Save one YUV frame (advanced)");
+        diagnostics.addView(captureButton, new LinearLayout.LayoutParams(-1, -2));
+        analyzeButton.setText("Analyze one IR-off frame");
+        diagnostics.addView(analyzeButton, new LinearLayout.LayoutParams(-1, -2));
+        rotateButton = new Button(this);
+        rotateButton.setText("Rotate preview +90°");
+        rotateButton.setOnClickListener(v -> {
+            previewRotationOffset = (previewRotationOffset + 90) % 360;
+            updatePreviewGeometry();
+            logLine("Preview rotation adjustment=" + previewRotationOffset + "°.");
+        });
+        diagnostics.addView(rotateButton, new LinearLayout.LayoutParams(-1, -2));
 
         exposureButton = new Button(this);
         exposureButton.setText("Use manual 30 ms / ISO 100 baseline");
@@ -280,21 +299,14 @@ public final class IrisProbeActivity extends Activity {
         diagnostics.addView(sensitivityButton, new LinearLayout.LayoutParams(-1, -2));
         root.addView(diagnostics, new LinearLayout.LayoutParams(-1, -2));
 
-        LinearLayout controls = new LinearLayout(this);
-        rotateButton = new Button(this);
-        rotateButton.setText("Rotate +90°");
-        rotateButton.setTextColor(Color.BLACK);
-        rotateButton.setOnClickListener(v -> {
-            previewRotationOffset = (previewRotationOffset + 90) % 360;
-            updatePreviewGeometry();
-            logLine("Preview rotation adjustment=" + previewRotationOffset + "°.");
-        });
-        controls.addView(rotateButton, new LinearLayout.LayoutParams(0, -2, 1));
-        irButton = new Button(this);
-        irButton.setText("IR off for this scan");
-        irButton.setEnabled(false);
-        controls.addView(irButton, new LinearLayout.LayoutParams(0, -2, 1));
-        root.addView(controls);
+        demoUnlockStatus = new TextView(this);
+        demoUnlockStatus.setText("DEMO LOCKED — not Android screen lock");
+        demoUnlockStatus.setTextColor(Color.WHITE);
+        demoUnlockStatus.setTextSize(18);
+        demoUnlockStatus.setGravity(Gravity.CENTER);
+        demoUnlockStatus.setPadding(8, 10, 8, 10);
+        demoUnlockStatus.setBackgroundColor(Color.rgb(120, 30, 30));
+        root.addView(demoUnlockStatus, new LinearLayout.LayoutParams(-1, -2));
 
         ScrollView scroll = new ScrollView(this);
         status = new TextView(this);
@@ -302,7 +314,7 @@ public final class IrisProbeActivity extends Activity {
         status.setTextSize(13);
         status.setPadding(12, 8, 12, 8);
         scroll.addView(status);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.45f));
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 0.25f));
         setContentView(root);
 
         cameraThread = new HandlerThread("iris-camera2");
@@ -401,6 +413,8 @@ public final class IrisProbeActivity extends Activity {
                             analyzeButton.setEnabled(true);
                         if (compareButton != null && camera != null && diagnosticConsensus != null)
                             compareButton.setEnabled(true);
+                        if (irButton != null && camera != null && !pulseSequenceActive)
+                            irButton.setEnabled(true);
                     });
                 } finally {
                     if (image != null) image.close();
@@ -841,6 +855,11 @@ public final class IrisProbeActivity extends Activity {
         }
         clearDiagnosticEnrollment();
         diagnosticEnrollment = new LogGaborIrisCodePrototype.DiagnosticEnrollment(3);
+        if (demoUnlockStatus != null) {
+            demoUnlockStatus.setText("ENROLLING — capture 3 usable IR frames");
+            demoUnlockStatus.setBackgroundColor(Color.rgb(105, 75, 10));
+        }
+        if (irButton != null) irButton.setText("IR capture — enroll sample 1/3");
         if (compareButton != null) compareButton.setEnabled(false);
         logLine("Started transient diagnostic enrollment: collect three usable eye-ROI annulus codes. "
                 + "Codes stay in memory and are discarded when the app exits; this is not Android enrollment.");
@@ -929,7 +948,7 @@ public final class IrisProbeActivity extends Activity {
             logLine("Comparison unavailable: collect three usable samples first.");
             return;
         }
-        requestLiveFrameAnalysis(true);
+        pulseAndCaptureOnce(true);
     }
 
     private void requestLiveFrameAnalysis(boolean compare) {
@@ -1133,11 +1152,26 @@ public final class IrisProbeActivity extends Activity {
                 } else {
                     LogGaborIrisCodePrototype.Score score = LogGaborIrisCodePrototype.compare(
                             diagnosticConsensus, annulus.code, 16);
-                    result.append(String.format(Locale.US,
-                            "; experimental code distance=%.4f overlap=%.1f%% angular-shift=%d "
-                                    + "(no threshold; not an identity decision)",
-                            score.maskedHammingDistance, 100.0 * score.overlapFraction,
+                    boolean demoMatch = !Double.isNaN(score.maskedHammingDistance)
+                            && score.maskedHammingDistance <= DEMO_UNLOCK_DISTANCE_THRESHOLD
+                            && score.overlapFraction >= DEMO_UNLOCK_MIN_OVERLAP;
+            result.append(String.format(Locale.US,
+                            "; DEMO %s distance=%.4f (cutoff %.2f) overlap=%.1f%% (minimum %.0f%%) shift=%d; "
+                                    + "unvalidated and has no security effect",
+                            demoMatch ? "MATCH" : "NO MATCH",
+                            score.maskedHammingDistance, DEMO_UNLOCK_DISTANCE_THRESHOLD,
+                            100.0 * score.overlapFraction, DEMO_UNLOCK_MIN_OVERLAP * 100.0,
                             score.angularShift));
+                    boolean matchForUi = demoMatch;
+                    runOnUiThread(() -> {
+                        if (demoUnlockStatus != null) {
+                            demoUnlockStatus.setText(matchForUi
+                                    ? "DEMO UNLOCKED — experimental match only"
+                                    : "DEMO LOCKED — no experimental match");
+                            demoUnlockStatus.setBackgroundColor(Color.rgb(
+                                    matchForUi ? 20 : 120, matchForUi ? 100 : 30, 30));
+                        }
+                    });
                 }
             } else if (collecting) {
                 if (annulus == null) {
@@ -1150,6 +1184,11 @@ public final class IrisProbeActivity extends Activity {
                     retainAnnulusCode = true;
                     result.append("; diagnostic enrollment sample accepted: ")
                             .append(enrollment.sampleCount()).append("/3 in memory");
+                    int enrolledSamples = enrollment.sampleCount();
+                    runOnUiThread(() -> {
+                        if (irButton != null && enrolledSamples < 3)
+                            irButton.setText("IR capture — enroll sample " + (enrolledSamples + 1) + "/3");
+                    });
                     if (enrollment.sampleCount() == 3) {
                         try {
                             LogGaborIrisCodePrototype.Template consensus = enrollment.consensus();
@@ -1158,6 +1197,13 @@ public final class IrisProbeActivity extends Activity {
                                 result.append("; consensus rejected because no phase bits have majority support");
                             } else {
                                 diagnosticConsensus = consensus;
+                                runOnUiThread(() -> {
+                                    if (demoUnlockStatus != null) {
+                                        demoUnlockStatus.setText("ENROLLED — demo locked; ready to compare");
+                                        demoUnlockStatus.setBackgroundColor(Color.rgb(120, 30, 30));
+                                    }
+                                    if (irButton != null) irButton.setText("Restart iris enrollment");
+                                });
                                 result.append(String.format(Locale.US,
                                         "; transient consensus ready, valid bits=%.1f%%",
                                         100.0 * consensus.validFraction()));
@@ -1178,6 +1224,8 @@ public final class IrisProbeActivity extends Activity {
                 if (compareButton != null && camera != null && diagnosticConsensus != null)
                     compareButton.setEnabled(true);
                 if (captureButton != null && camera != null && !frameSaved) captureButton.setEnabled(true);
+                if (irButton != null && camera != null && !pulseSequenceActive)
+                    irButton.setEnabled(true);
             });
         } finally {
             Arrays.fill(luma, (byte) 0);
@@ -1647,10 +1695,7 @@ public final class IrisProbeActivity extends Activity {
                 break;
         }
         Matrix transform = new Matrix();
-        if (!transform.setPolyToPoly(source, 0, destination, 0, 4)) {
-            logLine("Could not map camera buffer into preview; keeping prior transform.");
-            return;
-        }
+        if (!transform.setPolyToPoly(source, 0, destination, 0, 4)) return;
         preview.setTransform(transform);
         updateRoiOverlay();
     }
@@ -1663,12 +1708,12 @@ public final class IrisProbeActivity extends Activity {
         boolean swapped = rotation % 180 != 0;
         previewContainer.setAspectRatio(swapped ? previewSize.getHeight() : previewSize.getWidth(),
                                         swapped ? previewSize.getWidth() : previewSize.getHeight());
-        configureTransform(preview.getWidth(), preview.getHeight());
         if (rotateButton != null)
             rotateButton.setText("Rotate " + rotation + "° (+90)");
+        configureTransform(preview.getWidth(), preview.getHeight());
     }
 
-    private void pulseAndCaptureOnce() {
+    private void pulseAndCaptureOnce(boolean compare) {
         if (camera == null || completedFrames.get() == 0) {
             logLine("IR capture blocked: first iris frame callback has not arrived.");
             return;
@@ -1677,15 +1722,24 @@ public final class IrisProbeActivity extends Activity {
             logLine("IR capture blocked: another one-frame operation is pending.");
             return;
         }
-        if (pulseUsed) {
-            logLine("IR capture blocked: this app session allows one pulse only.");
-            return;
-        }
-        pulseUsed = true;
         pulseSequenceActive = true;
         frameOperationBusy = true;
         irButton.setEnabled(false);
-        logLine("Starting one minimum-current IR pulse (hardware code 1, maximum 1 second); one YUV frame will be analyzed in memory and discarded.");
+        if (compareButton != null) compareButton.setEnabled(false);
+        try {
+            // Suspend the IR-off preview while the emitter is active so the
+            // bounded pulse is associated with the explicit one-frame request.
+            session.stopRepeating();
+        } catch (CameraAccessException | RuntimeException e) {
+            pulseSequenceActive = false;
+            frameOperationBusy = false;
+            irButton.setEnabled(true);
+            logLine("IR pulse cancelled: could not pause preview: " + e);
+            return;
+        }
+        logLine("Starting one minimum-current IR pulse (hardware code 1, maximum 1 second); requesting one "
+                + (compare ? "demo-compare" : "analysis/enrollment")
+                + " frame. IR is switched off by the Camera2 result callback after exposure; image pixels are discarded.");
         new Thread(() -> {
             String response;
             long pulseRequestElapsedNs = 0;
@@ -1709,7 +1763,7 @@ public final class IrisProbeActivity extends Activity {
                             return;
                         }
                         logLine("Minimum IR level is on; requesting one in-memory analysis frame now. The pulse will stop on the capture-result callback after exposure.");
-                        requestPulseAnalysisFrame(captureComplete);
+                        requestPulseAnalysisFrame(captureComplete, compare);
                     });
                     boolean captured = captureComplete.await(850, TimeUnit.MILLISECONDS);
                     if (!captured) {
@@ -1737,6 +1791,7 @@ public final class IrisProbeActivity extends Activity {
             } finally {
                 pulseSequenceActive = false;
                 signalPulseCaptureCompletion();
+                if (cameraHandler != null) cameraHandler.post(this::resumePreviewAfterPulse);
             }
             String result = response + " pulseRequestElapsedRealtimeNs=" + pulseRequestElapsedNs
                     + " onAckElapsedRealtimeNs=" + onAckElapsedNs
@@ -1744,13 +1799,38 @@ public final class IrisProbeActivity extends Activity {
                     + " offAckElapsedRealtimeNs=" + offAckElapsedNs;
             runOnUiThread(() -> {
                 pulseSequenceActive = false;
-            if (!analyzeNextFrame) frameOperationBusy = false;
+                if (!analyzeNextFrame) frameOperationBusy = false;
                 logLine("IR capture helper result: " + result + ".");
+                if (!analyzeNextFrame && irButton != null && camera != null)
+                    irButton.setEnabled(true);
+                if (!analyzeNextFrame && compareButton != null && camera != null
+                        && diagnosticConsensus != null) compareButton.setEnabled(true);
             });
         }, "iris-torch-capture").start();
     }
 
-    private void requestPulseAnalysisFrame(CountDownLatch captureComplete) {
+    private void resumePreviewAfterPulse() {
+        if (camera == null || session == null || previewSurface == null
+                || !previewSurface.isValid()) return;
+        try {
+            CaptureRequest.Builder previewRequest = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequest.addTarget(previewSurface);
+            applyCurrentExposure(previewRequest);
+            session.setRepeatingRequest(previewRequest.build(), previewCaptureCallback(), cameraHandler);
+            logLine("IR-off repeating preview restored after the one-frame pulse transaction.");
+        } catch (CameraAccessException | RuntimeException e) {
+            logLine("Could not restore preview after IR transaction: " + e);
+        }
+    }
+
+    private void recordIrGlowAnswer(boolean sawGlow, Button yes, Button no) {
+        yes.setEnabled(false);
+        no.setEnabled(false);
+        irFeedbackPrompt.setText(sawGlow ? "Answer recorded: yes, you saw the glow." : "Answer recorded: no, you didn’t see the glow.");
+        logLine("User observation after minimum-current IR pulse: " + (sawGlow ? "YES, faint red glow seen." : "NO, faint red glow not seen."));
+    }
+
+    private void requestPulseAnalysisFrame(CountDownLatch captureComplete, boolean compare) {
         if (camera == null || session == null || frameReader == null) {
             logLine("IR analysis frame request cancelled because the iris camera is not ready.");
             captureComplete.countDown();
@@ -1762,7 +1842,7 @@ public final class IrisProbeActivity extends Activity {
             return;
         }
         analyzeNextFrame = true;
-        compareNextFrame = false;
+        compareNextFrame = compare;
         if (analyzeButton != null) analyzeButton.setEnabled(false);
         if (captureButton != null) captureButton.setEnabled(false);
         try {
@@ -1816,16 +1896,10 @@ public final class IrisProbeActivity extends Activity {
             CaptureRequest.Builder request = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             request.addTarget(previewSurface);
             request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-            if (manualSensorSupported) {
-                manualExposureNs = clampManualExposure(WINDOWS_BASELINE_EXPOSURE_NS);
-                applyManualSensorSettings(request);
-                manualExposureMode = true;
-                logLine("Starting iris preview at source-derived manual baseline: 30 ms, ISO 100, "
-                        + "33.5 ms frame duration; IR remains off.");
-            } else {
-                request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
-                manualExposureMode = false;
-            }
+            request.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+            manualExposureMode = false;
+            logLine("Starting iris preview with Camera2 auto exposure; this adapts preview brightness. "
+                    + "IR remains off. The manual 30 ms / ISO 100 mode remains available for controlled captures.");
             java.util.List<Surface> outputs = new java.util.ArrayList<>();
             outputs.add(previewSurface);
             outputs.add(frameReader.getSurface());
@@ -1845,7 +1919,7 @@ public final class IrisProbeActivity extends Activity {
                         if (exposureButton != null)
                             exposureButton.setEnabled(manualSensorSupported);
                         if (exposureButton != null && manualSensorSupported)
-                            exposureButton.setText("Use AE auto (restore)");
+                            exposureButton.setText("Use manual 30 ms / ISO 100 baseline");
                         if (sensitivityButton != null) {
                             sensitivityButton.setEnabled(manualSensorSupported);
                             sensitivityButton.setText("Manual ISO " + manualSensitivityIso + " (tap to increase)");
@@ -1881,6 +1955,10 @@ public final class IrisProbeActivity extends Activity {
             @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest r,
                                                     android.hardware.camera2.TotalCaptureResult result) {
                 int n = completedFrames.incrementAndGet();
+                if (n == 1 && irButton != null) {
+                    runOnUiThread(() -> irButton.setEnabled(camera != null
+                            && !frameOperationBusy && !pulseSequenceActive));
+                }
                 if (n == 1 || n % 30 == 0) {
                     Long exposureNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
                     Integer sensitivityIso = result.get(CaptureResult.SENSOR_SENSITIVITY);

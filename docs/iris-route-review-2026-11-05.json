@@ -1,0 +1,139 @@
+{
+  "id": "iris-route-review-2026-11-05",
+  "kind": "static-analysis-and-read-only-phone-baseline",
+  "device": "Lumia 950 XL (cityman)",
+  "kernel": "3.10.108-perf-gcc84cab9 #18",
+  "adb": "connected",
+  "camera": {
+    "enumerated": 3,
+    "active_clients": 0
+  },
+  "pinctrl": {
+    "cci_state": "cci_suspend",
+    "gpio21": "MUX UNCLAIMED; GPIO UNCLAIMED",
+    "live_cci_timer0_group": false
+  },
+  "qpnp_led_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "static_findings": [
+    "The RM-1085/RM-1116 service schematic separates iris sensor connector signals from platform flash signals.",
+    "The extracted FSTROBE/TORCH_EN/FLASH_EN and STROBE/TORCH/I2C/ENABLE labels are consistent with the separate rear Hill flash path; OCR wire geometry is unavailable, so this is not a net-level proof.",
+    "Windows qccamplatform8994 helper 0x42e560 is called from two camera configuration sites with selector arguments 0 and 1; its generic indirect I/O requests do not identify a Cityman TLMM pin or the CCI GPIO register base.",
+    "Linux MSM CCI GPIO write remains unsupported in the pinned source; the old ioctl has no payload for a timed sequence."
+  ],
+  "actions": {
+    "kernel_source_changed": false,
+    "kernel_built": false,
+    "temporary_boot": false,
+    "cci_or_pinctrl_written": false,
+    "emitter_pulsed": true,
+    "phone_camera_preview_test": true,
+    "biometric_or_framework_state_modified": false,
+    "camera_stream_for_emitter_test": true
+  },
+  "reason_stopped": "The one-shot minimum-level emitter request was accepted and shut off cleanly. No camera was streamed during the pulse, so no frame synchronization result was collected. Windows CCI output-to-board routing and the CCI GPIO register/IRQ/timing contract remain unresolved; no kernel build or temporary boot was justified by this test.",
+  "sources": [
+    "docs/iris-authentication.md",
+    "docs/windows-driver-analysis.md",
+    "kernel/IRIS-ANDROID-IMAGE-PATH.md",
+    "RM-1085/RM-1116 service schematic revision 1.0 (2015-11-20)"
+  ],
+  "phone_test": {
+    "app": "com.lumia.irisprobe.feedback",
+    "scope": "iris camera ID 2 preview with one minimum-level IR pulse and user-visible Yes/No observation prompt",
+    "result": "One app-triggered minimum-level pulse: Camera2 IR_ANALYZE frame 80 completed at 29.995718 ms, ISO 100 while pulseSequenceActive=true. Matching 1920x1080 YUV callback had the same sensor timestamp and arrived at the helper OFF acknowledgement. User selected Yes and reported seeing faint red glow. Pixels were discarded; no optical output/safety or image-quality conclusion.",
+    "normal_front_camera_opened": false,
+    "illumination_requested": true,
+    "cleanup": "Feedback app force-stopped; Active Camera Clients returned []; torch_0, torch_1, flash_0, flash_1 all read 0; temporary helper files and ADB forward removed.",
+    "limits": "No frame pixels exported, no eye-region quality or matcher check, and no optical/IR test.",
+    "frame_callback_confirmed": true,
+    "pulse_sequence_active_at_capture_result": true,
+    "software_helper_on_ack_to_stop_request_ms": 174.278,
+    "pixels_retained": false,
+    "preview_capture_result_callbacks_before_close": 1540
+  },
+  "installed_android_biometric_state": {
+    "biometric_service": "registered",
+    "iris_service": "not listed",
+    "biometric_sensors": [],
+    "active_session": null,
+    "interpretation": "The installed OS has no iris biometric sensor registration; local framework patches are not active on this build."
+  },
+  "setup_photo_review": {
+    "file": "IMG_1353.HEIC (user-provided, retained unchanged)",
+    "visual_assessment": "Phone is beneath a white paper canopy/tunnel. The photographed interior appears matte and diffuse; no metal can or obvious mirror-like surface appears in the pictured path.",
+    "limits": "A photo cannot establish material reflectance, complete beam geometry, or whether people/animals are outside the photographed area."
+  },
+  "emitter_test": {
+    "scope": "one bounded minimum-level torch_0 pulse directed into the pictured paper diffuser",
+    "requested_brightness": 14,
+    "previously_measured_hardware_code": 1,
+    "helper_acknowledgements": [
+      "ON",
+      "OFF"
+    ],
+    "host_requested_on_interval_ms": 250,
+    "helper_hard_auto_off_ms": 1000,
+    "camera_stream_during_pulse": false,
+    "frame_captured": false,
+    "optical_on_time_measured": false,
+    "result_limit": "Confirms the helper accepted and stopped the minimum-level software request; it does not establish LED optical output, exposure safety, or camera synchronization."
+  },
+  "cleanup": {
+    "helper_process_stopped": true,
+    "temporary_helper_files_removed": true,
+    "temporary_adb_forward_removed": true,
+    "active_camera_clients": 0,
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "camera_services_restarted_or_killed": false
+  },
+  "interactive_feedback_test": {
+    "app": "com.lumia.irisprobe.feedback",
+    "scope": "one user-requested minimum-level torch_0 pulse while only iris camera ID 2 was open",
+    "pulse_helper": "app UI displayed the feedback question only after receiving ON and OFF-confirmed helper replies",
+    "user_observation": "User selected Yes; app UI and log recorded faint red glow seen from the front IR LED.",
+    "preview": "The iris preview had delivered 1122 capture-result callbacks before it was closed. No normal front-camera client was active.",
+    "limits": "This confirms one successful software-timed pulse/capture sequence and one user-visible glow report. It does not quantify IR optical output, safety, repeatability, or image usefulness; the YUV pixels were discarded.",
+    "cleanup": "Feedback app force-stopped; active camera clients returned []; temporary helper and adb forward removed; torch_0, torch_1, flash_0, flash_1 read 0.",
+    "capture_result": {
+      "frame_number": 80,
+      "exposure_ns": 29995718,
+      "sensitivity_iso": 100,
+      "frame_duration_ns": 33441782,
+      "sensor_timestamp_ns": 88228249504885,
+      "sensor_timestamp_source": 0,
+      "capture_result_callback_elapsed_realtime_ns": 88228323740318,
+      "pulse_sequence_active_at_result": true,
+      "yuv_callback": {
+        "timestamp_ns": 88228249504885,
+        "dimensions": "1920x1080",
+        "crop": "0,0-1920,1080",
+        "callback_elapsed_realtime_ns": 88228327067193,
+        "pulse_sequence_active_at_callback": true
+      },
+      "pixels_retained": false,
+      "analysis_note": "The app received the matching YUV image and ran its in-memory analysis path; its detailed spatial-luma/eye diagnostic is shown only in the private UI and was not recovered before force-stop."
+    },
+    "helper_timing": {
+      "pulse_request_elapsed_realtime_ns": 88228139257383,
+      "on_ack_elapsed_realtime_ns": 88228150134779,
+      "camera_capture_request_elapsed_realtime_ns": 88228153309623,
+      "capture_result_callback_elapsed_realtime_ns": 88228323740318,
+      "stop_request_elapsed_realtime_ns": 88228324413182,
+      "off_ack_elapsed_realtime_ns": 88228327066464,
+      "requested_on_ack_to_stop_request_ms": 174.278,
+      "stop_request_to_off_ack_ms": 2.653,
+      "note": "Software/helper timestamps, not measured optical on-time."
+    },
+    "preview_callbacks_before_close": 1540
+  }
+}

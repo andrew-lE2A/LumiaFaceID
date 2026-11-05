@@ -40,6 +40,48 @@ units and have not been validated as eye-safety limits. Linux `torch_0`
 brightness 14 (hardware current code 1) was observed as a faint red glow, but
 that observation does not establish an eye-safe exposure.
 
+## Android port boundary for the original recognition flow
+
+The Windows call flow is a reference for a port, not a binary that Android can
+load. `DeltaIrisEngineAdapter.dll` and `iris_mobile_v2.WindowsPhone.dll` are
+ARM32 PE files for Windows and depend on WinBio and Windows runtime interfaces;
+they are not Android ELF libraries. The adapter negotiates a WinBio registered
+format, receives a `WINBIO_CAPTURE_DATA` containing a BIR, validates the
+vendor-data block, and passes a private payload to `irm2_on_frame`. Enrollment
+and identification then use distinct engine paths. Enrollment calls
+`irm2_init_enrollment`, updates through `irm2_continue_enrollment`, and reads a
+template separately through `irm2_get_template`; identification calls
+`irm2_init_identification`, feeds frames to `irm2_on_frame`, and later queries
+`irm2_get_identification_result` and liveness status. Several argument/layout
+details and whether liveness gates every result remain unresolved. See the
+[Windows stack map](windows-iris-stack-map.md) for the static call-site evidence.
+
+Android Camera2 currently gives the probe 1920x1080 YUV frames, not the
+Windows BIR or its vendor block. One bounded app run proved that the minimum
+torch request can bracket a Camera2 frame and receive its matching YUV buffer;
+it did not reveal whether that frame contains a usable eye image. The current
+Keyguard patches provide a hidden Class 1 request/cancel route, but the service
+returns `HW_UNAVAILABLE` because no camera authenticator is connected. The
+diagnostic Log-Gabor matcher remains outside that route.
+
+The implementation sequence is therefore:
+
+1. Recover the Windows vendor-record pixel layout and the exact engine input
+   contract from the FFU; do not treat YUV plane order as equivalent to it.
+2. Implement a native Android frame adapter and recognition engine, or a
+   validated replacement, with explicit image-quality and liveness outcomes.
+3. Add a Keyguard-only Camera2 provider with camera arbitration, cancellation,
+   timeout and teardown; preserve the separate generic biometric registration
+   path and keep public BiometricPrompt filtering unchanged.
+4. Implement credential-confirmed per-user enrollment, protected template
+   storage, removal and lockout. Keep authentication fail-closed until the
+   matcher, liveness policy, lifecycle and failure handling are validated.
+
+The Android `torch_0` class-device request used by the probe is not the
+Windows camera-KMD/CCI pulse route. Reproducing the original illumination
+behavior requires recovering and implementing that route separately; Windows
+current codes and guard rails are not Android LED values or proof of safety.
+
 ### Recovered Windows illumination states and bounds (static analysis)
 
 The latest `leojukic03/lumia-iris-notes` findings (checkout
@@ -194,6 +236,32 @@ for CCI0 clock/data and GPIOs 19/20 for CCI1 clock/data. Their labels are
 `CCI_I2C_DATA0`, `CCI_I2C_CLK0`, `CCI_I2C_DATA1`, and `CCI_I2C_CLK1`. It does
 not map Windows output indexes 0–4 to TLMM pins or the PMIC input.
 
+**Cityman schematic lead (static evidence, not a phone measurement):** the
+RM-1085/RM-1116 service schematic's camera/bridge-flex sheet identifies the
+iris camera connector and its sensor signals (CSI lane/clock, CCI0 I2C,
+EXTCLK1, reset, VANA and VDIG). On the same sheet's OCR extraction, the
+platform-side signals `FSTROBE`, `TORCH_EN`, `FLASH_EN` and `CCI0_I2C_DATA/CLK`
+appear separately from the iris sensor connector signals. The same OCR region
+lists flash-controller pins `STROBE`, `TORCH`, `SDA`, `SCL` and `ENABLE`, plus
+three LED outputs. In combination with this tree's rear Hill flash node on
+CCI master 0 and the observed Hill ID `0x16`, the sheet's flash nets are a
+candidate description of the **rear Hill flash path**, not proof of the
+front iris emitter route. This weakens the assumption that the iris emitter
+is controlled by a GPIO carried on its sensor FPC, but it does not identify
+the IR path. The extracted text has lost schematic wire geometry, so it does
+**not** prove which platform net reaches the flash-controller input, which LED
+channel is connected to the IR emitter, or that CCI output 0 is involved. Do
+not infer pin mapping from signal-name similarity. Source copy: [RM-1085/RM-1116 service schematic,
+revision 1.0, 20 Nov 2015](https://pdfcoffee.com/lumia-950xl-rm-1085-1116-schematics-pdf-pdf-free.html).
+
+The Windows platform helper at `0x42e560` logs `WritetoGpio Enter/End` and is
+called from two camera-configuration sites (`0x401eec`, selector argument 0;
+`0x401ff8`, selector argument 1). Its body builds and submits a generic
+platform I/O request through indirect callbacks. Those call sites and the log
+string do not expose a Cityman TLMM pin, the CCI GPIO queue MMIO base, or a
+net-to-PMIC mapping. This is a useful platform-driver boundary, not the
+missing route proof.
+
 The Windows CCI HAL disassembly also clarifies the driver's third argument:
 its GPIO-output encoder accepts an output index 0–4 and a level 0/1, then packs
 those into the GPIO command word. The iris sequence uses the configured
@@ -270,14 +338,87 @@ status words, then decodes seven indexed masks from the table at `0x416304`;
 the table entries, in index order 0–6, are `0x0b0000f7`, `0x13000f07`,
 `0x250f1006`, `0x45f01006`, `0x0000000f`, `0x000000f0`, and `0x00000f00`.
 It stores each masked result in a per-index state slot at offset `+0xAC`.
+The first four table slots can now be named by cross-checking the masks against
+the pinned MSM8994 Linux CCI IRQ definitions in
+`drivers/media/platform/msm/camera_v2/sensor/cci/msm_cam_cci_hwreg.h` (the same
+bit definitions are present in the [Qualcomm kernel CCI header](https://android.googlesource.com/kernel/msm/%2B/b0ce5942f23d4b0e4072a2f41fa1be1d6a544a9c/drivers/media/platform/msm/camera/cam_sensor_module/cam_cci/cam_cci_hwreg.h)):
+index 0 contains the M0 Q0 report
+bit (`0x10`), index 1 the M0 Q1 report bit (`0x100`), index 2 the M1 Q0 report
+bit (`0x10000`), and index 3 the M1 Q1 report bit (`0x100000`). Their table
+order is therefore M0Q0, M0Q1, M1Q0, M1Q1. The last three masks (`0xF`,
+`0xF0`, `0xF00`) are a strong match for GPIO Q0, Q1, Q2 respectively: each is
+one four-cause nibble and the Windows image has matching four-cause labels for
+each GPIO queue. This GPIO assignment is a cross-source inference, not a
+symbolic name in the Windows table; the ISR reads indices 0–5 from one status
+word and index 6 from the second, so Q2's status-word split needs confirmation.
+
+The pinned MSM8994 Linux device tree independently locates the CCI controller
+at `0xFDA0C000` (`qcom,cci@fda0c000`, size `0x1000`), while the iris CAMT
+sensor resource at `0xFDA08C00` is a different block used for CSID3. This
+distinguishes the two relevant physical regions, but does not identify the
+Windows context's `+4` pointer or prove that its queue window uses Linux's CCI
+base. The generic Windows selector is called from two paths that first build
+queue state with `0x407600`; a third `0x407688` caller (`0x404b76`) submits an
+already populated queue object without passing through that builder at that
+call site. Thus, index 5 is not evidence of a missing branch in the generic
+selector by itself: it could be reserved or populated by a separate path, and
+its GPIO-Q1 interpretation remains unresolved.
+
+The MSM8994 pinctrl function table maps GPIO21 to `CCI_TIMER0`
+([pinctrl source](https://cos.googlesource.com/third_party/kernel/%2B/2b6148ec22df8bd88c829407078577aecc9c764a/drivers/pinctrl/qcom/pinctrl-msm8994.c)).
+In the pinned reference camera DTS, however, the active CCI pinctrl state only
+selects GPIO17–20 for CCI I²C. GPIO21 is defined in that DTS as TPIU `setb_8`
+with mux function 6, and the reference CDP TPIU node can select it as a debug
+pin. This proves a SoC mux option, not that Cityman's running DT selects
+`CCI_TIMER0`, that Windows CCI output 0 drives it, or that the board routes it
+to the PMI8994 IR input. Do not enable or repurpose GPIO21 based on this alone.
+
+**Read-only phone snapshots (2026-11-05):** ADB debugfs
+`/sys/kernel/debug/pinctrl/fd510000.pinctrl/pinctrl-handles` reported the live
+CCI device state as `cci_suspend` while idle. On retry, a pre-existing iris
+Camera2 stream was already active as package `com.lumia.irisprobe.layoutscan`,
+camera ID 2; during that stream the CCI device still reported `cci_suspend`,
+GPIO17–20 remained assigned to CCI suspend groups, GPIO21 remained
+`(MUX UNCLAIMED) (GPIO UNCLAIMED)`, and `pinmux-functions` still exposed no
+`cci_timer0` function. All four camera torch/flash LED brightness values read
+0. The active stream was left untouched. This shows the current Android iris
+stream path does not visibly select GPIO21 as CCI_TIMER0, but cannot establish
+whether Windows uses a different path or whether the board routes this pin to
+the PMI8994 input. No pin or LED controls were changed.
+
+A later idle snapshot on kernel #18 (same date) found three enumerated cameras,
+no active camera clients, `cci_suspend` on `fda0c000.qcom,cci`, GPIO21 still
+unclaimed, and no `cci_timer0` group in the live pinmux function list. The
+four QPNP channel brightness values were zero. A read-only `torch_0` register
+dump was collected, but its values were not used to infer a GPIO route. This
+is a clean baseline for a future test; it does not provide the missing CCI
+GPIO queue map or a safe reason to alter the mux.
+
+The live `pinmux-functions` names are generated from pin groups present in the
+device tree; the TLMM pinctrl driver applies the numeric `qcom,pin-func` value
+from each group. Therefore, the missing live `cci_timer0` name means the
+running DT does not declare that group. It does not mean the SoC lacks the mux
+capability. A DT/kernel change could select a numeric mux, but there is still
+no evidence that CCI output 0 is that timer or that GPIO21 reaches the IR input.
+
 The queue initializer uses the mapped index both in its `+0x10` pointer stride
-and in a queue-state table, while a helper maps command/master selectors to
-indices 0–6. This establishes the decode values and the existence of
-per-queue state, but does not yet name each index as GPIO Q0–Q2 or I²C; the
-absolute CCI MMIO base and completion semantics also remain unverified. Next,
-trace the Windows controller resource into that context and correlate command
-selector values with the embedded IRQ names and queue execution path. The
-source and physical unit of the WAIT-scale byte remain unresolved.
+and in a queue-state table. The selector helper at `0x4075bc` maps its two
+arguments `(a, b)` as follows. In the call chain, `a` is the first 32-bit word
+of a caller-provided descriptor, copied into queue state at `+0x5C`; `b` is
+the selector copied from the owner context's `+0xB4` field into state at
+`+0x58`. For `b` in `{0,1,3}`, result 1 when `a=0` and
+3 otherwise; for `b=2`, result 0 when `a=0` and 2 otherwise; for `b=4`, result
+6; for `b` in `{5,6}`, result 4 when `a=2`, otherwise 0 when `a=0` and 2
+otherwise; values outside `b=0..6` return invalid index 7. These are the
+observed branches. The fact that `a=0/1` selects the same M0/M1 split as the
+first four mask groups is consistent with `a` being a controller/master
+selector, but that semantic name is not verified. Notably, this helper
+produces indices 0–4 and 6 but never 5; the separate pre-populated submit path
+has not yet been shown to select index 5. GPIO Q1 mapping, the absolute Windows
+CCI base, and completion semantics remain unverified. Next, trace the source
+of that pre-populated queue object and connect the Windows controller resource
+to the context. The source and physical unit of the WAIT-scale byte remain
+unresolved.
 
 The current app-level workaround is already available: it requests
 `torch_0` at brightness 14, queues one iris capture while the light is on, and

@@ -474,6 +474,22 @@ vendor block remain vendor-defined, and their exact image-layout meaning is
 not established by the standard ([Microsoft `WINBIO_BIR`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_bir),
 [`WINBIO_BIR_DATA`](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/winbio_types/ns-winbio_types-_winbio_bir_data)).
 
+**Additional boundary from the complete callsite:** the validator returns the
+address `BIR + VendorDataBlock.Offset + vendorRelativeOffset` after checking
+`vendorRelativeOffset + vendorPayloadLength <= VendorDataBlock.Size`. The
+caller passes that address as `irm2_on_frame`'s second ARM argument (`r1`) and
+passes literal zero in `r2`; it does not pass the validated payload length.
+The engine's frame path uses its configured width and height when splitting
+the input into two overlapping views, and the split helper's byte arithmetic
+does not multiply by a channel count or take a row stride. This supports the
+inference that the payload consumed by `irm2_on_frame` is a tightly packed,
+one-byte-per-pixel plane whose dimensions are implicit in the engine context.
+It does **not** prove that the plane is sensor RAW, grayscale, or Y/luma, nor
+that Android's Camera2 Y plane has matching rotation, crop, black level or
+normalization. The validated length is a bounds check, not an engine argument;
+the expected `width * height` extent still needs to be reconciled with the
+vendor payload length before an Android adapter is written.
+
 The `StartCapture` table entry dispatches according to sensor-context mode and
 reaches the worker that performs the two-stage capture-data IOCTL. Its
 completion path stores the resulting buffer and size into the sensor context.
