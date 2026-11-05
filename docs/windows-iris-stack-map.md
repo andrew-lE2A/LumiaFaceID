@@ -66,11 +66,13 @@ imports `Icaros.dll` methods for `IARCEngine`, `IKurreStash`, and
 `IKurreStashPool`, plus `TImageInfo`. This directly connects the Mobile
 authentication binary to the extracted Mobile Icaros implementation.
 
-The WOA ARM32 authentication DLL has the same size and the same exported entry,
-but a different SHA-256 (`5e7be378...b5cd4e`) and a different CRT import:
-Mobile imports `MSVCR120.dll`, while WOA imports `LUVCR120.dll`. Therefore the
-WOA binary is a useful parallel implementation, not a byte-identical substitute
-for the Mobile DLL. Recheck every inferred call contract against both builds.
+The WOA ARM32 authentication DLL has the same size and exported entry. Its
+SHA-256 differs (`5e7be378...b5cd4e`), but the two import tables contain the
+same 18 DLL dependency names and the same 86 named imports after normalizing
+one CRT dependency: Mobile imports `MSVCR120.dll`, while WOA imports
+`LUVCR120.dll`. This is strong evidence that both builds share the same
+external capture/ARC interface. They are still distinct binaries; compare code
+and data before assuming identical behavior.
 
 Read-only PE inspection identifies an ARMv7 Thumb PE32 DLL with a 2016-05-02
 timestamp. Its imports include `D3D11.dll`, `VCOMP120.dll` (OpenMP runtime),
