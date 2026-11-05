@@ -252,8 +252,32 @@ uses a per-platform configured multiplier; the analyzed path does not derive
 it directly from a visible clock-rate calculation. The iris driver divides its
 delay and duration arguments by ten before submitting them, but their physical
 unit and the configured scale's relationship to the CCI clock are still
-unknown. Next, trace that platform-context byte to its ACPI/registry producer;
-do not substitute Linux's I2C formula.
+unknown. The platform-context pointer and byte have not yet been traced back
+through driver initialization to their producer; do not assume they come from
+ACPI or the registry, and do not substitute Linux's I2C formula.
+
+**GPIO queue and IRQ leads from the same binary.** The queue-object initializer
+at `0x4076b0` constructs a pointer from a base pointer at context offset `+4`
+plus `0xBC + 0x10 * queue_index`; the submit routine at `0x407d88` later
+performs indirect writes through queue-object pointers. This is a concrete
+candidate for the HAL's per-queue register window, but the context base and
+queue-index mapping have not yet been traced to the CCI MMIO resource. Do not
+treat `0xBC` as a verified absolute CCI register offset. The image also embeds
+IRQ labels for `GPIO_Q0`, `GPIO_Q1` and `GPIO_Q2` report, underflow, overflow
+and command-error causes. Those names confirm distinct GPIO-queue interrupt
+classes exist. The ISR at `0x406b14` snapshots and acknowledges two interrupt
+status words, then decodes seven indexed masks from the table at `0x416304`;
+the table entries, in index order 0–6, are `0x0b0000f7`, `0x13000f07`,
+`0x250f1006`, `0x45f01006`, `0x0000000f`, `0x000000f0`, and `0x00000f00`.
+It stores each masked result in a per-index state slot at offset `+0xAC`.
+The queue initializer uses the mapped index both in its `+0x10` pointer stride
+and in a queue-state table, while a helper maps command/master selectors to
+indices 0–6. This establishes the decode values and the existence of
+per-queue state, but does not yet name each index as GPIO Q0–Q2 or I²C; the
+absolute CCI MMIO base and completion semantics also remain unverified. Next,
+trace the Windows controller resource into that context and correlate command
+selector values with the embedded IRQ names and queue execution path. The
+source and physical unit of the WAIT-scale byte remain unresolved.
 
 The current app-level workaround is already available: it requests
 `torch_0` at brightness 14, queues one iris capture while the light is on, and

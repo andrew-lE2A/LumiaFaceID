@@ -16,6 +16,7 @@ DONE / VERIFIED
 [x] Audited the local Linux CCI driver against Windows' CCI-timed IR pulse: GPIO command enums exist, but MSM_CCI_GPIO_WRITE is a no-op and no GPIO queue encoder is implemented.
 [x] Confirmed the legacy GPIO ioctl has only two 16-bit queue fields and falsely returns success; Linux I2C queue locking, fixed-point WAIT timing and I2C-only IRQ handling do not establish GPIO queue support.
 [x] Traced the Windows GPIO WAIT scale in disassembly: it is a per-platform multiplier copied from a nested context byte, not proven to be the Linux I2C clock formula.
+[x] Located Windows GPIO Q0-Q2 IRQ labels, recovered the seven indexed IRQ masks, and traced a candidate queue-register pointer formula (`context base + 0xBC + 0x10 * queue index`); the absolute base, GPIO/I2C index names and completion semantics remain unverified.
 [x] Recorded one bounded minimum torch_0 pulse and an illuminated frame with higher signal. It did not establish a usable eye region, optical timing or eye-safe limits.
 [x] Verified camera teardown and LED cleanup after recorded tests; recent readback showed all cameras closed and all four LED channels at 0.
 [x] One latest IR-off frame arrived, but was nearly black (luma p95=2); it did not show usable iris detail.
@@ -44,7 +45,7 @@ NOT DONE
 
 NEXT CHECKPOINTS
 [ ] Obtain repeatable useful iris frames under a confirmed diffuse setup; avoid IR until the setup is safe and emitter channel is verified.
-[ ] Port Windows CCI-timed illumination behavior into Linux: trace the scale byte to its ACPI/registry producer; recover GPIO queue MMIO offsets, queue/selector meaning, GPIO IRQ/completion behavior and safe coexistence from qccamplatform8994.sys or an MSM8994 TRM. Keep the pulse's physical time unit unresolved until both inputs are known.
+[ ] Port Windows CCI-timed illumination behavior into Linux: trace the scale byte and candidate queue pointer through platform-driver initialization to the CCI MMIO resource; map the recovered indexed masks to GPIO/I2C queue names and completion handling, then establish safe coexistence from qccamplatform8994.sys or an MSM8994 TRM. Keep the pulse's physical time unit unresolved until its scale source and unit are known.
 [ ] Confirm whether CCI output 0 maps to MSM8994 CCI_TIMER0/GPIO21 and whether that line reaches the PMI8994 IR input.
 [ ] Build and test the image pipeline and matcher on representative on-device frames before connecting any success result to Keyguard.
 [ ] Implement and compile the real Android camera authenticator, enrollment/removal, lockout and camera arbitration.
