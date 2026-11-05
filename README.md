@@ -1,18 +1,106 @@
 # LumiaFaceID
 
-Bring-up of the **Lumia 950 XL (cityman) Windows Hello iris camera** on
-**LineageOS 23.2 / Android 16**.
+Research and bring-up for the Windows Hello iris camera on the **Lumia 950 XL
+(cityman)** running the unofficial **LineageOS 23.2 / Android 16** port.
 
-**Status: sensor identification confirmed. The experimental kernel diagnostic
-reads model `0x0861`; image capture and biometric unlock are not implemented.**
-The first tool collects a read-only baseline from the existing port. It does not power the sensor, enable
-the infrared illuminator, enroll a user, or authenticate anyone.
+## Current status
 
-## Collect a baseline
+The sensor is identified and the Android camera stack can open it. A diagnostic
+app can show the preview and receive YUV frames, and a separate demo flow can
+collect three transient samples and compare a later frame. **This is not a
+working biometric authenticator:** eye localization and matching are
+experimental, the comparison cutoff is provisional, and nothing in the app
+unlocks Android or persists an enrollment template.
+
+| Area | What is known |
+| --- | --- |
+| Sensor | Model `0x0861`; Android exposes three cameras and the iris is camera ID 2, reported as front-facing. The normal front camera remains its own slot. |
+| Image path | Camera2 preview and 1920×1080 YUV callbacks have been observed from the iris camera. The frames captured so far are too dark or lack a usable eye region; segmentation and orientation/geometry are not validated. |
+| Kernel diagnostic | MCLK is about 9.6 MHz, CSID3 core about 240 MHz and PHY2 timer about 200 MHz. CSI selection register `0x0111` reads back `2`. The separate direct stream diagnostic has recorded zero sensor-counter increments and zero CSID3 packet/ECC/CRC deltas. These measurements are from that diagnostic path and do not negate the Camera2 callbacks through the Android camera stack. |
+| IR emitter | A previous single minimum-level `torch_0` request (brightness 14, corresponding to the lowest measured nonzero hardware code) returned ON/OFF, and the user reported a faint red glow. A matching Camera2 result/YUV frame was received in that run. The software helper turns the LED off on capture completion or after its one-second maximum. Optical output and actual LED-to-exposure timing were not measured. |
+| Live preview IR | **Not implemented.** The repeating preview remains IR-off. Enrollment and comparison requests pulse the LED around an individual still capture; this is not the Windows per-frame camera/KMD illumination path. |
+| Windows comparison | Static analysis found that Windows carries pulsing-mode and IR-current settings in a per-frame camera result submitted to a camera KMD IOCTL. The receiving implementation, Cityman pin/output route, Android timing equivalent and current-code mapping are unresolved. |
+| Unlock | No iris biometric service is registered in the installed Android build. No protected template store, validated matcher, liveness detection, lockout policy or successful Android screen unlock exists. |
+
+The Windows flash driver's accepted levels and pulse limits are **not** Android
+brightness conversions or validated eye-safety limits. Do not raise the
+emitter level based on those values. The current minimum-level software pulse
+also does not constitute optical or eye-safety validation.
+
+## Demo app
+
+The experimental app source and device instructions are in
+[`android/iris-camera-probe/`](android/iris-camera-probe/README.md). Its visible
+flow is:
+
+1. Open the iris camera.
+2. Start an in-memory enrollment and capture three IR-assisted frames.
+3. Capture one more IR-assisted frame for the demo comparison indicator.
+
+The app stops repeating preview during each still capture, requests the
+minimum-level torch pulse, then asks the helper to turn it off when Camera2
+reports that exposure complete. The matcher is an unvalidated log-Gabor
+prototype with an uncalibrated demo cutoff. **“Demo unlock” changes only the
+app's display; it does not authenticate the user or unlock Android.** Captured
+pixels and templates are transient and are not saved by this enrollment flow.
+
+To build the feedback/demo APK, set the Android SDK and signing variables
+documented in [`android/iris-camera-probe/build.sh`](android/iris-camera-probe/build.sh),
+then build with the feedback manifest:
+
+```sh
+PROBE_MANIFEST=android/iris-camera-probe/AndroidManifest.feedback.xml \
+  sh android/iris-camera-probe/build.sh
+```
+
+The built APK is ignored by Git. With the phone connected, the helper scripts
+install/launch the demo or stop it, remove its ADB forward, and force all four
+LED channels off:
+
+```sh
+android/iris-camera-probe/demo-on-phone.sh [adb-serial]
+android/iris-camera-probe/demo-off-phone.sh [adb-serial]
+```
+
+Do not use the IR emitter while it is aimed at a person or eye, or inside a
+metal can or reflective enclosure. For any authorized emitter observation,
+use a diffuse target with no person or animal in the direct or reflected path.
+The software timeout is not an eye-safety limit.
+
+## Main blockers and next work
+
+1. **Recover the real illumination route and timing.** Linux's pinned CCI GPIO
+   write path is a no-op. Windows CCI queue/output mapping and the camera KMD
+   receiver are not resolved. GPIO21 has a CCI_TIMER0 mux option in SoC data,
+   but it was unclaimed in the observed Android state and the live device tree
+   has no active CCI timer group. The service-schematic text is not enough to
+   prove that this signal reaches the front IR emitter. Avoid guessed GPIO,
+   register or pinmux writes.
+2. **Reproduce camera-synchronized IR safely.** Windows sends per-frame pulse
+   and current metadata through its camera stack. Android currently has only
+   a bounded software pulse per still request, with no measured optical edge
+   timing. The emitter's output, current mapping, thermal behavior and safe
+   exposure remain unknown.
+3. **Get usable images.** Capture repeatable frames with visible iris detail,
+   confirm orientation and eye geometry, and build reliable pupil/iris
+   segmentation and quality rejection on representative phone samples.
+4. **Validate recognition before authentication.** The prototype matcher has
+   no calibrated false-accept/false-reject rates or presentation-attack
+   resistance. Android biometric framework scaffolding is source-only and
+   does not provide a camera-backed authenticator.
+
+See the living [development checklist](LumiaFaceID-checklist.txt), the
+[Windows driver analysis](docs/windows-driver-analysis.md), the
+[Windows-to-Android authentication map](docs/windows-iris-stack-map.md),
+[Android authentication gaps](docs/iris-authentication.md),
+[recorded phone route test](docs/iris-route-review-2026-11-05.json), and the
+[kernel and CSI investigations](kernel/README.md).
+
+## Read-only phone baseline
 
 On a computer connected to the phone, install Python 3.10+ and Android SDK
-Platform Tools. Enable USB debugging on the phone and authorize that computer.
-With the phone booted into its Android 16 cityman ROM:
+Platform Tools. Enable USB debugging and authorize the computer. With the
+phone booted into its Android 16 cityman ROM, collect a read-only baseline:
 
 ```sh
 python3 tools/collect_cityman.py --output cityman-report.json
@@ -20,100 +108,30 @@ python3 tools/collect_cityman.py --output cityman-report.json
 python3 tools/collect_cityman.py --serial YOUR_ADB_SERIAL --output cityman-report.json
 ```
 
-The output includes selected build properties, camera/media device names,
-camera/CCI device-tree properties, and the outcome of each read. It omits raw
-logcat, biometric images, templates, and a full property dump. Review it before
-sharing. Generated reports are ignored by Git. Permission-denied and unavailable
-interfaces remain recorded as unavailable; the tool does not request root,
-change SELinux, restart services, scan I²C, or write device registers.
+The report contains selected build properties, camera/media device names,
+camera/CCI device-tree properties and the outcome of each read. It omits raw
+logcat, biometric images, templates and a full property dump. Review it before
+sharing. Reports are ignored by Git, existing output files are not overwritten,
+and the collector does not request root, change SELinux, restart services, scan
+I²C or write device registers.
 
-Exit codes: `0` = requested reads completed, `1` = collection incomplete,
-`2` = tool/ADB/argument error, `3` = device/build differs from cityman Android 16.
-Successful collection does **not** mean the iris sensor works. Reports with
-failed reads are still saved. Existing output files are never overwritten.
-
-On the port's current Linux 3.10 kernel, the full device-tree exports are
-disabled/unimplemented. Collector 0.2.0 also reads selected platform-device
-`uevent` files for registered camera/CCI node names and compatible strings.
-The report can still say `incomplete` because full device-tree properties remain
-unavailable; send the saved JSON anyway. Its `platform_devices` section is useful
-and does not require enabling root or changing the kernel.
+On the current Linux 3.10 kernel, full device-tree exports are
+disabled/unimplemented. The collector also reads selected platform-device
+`uevent` files; a report may still be marked incomplete because full device-tree
+properties are unavailable. Its `platform_devices` section remains useful.
 
 ## Development
 
-No third-party Python dependencies are required. The kernel sequence tests also
-require a host C compiler (`cc`, such as GCC or Clang):
+The Python tools have no third-party dependencies. To run the repository's
+host-side tests (which also need a C compiler):
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-In the managed Linux x86_64 cloud environment, `sh tools/setup_cloud.sh` installs
-pinned, checksum-verified Android Platform Tools outside the checkout and runs
-the tests. Use `--adb /workspace/.lumiafaceid/sdk/platform-tools/adb` with the
-collector there. A phone must be connected to the host running the collector;
-this cloud environment does not provide access to your computer's USB devices.
+Tests use simulated ADB, init services and kernel APIs; they do not validate
+hardware acquisition, illumination or authentication. The managed Linux x86_64
+cloud setup is documented in [`tools/setup_cloud.sh`](tools/setup_cloud.sh).
 
-Tests use simulated ADB, init services and kernel APIs. The owner has confirmed
-temporary kernel boot and one successful sensor identification with clean
-cleanup and unchanged normal cameras. Acquisition and authentication have not
-been validated on hardware.
-See [the verified sources and missing hardware information](docs/hardware.md)
-and [the implementation milestones](docs/bring-up.md).
-
-For offline driver research, [windows-driver-analysis.md](docs/windows-driver-analysis.md)
-records the recovered original tertiary-camera probe table and its limits.
-`tools/inspect_iris_driver.py` reproduces the table extraction from the exact
-pinned local ARM driver; it does not access the phone.
-
-The [kernel prerequisite patch](kernel/README.md) corrects the existing camera
-slave-read ioctl and has been compiled for the target ARM64 kernel, including
-its 32-bit compatibility path. Iris acquisition and authentication remain
-unimplemented. A full prerequisite kernel is available for a
-[temporary boot compatibility test](kernel/BOOT-TEST.md); assemble its boot
-image locally with your own backup using `tools/repack_boot.py`.
-
-The next [iris-ID diagnostic](kernel/IRIS-ID.md) is a separate, root-triggered
-kernel path. Its initial status-only boot check now passes on the phone. A
-one-attempt helper stops and restores camera services around the next explicit
-model read. The owner completed that read successfully. The
-[capture investigation](docs/iris-capture.md) and offline `tools/inspect_iris_dcc.py`
-recover the matching calibration's static mode; acquisition and authentication
-are still not provided.
-
-The next [sensor-stream test](kernel/IRIS-STREAM.md) has a separately gated kernel
-build and a locally prepared, hash-pinned register program. It briefly starts
-the sensor and checks its internal frame counter, then stops and unwinds power.
-It does not yet configure CSI reception or return an image. IR remains off.
-The first test completed programming and cleanup but its counter remained zero.
-Version 02 matches the original transaction shapes and records configuration
-readbacks even when the counter stalls. Its phone test confirmed mode select
-latched and timing/geometry read back, with clean cleanup and unchanged normal
-cameras. The counter still remained zero; no image packets or frames have been
-verified. The next [CSI packet test](kernel/IRIS-CSI.md) uses the recovered PHY2
-combo/CSID3 route and records receiver counters around one sensor cycle. Its
-first phone test completed setup and cleanup but recorded zero receiver
-counters. Version 02 matches an additional original receiver control flag and
-saves receiver/PHY readbacks before sensor stop. Its phone test confirmed the
-target configuration and changed PHY status bits, but still recorded zero iris
-packets. Working normal cameras produced positive packet counts on the same
-boot; the iris transmit/receiver issue remains unresolved.
-It does not configure image DMA or deliver a frame.
-
-The [explicit CSI-2 selection comparison](kernel/IRIS-CSI2.md) adds a
-separate one-shot control for the original driver's `0x0111=2` setting after
-mode programming. It preserves the receiver route and timing, requires
-readback before start, and latched on kernel #8. The receiver still recorded
-zero packets, with unchanged readbacks and clean camera recovery. The
-[MCLK observation](kernel/IRIS-MCLK.md) measured the internal enabled branch at
-about 9.6 MHz. The completed [receiver clock check](kernel/IRIS-RXCLK.md)
-measured CSID3 near 240 MHz and the PHY2 timer near 200 MHz, with zero packets
-and clean camera recovery. The [startup/link audit](docs/iris-startup-audit.md)
-records rechecked original-driver branches and remaining evidence needed before
-new writes. For read-only recovery from a connected phone, use
-`tools/collect_iris_evidence.py`; the audit documents its local report format
-and `tools/inspect_iris_startup.py` for offline startup-link extraction.
-
-Target port: [XDA thread](https://xdaforums.com/t/rom-16-unofficial-lineageos-23-2-lumia-950-xl-cityman.4807007/).
-No firmware, sensor calibration, Windows driver binaries, or biometric data are
-distributed here.
+No firmware, sensor calibration, Windows driver binaries, private sensor
+profiles or biometric data are distributed here.
