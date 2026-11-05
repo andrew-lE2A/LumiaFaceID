@@ -170,6 +170,13 @@ notes' GPIO-21/CCI-timer-0 connection remains an inference. Do not drive GPIO
 21 or write guessed CCI registers. The current-source finding is static only;
 no queue was started and no pin or LED was touched.
 
+The Windows CCI HAL disassembly also clarifies the driver's third argument:
+its GPIO-output encoder accepts an output index 0–4 and a level 0/1, then packs
+those into the GPIO command word. The iris sequence uses the configured
+selector as that output index and requests high then low. This confirms the
+logical CCI output number; it still does not map that number to a TLMM pin or
+the PMI8994 input.
+
 ### Camera flash plumbing audit (2026-11-05)
 
 Static review of the pinned Cityman camera sources found that the iris plugin
