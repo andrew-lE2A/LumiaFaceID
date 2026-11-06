@@ -1,0 +1,101 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "artifact": {
+    "path": "/private/tmp/lumia-iris-probe-device-20261106/v2/LumiaIrisProbe-devnext-v2.apk",
+    "sha256": "aa0c611bf6ed92258722856da793b9cb41e0b272504747a3093b59a67fed7fed",
+    "compile_sdk": 35,
+    "signature": "temporary local test key"
+  },
+  "source_sha256": {
+    "IrisProbeActivity.java": "0292d18cc15f5b991f396f827d6e7355d99069a6099ef80786f6546dfb4d43f8"
+  },
+  "camera": {
+    "id": "2",
+    "sensor_orientation_degrees": 90,
+    "concurrent_cameras": false,
+    "format": "YUV_420_888",
+    "buffer_size": [
+      1920,
+      1080
+    ],
+    "crop": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "buffer_timestamp_ns": 3644460832323,
+    "capture_result_timestamp_ns": 3644460832323,
+    "timestamp_source": "UNKNOWN",
+    "ir_enabled": false,
+    "frame_saved": false
+  },
+  "capture_result": {
+    "exposure_ns": 75004280,
+    "reported_iso": 776,
+    "advertised_iso_range": [
+      100,
+      800
+    ],
+    "post_raw_sensitivity_boost_percent": 100,
+    "frame_duration_ns": 75184080,
+    "ae_state": "CONVERGED"
+  },
+  "analysis": {
+    "whole_frame_luma": {
+      "p05": 122,
+      "p50": 142,
+      "p95": 160,
+      "mean_absolute_gradient_horizontal": 3.14,
+      "mean_absolute_gradient_vertical": 3.07
+    },
+    "split": {
+      "orientation_index": 1,
+      "overlap": 300,
+      "view_a": {
+        "rectangle_xywh": [
+          0,
+          0,
+          1920,
+          690
+        ],
+        "p95": 158,
+        "radial_contrast_proposal": {
+          "center_sensor_px": [
+            1170,
+            504
+          ],
+          "estimated_pupil_radius_px": 24,
+          "estimated_outer_radius_px": 120,
+          "edge_strengths": [
+            0.01,
+            0.005
+          ]
+        }
+      },
+      "view_b": {
+        "rectangle_xywh": [
+          0,
+          390,
+          1920,
+          690
+        ],
+        "p95": 160,
+        "radial_contrast_proposal": null
+      },
+      "face_or_eye_roi": null,
+      "whole_frame_contrast_proposal": null
+    }
+  },
+  "interpretation": "The new display-only per-view radial scan ran on one IR-off frame. One view had a coarse circular-contrast candidate; the other did not. No generic face/eye ROI was found. A contrast candidate is not an eye/iris localization result, and it is excluded from enrollment and matching. The Windows payload's format and orientation remain unverified against Android YUV.",
+  "teardown": {
+    "camera_active_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  }
+}

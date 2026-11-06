@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "camera": {
+    "id": "2",
+    "sensor_orientation_degrees": 90,
+    "concurrent_cameras": false,
+    "format": "YUV_420_888",
+    "buffer_size": [
+      1920,
+      1080
+    ],
+    "crop": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "buffer_timestamp_ns": 3968308345323,
+    "capture_result_timestamp_ns": 3968308345323,
+    "timestamp_source": "UNKNOWN",
+    "frame_saved": false,
+    "ir_enabled": false
+  },
+  "capture_result": {
+    "exposure_ns": 75004280,
+    "reported_iso": 1244,
+    "advertised_iso_range": [
+      100,
+      800
+    ],
+    "post_raw_sensitivity_boost_percent": 100,
+    "frame_duration_ns": 75184080,
+    "ae_state": "CONVERGED"
+  },
+  "manual_roi": {
+    "center_sensor_px": [
+      1170,
+      504
+    ],
+    "tap_buffer_screen_round_trip_error_px": 0,
+    "boundary_proposal": {
+      "pupil_center_sensor_px": [
+        1113,
+        410
+      ],
+      "pupil_radius_px": 4,
+      "outer_radius_px": 10,
+      "edge_strengths": [
+        0.045,
+        0.007
+      ],
+      "valid_phase_bit_fraction": 0.111
+    }
+  },
+  "split_view_probe": {
+    "orientation_index": 1,
+    "overlap": 300,
+    "view_a_p95": 153,
+    "view_b_p95": 155,
+    "view_a_radial_proposal": null,
+    "view_b_radial_proposal": null,
+    "face_or_eye_roi": null
+  },
+  "interpretation": "The previously reported coarse view-A candidate did not recur in either split view on this fresh IR-off frame. A user-selected crop centered at its mapped location yielded only a small, weak full-resolution annulus proposal with 0.111 valid phase bits. This is consistent with insufficient or unstable structure, but a single follow-up does not prove the earlier feature was not an eye. No proposal is used for enrollment or matching.",
+  "teardown": {
+    "camera_active_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  }
+}

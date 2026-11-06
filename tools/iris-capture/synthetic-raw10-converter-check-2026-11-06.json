@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-06",
+  "tool": "tools/iris-capture/windows_frame.py",
+  "fixture": {
+    "format": "MIPI RAW10 packed groups",
+    "width": 4,
+    "height": 2,
+    "row_stride_bytes": 8,
+    "row_payload_bytes": 5,
+    "row_padding_bytes": 3,
+    "expected_top_eight_bit_pixels": [10, 20, 30, 40, 50, 60, 70, 80]
+  },
+  "checks": {
+    "packed_raw10_decode_matches_expected": true,
+    "row_padding_ignored": true,
+    "frame_pgm_dimensions_and_pixels_match": true,
+    "rotation_0_split_geometry_and_pixels_match": true
+  },
+  "result": "pass",
+  "limits": [
+    "This synthetic fixture does not validate the camera HAL's real RAW10 bytes or black level.",
+    "No Lumia pixels were captured or used.",
+    "Cityman rotation and the Windows pixel normalization remain unresolved."
+  ]
+}

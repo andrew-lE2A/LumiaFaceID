@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-06",
+  "method": "read-only ADB check while device was connected",
+  "observed": {
+    "build_display_id": "BP4A.251205.006 test-keys",
+    "crypto_state": "unsupported",
+    "iris_service": "not found",
+    "biometric_service": "found",
+    "biometric_sensors": [],
+    "biometric_current_session": null,
+    "iris_hardware_feature": false,
+    "camera_device_count": 3,
+    "iris_camera_id_2": "closed, no client instance"
+  },
+  "led_readback": {
+    "method": "read /sys/class/leds/<channel>/brightness from shell",
+    "result": "nodes unavailable or unreadable to this shell",
+    "channels_changed": false
+  },
+  "changes_made": [],
+  "interpretation": "The installed ROM still exposes the iris only as a camera. It has no iris service, registered biometric sensor, or active session. Unsupported device crypto also means protected on-device enrollment storage is not available in the current ROM state. No camera stream or emitter control was started."
+}

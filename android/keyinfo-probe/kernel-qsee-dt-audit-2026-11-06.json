@@ -1,0 +1,30 @@
+{
+  "host_date": "2026-11-06",
+  "artifact": "kernel/builds/iris-csi-03/boards.dtb",
+  "artifact_sha256": "b573dc33bcb55525dd00ebad8fb773b924a56b879003f276fc22c5224e52ab24",
+  "artifact_source_commit": "cc84cab9900ee4e7a3046b3756858e9832caee72",
+  "device_trees": [
+    {
+      "model": "Microsoft Lumia 950",
+      "compatible": ["qcom,msm8992", "mmo,talkman"],
+      "offset": 0,
+      "size": 258372,
+      "sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66"
+    },
+    {
+      "model": "Microsoft Lumia 950 XL",
+      "compatible": ["qcom,msm8994", "mmo,cityman"],
+      "offset": 258372,
+      "size": 275999,
+      "sha256": "15dc3cb07b6d4d69f246452dc237fa605007a18b4eae758926cf877ffafe636e"
+    }
+  ],
+  "qsee_node_in_both_trees": {
+    "node_path": "/soc/qcom,qseecom@6500000",
+    "compatible": "qcom,qseecom",
+    "register_range": "0x06500000-0x0650004f",
+    "status_property": "absent (enabled by default in Device Tree)"
+  },
+  "source_config": "The previously inspected mmo_defconfig has CONFIG_QSEECOM=y.",
+  "interpretation": "Both saved talkman and cityman trees in this artifact contain an enabled-by-default QSEE node. The phone's runtime had no /dev/qseecom node. This narrows the next check to confirming the exact kernel/DTB booted and collecting the QSEECOM probe result; these saved trees are not proof they are the phone's active DTB."
+}

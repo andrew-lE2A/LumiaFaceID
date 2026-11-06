@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-06",
+  "method": "read-only ADB properties, Binder service list, and lshal inspection",
+  "observed": {
+    "crypto_state": "unsupported",
+    "keystore2_init_service": "running",
+    "gatekeeperd_init_service": "running",
+    "vendor_gatekeeper_init_service": "running",
+    "vendor_keymaster_init_service": "running",
+    "qseecomd_init_service": "running",
+    "qsee_listener_registration_property": "true",
+    "qseecom_device_node": "absent at /dev/qseecom",
+    "registered_hidl_services": [
+      "android.hardware.gatekeeper@1.0::IGatekeeper/default",
+      "android.hardware.keymaster@3.0::IKeymasterDevice/default"
+    ],
+    "gatekeeper_service_binary": "android.hardware.gatekeeper@1.0-service.software",
+    "keymaster_service_binary": "android.hardware.keymaster@3.0-service",
+    "keymaster_process_pid": 507,
+    "keystore2_binder_service": "android.system.keystore2.IKeystoreService/default"
+  },
+  "queries": {
+    "dumpsys_keystore2": "service not found by dumpsys",
+    "cmd_keystore2_help": "service not found",
+    "keystore2_binder_dump": "registered binder name returned OK but no diagnostic details",
+    "keymaster_hidl_debug": "exit code 0; empty output",
+    "gatekeeper_hidl_debug": "empty output",
+    "ro_hardware_keymaster_gatekeeper_properties": "empty"
+  },
+  "changes_made": [],
+  "interpretation": "Keystore2 and Keymaster 3.0 endpoints are active, but service inventory does not establish hardware backing, secure credential confirmation, or per-user template encryption. The software-labeled Gatekeeper binary and unsupported disk-encryption state require follow-up."
+}

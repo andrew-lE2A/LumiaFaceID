@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-06",
+  "test": "temporary package installation and foreground launch smoke check",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "artifact": {
+    "path": "/private/tmp/lumia-iris-probe-device-20261106/rebuild/LumiaIrisProbe-devnext.apk",
+    "sha256": "0664ec26e01ca62e1290761dd03f3acd3d077e1ba9621b270523c0d6f2b26915",
+    "compile_sdk": 35,
+    "build_tools": "35.0.0",
+    "signature": "temporary local test key; separate package, existing app not replaced"
+  },
+  "source_sha256": {
+    "WindowsIrisSplitGeometry.java": "909efef7dce430a4213742a8ddc47f99ea5e5f9ed6d9d71caae71d7463a5d7e2",
+    "IrisProbeActivity.java": "466776fe657b14e1744f7ee191b94cc63d553ec3396b00e7425804497947519c"
+  },
+  "observed": {
+    "install": "success after platform rejected incremental-install mode and adb fell back to streamed install",
+    "activity_start": "successful; foreground activity is com.lumia.irisprobe.IrisProbeActivity",
+    "process_pid": 16641,
+    "camera_active_clients": [],
+    "biometric_service_sensors": [],
+    "biometric_current_session": null,
+    "crypto_state": "unsupported",
+    "android_runtime_fatal_errors": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "changes_made": [
+    "Installed and launched a new temporary package; original probe package was left intact."
+  ],
+  "limitations": [
+    "Launch-only check: camera preview was not opened and no IR pulse was requested.",
+    "This does not verify frame capture, Windows-compatible pixel input, iris matching, biometric enrollment, or Android unlock."
+  ]
+}

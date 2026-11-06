@@ -1,0 +1,50 @@
+{
+  "host_date": "2026-11-06",
+  "baseline": {
+    "kernel": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026",
+    "qsee_version": "0x800000 (QSEE_VERSION_20 in the local source)",
+    "platform_node": "/soc/qcom,qseecom@6500000",
+    "driver_probe": "Failed during secure-app region notification: SMC function 0x32000105 returned raw -8; SCM return registers were zero; qseecom reported send secapp reg fail -22 and platform probe failed -22.",
+    "result": "/dev/qseecom absent; QSEE platform device unbound"
+  },
+  "variant": {
+    "method": "one-time fastboot boot; no partition flashed",
+    "boot_image_sha256": "3f04c9be216a000af0bd81e617f15ff42f2beba87e5a7e2867490f7bbbe1a9b1",
+    "base_boot_image_sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+    "kernel_payload": "byte-identical to base image",
+    "ramdisk_sha256": "0556c0f77dc157615c2254a788b7a0bea89b52291867b9038adeffb470237e34",
+    "talkman_dtb_sha256": "17de0fea39d987d15df5e3caa8ee2bddba6c629c1381e05fbb06a8f52b3bcf66",
+    "cityman_dtb_sha256": "ffc3a9da5afcb442ee4b4a199f0286f3bfbd22df7b7bdbff27aa0bc68d1550f4",
+    "only_dtb_change": "Added qcom,appsbl-qseecom-support to /soc/qcom,qseecom@6500000. Semantic DTB comparison found no other property changes.",
+    "qsee_probe_log": [
+      "qseecom.qsee_version = 0x800000",
+      "qseecom.appsbl_qseecom_support = 0x1",
+      "qseecom.whitelist_support = 0"
+    ],
+    "result": "QSEECOM platform device bound to driver qseecom; /dev/qseecom created (major 240, minor 0). The prior app-region notification failure path was skipped. qseecomd ran and sys.listeners.registered=true."
+  },
+  "follow_up": {
+    "credential_bound_KeyInfo": "Not rerun. The Android user was RUNNING_LOCKED after boot, so the diagnostic activity could not launch. Temporary APK was uninstalled.",
+    "iris_unlock_readiness": "Still unproven. QSEE device binding does not establish that Android Keymaster selects a TEE-backed key implementation or that secure-hardware credential enforcement works.",
+    "return_to_installed_kernel": "Rebooted normally after the temporary boot. Kernel #18 is running again and /dev/qseecom is absent, confirming the DT variant was temporary.",
+    "cleanup": {
+      "camera_server": "running",
+      "camera_clients": "none observed; no camera trace errors",
+      "leds": {
+        "led:torch_0": 0,
+        "led:torch_1": 0,
+        "led:flash_0": 0,
+        "led:flash_1": 0
+      },
+      "temporary_probe_apk": "uninstalled",
+      "phone_partition_written": false,
+      "original_boot_backup_and_private_profile": "preserved"
+    }
+  },
+  "UEFI_memory_map_lead": {
+    "partition": "Windows FFU UEFI",
+    "extracted_sha256": "9b9483fd101837867c8ed42b433bfb1d3f9a160b777c3ab0e1e90d34013e11e7",
+    "entry": "0x06500000, 0x00500000, TZ Apps, reserved non-secure device memory",
+    "interpretation": "This matches the Linux QSEE app-region range exactly and supports a bootloader-managed QSEE memory-region hypothesis. It does not prove that UEFI issued QSEE's app-region notification."
+  }
+}

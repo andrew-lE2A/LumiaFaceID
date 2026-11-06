@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.rawsave20261106",
+  "implementation": {
+    "control": "one-shot Save one RAW10 frame action",
+    "emitter": "hard-coded IR off; no LED requests in this path",
+    "confirmation": "requires confirmation that the camera faces a diffuse non-person target",
+    "storage": "packed RAW10 bytes and JSON geometry sidecar in app-private files",
+    "session_limit": "one saved RAW10 frame per app installation; existing files are detected after activity recreation",
+    "cleanup": "partial RAW and metadata files are deleted on write failure"
+  },
+  "build": {
+    "result": "success",
+    "compile_sdk": 35,
+    "build_tools": "35.0.0",
+    "apk": "android/iris-camera-probe/build/LumiaIrisProbe.apk",
+    "package_manifest_activity": "com.lumia.irisprobe.IrisProbeActivity",
+    "debuggable_temporary_variant": true,
+    "keystore": "ephemeral local test key; removed after signing",
+    "warnings": [
+      "javac source/target 8 are obsolete on the installed JDK",
+      "source uses deprecated Android APIs"
+    ]
+  },
+  "phone_readback": {
+    "apk_installed": true,
+    "activity_launched": true,
+    "raw10_inspect_control_visible": true,
+    "raw10_save_control_visible": true,
+    "private_files_initially_empty": true,
+    "camera_id_2_opened": false,
+    "active_camera_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "raw_frame_saved": false,
+    "capture_waiting_for": "operator to point at a diffuse non-person target and confirm the one-shot save"
+  },
+  "limits": [
+    "The file-based converter has not yet been validated against a real sensor RAW file.",
+    "No pixel data were captured during installation or UI verification.",
+    "This probe does not enroll a biometric or unlock Android."
+  ]
+}

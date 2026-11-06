@@ -1,33 +1,42 @@
 # Lumia Iris Camera2 Probe
 
-A minimal Android Camera2 app for the Lumia 950 XL iris bring-up. The HAL can assign the iris different numeric camera IDs across boots, so the app reads camera metadata and selects the unique front-facing 1920×1088 sensor, then opens only that ID. If there is no unique match, it refuses to open a camera. The preview keeps the sensor aspect ratio and has a **Rotate +90°** control for adjusting the provisional mount angle. The screen and logcat show the selected ID, stream size, open/configuration errors, and capture-result callback counts.
+The app selects the unique front-facing 1920×1088 sensor from metadata, then opens only that camera ID. Its three-sample enrollment and demo comparison are now **IR-off only**: the earlier build incorrectly pulsed the emitter for samples that might be aimed at a person. IR-assisted eye capture is disabled until emitter output/current and exposure safety are independently established. IR-off samples may be too dark to encode a usable iris. This is an in-memory matcher demonstration, not Android enrollment or screen unlock.
 
-The **IR + analyze** button is disabled until a capture-result callback arrives and is available once per app session. It asks a root-only localhost helper to set torch_0 brightness 14 (the lowest previously measured nonzero hardware level), requests one YUV frame, and sends `STOP` when that capture's result callback arrives after sensor exposure, without waiting for YUV delivery or CPU analysis. The buffer is still analyzed in memory and discarded; it is not saved to app storage. Capture failure, reader failure, activity close, and an 850 ms app timeout also release the helper, which has an independent one-second hard software maximum. A bounded phone run with a fake brightness file verified this order without enabling a physical LED: `STOP` was requested about 3 ms after the capture-result callback and about 1 ms before the YUV callback; the helper wrote the fake level back to zero. This verifies software ordering, not the physical LED edge or optical exposure overlap. Previous physical runs provide separate request/result/buffer timestamp evidence, but the sensor clock is unknown and optical timing remains unmeasured. This is not biometric authentication or a validated eye-safety level. Never aim the emitter at a person or eyes. Use only with a diffuse target and no one in the reflected path. **Do not use IR while the phone is covered by the metal can or any reflective enclosure.** The app cannot write the LED sysfs node directly. For a hardware test, start the helper over adb:
+Historical IR test: a previous version contacted a root-only helper to request
+torch_0 brightness 14 (the lowest measured nonzero hardware code). One phone
+run received a Camera2 result/YUV frame and the user reported seeing a faint
+red glow. This confirms a software request and an observation, not optical
+power, safe eye exposure, repeatable frame synchronization or useful iris
+detail. The sensor timestamp source is unknown. **Do not point the emitter at
+a person or eye.** A minimum driver code is not an eye-safety limit. Do not use
+IR in a metal can or reflective enclosure.
 
-```sh
-adb root
-adb push iris-torch-server.sh /data/local/tmp/iris-torch-server.sh
-adb shell chmod 700 /data/local/tmp/iris-torch-server.sh
-adb shell 'nohup sh /data/local/tmp/iris-torch-server.sh >/data/local/tmp/iris-torch-server.log 2>&1 </dev/null &'
-```
+The helper binds to the phone's `127.0.0.1`, accepts `PULSE`, and forces
+torch_0 back to zero on STOP, disconnect, signal or its one-second timeout.
+An ADB forward for `tcp:18761` exposes that pulse request on the host's
+loopback, where any local process can reach it. The current demo starts the
+helper on phone loopback and removes stale ADB forwards; it never creates a
+forward. The app has a separate Advanced control that asks for confirmation,
+then requests one 250 ms pulse at brightness 14 (lowest measured nonzero
+code). The helper enforces its one-second maximum. This pulse is a diffuse
+target diagnostic only, is not synchronized to exposure, and is not an
+eye-safety limit. Enrollment and comparison remain IR-off.
 
-The helper binds only to `127.0.0.1`, rejects all commands except `PULSE`, writes brightness 14 and replies `ON`, then waits for `STOP` for at most one second. It writes 0 and replies `OFF` when stopped, disconnected or timed out. No background watchdog process is needed; its exit/signal trap also writes 0. It is temporary and stops when the phone reboots. Check `/sys/class/leds/led:torch_0/brightness` is `0` after use. Do not use the sensor-strobe path. The software helper's one-second bound is not an eye-safety limit.
-
-For the installed feedback build, start the complete on-device demo from the repository root with:
+To install and open the IR-off diagnostic demo from the repository root:
 
 ```sh
 android/iris-camera-probe/demo-on-phone.sh [adb-serial]
 ```
 
-It requires `build/LumiaIrisProbe.apk`, refuses to start while any camera client is active, resets all four LED brightness nodes to zero, installs/launches the feedback app, and starts the idle localhost helper plus ADB port forward. In the app, open the iris preview and tap **Start iris enrollment**, then tap that same button three more times to collect three usable samples. Each IR sample pauses repeating preview, turns on minimum torch_0, requests one still frame, and switches illumination off on the Camera2 capture-result callback before resuming the preview. The repeating live preview remains IR-off; matching Windows' per-frame illumination requires camera/KMD synchronization that this Android app does not currently have. The in-memory matcher then enables **Demo unlock**, which requests another IR-assisted frame and reports an experimental score plus a demo-only locked/unlocked state. The score threshold is provisional and unvalidated; no template is persisted and Android itself is never unlocked. The advanced controls include the IR-off analyzer, manual ROI selector, manual exposure and saved-frame diagnostic. To stop the app, helper and forwarding and force all LED nodes off, run:
+It requires `build/LumiaIrisProbe.apk`, refuses to start while any camera client is active, resets all four LED brightness nodes to zero, starts the loopback-only pulse helper, removes any stale `tcp:18761` forward, and installs/launches the demo. Start an IR-off diagnostic enrollment, collect three samples, then run a demo comparison if a usable template was produced. The threshold is provisional and unvalidated; no template is persisted, and Android is never unlocked. Advanced controls include the guarded one-shot IR test, manual ROI selection, exposure controls, and frame diagnostics. To close the app and force all LED nodes off, run:
 
 ```sh
 android/iris-camera-probe/demo-off-phone.sh [adb-serial]
 ```
 
-The on-phone demo remains a capture/illumination diagnostic, not Android iris authentication. Do not aim the emitter at anyone or use it with an eye in the reflected path; the one-second software timeout is not an eye-safety limit.
+The app exposes emitter control only through the separate, confirmed diffuse-target test; enrollment and comparison cannot request IR. The helper timeout is a fail-safe, not an eye-safety limit.
 
-For a future safe, uncovered-target run, the app logs elapsed-realtime
+Historical pulse-enabled app builds logged elapsed-realtime
 timestamps immediately before sending `PULSE` and `STOP`, when it receives
 `ON` and `OFF`, when it submits the one-frame request, when the capture-result
 callback arrives, and when the YUV buffer arrives. It also logs the buffer timestamp and sensor timestamp source,
@@ -41,9 +50,8 @@ capture ([Camera2 reference](https://developer.android.com/reference/android/har
 This establishes frame identity and transaction order, not optical LED timing;
 the helper events do not measure optical turn-on or turn-off latency.
 
-To check capture-result/YUV timestamp matching after either **Analyze one live
-frame** (IR remains off) or a later permitted emitter run, without reading any
-frame data:
+To check capture-result/YUV timestamp matching after an **Analyze one live
+frame** request, without reading any frame data:
 
 ```sh
 adb logcat -d -s LumiaIrisProbe:I | python3 tools/analyze_iris_pulse_timing.py
@@ -108,7 +116,48 @@ fraction, then discards the code and frame. These are unvalidated proposals,
 not pupil or iris segmentation, matching, or identity decisions. This
 operation does not enable IR, store pixels, or enroll a template.
 One-frame analysis and YUV saving are mutually exclusive, and either blocks
-the IR pulse button until the frame operation completes or times out.
+the enrollment/comparison controls until the frame operation completes or
+times out.
+The same analysis now also reports luma statistics for the two rectangular
+views described by the recovered Windows engine's `split_frame` path. It uses
+the Windows nearest-quarter-turn calculation and 300-unit overlap, with
+Android `SENSOR_ORIENTATION` supplied only as an unverified trial input. This
+is a geometry probe: it does not copy/rotate the frame into Windows buffers,
+and it does not establish that Camera2 Y has the same dimensions, byte layout,
+normalization, or orientation as the private Windows BIR payload. Values are
+discarded with the frame and cannot feed enrollment or comparison. See the
+static-analysis caveats in [`docs/windows-iris-stack-map.md`](../../docs/windows-iris-stack-map.md).
+The updated source compiled with Android 35 and a separately named temporary
+package launched on the Lumia on 2026-11-06. The camera stayed closed, all
+four LED channels read zero, and no biometric sensor/session appeared. This is
+an app-start check only; see
+[`phone-windows-split-app-launch-2026-11-06.json`](phone-windows-split-app-launch-2026-11-06.json).
+The follow-up opened only iris camera 2, analyzed one unsaved IR-off YUV frame,
+and exercised the split-statistics path. Its two views reported luma p95 values
+151 and 153, but the face/eye ROI detector found no candidate. Timestamp
+identity and clean camera/LED teardown were confirmed. The AE result again
+reported ISO 2386 despite the advertised maximum of 800. See
+[`phone-windows-split-frame-2026-11-06.json`](phone-windows-split-frame-2026-11-06.json).
+The next build ran the existing coarse radial-contrast heuristic independently
+inside each Windows-derived view, still display-only and excluded from matching.
+One IR-off frame produced a candidate in view A (estimated pupil/outer radii
+24/120 px) and no candidate in view B; the face/eye detector found no ROI.
+This is not eye localization. Camera teardown again left no active clients and
+all LEDs at zero. See
+[`phone-windows-split-radial-probe-2026-11-06.json`](phone-windows-split-radial-probe-2026-11-06.json).
+A follow-up manually selected that candidate's transformed preview location
+and analyzed one more IR-off frame. Neither split view repeated a radial
+proposal; the full-resolution crop yielded only a weak 4/10 px boundary with
+0.111 valid phase bits. This is insufficient for iris coding and remains a
+heuristic result, not proof about the earlier candidate. Camera teardown and
+all LED-off readbacks passed; see
+[`phone-manual-roi-followup-2026-11-06.json`](phone-manual-roi-followup-2026-11-06.json).
+One controlled manual frame then requested 100 ms / ISO 800 and returned
+99.996 ms / ISO 800. Its luma p95 was 102, below the preceding AE frame's 160;
+both split halves produced only low-strength radial proposals, with no
+face/eye ROI. Closing the camera restored AE mode, left no clients, and all
+four LED channels read zero. See
+[`phone-manual-100ms-iso800-2026-11-06.json`](phone-manual-100ms-iso800-2026-11-06.json).
 Both one-frame request paths now explicitly carry the currently selected
 exposure mode. In the default manual mode, that is AE off, 30 ms exposure,
 ISO 100, and 33.5 ms frame duration; choosing **Use AE auto (restore)** makes
@@ -249,6 +298,54 @@ pixel rate, 2100-pixel line length and 1000-line initial exposure. Tap
 **Use AE auto (restore)** to compare automatic control; closing the camera
 returns the next session to the source-derived manual baseline. This is a
 timing/control probe, not an image-quality calibration or illumination test.
+
+The latest linked reverse-engineering notes ([commit `eb1fca3`](https://github.com/leojukic03/lumia-iris-notes/commit/eb1fca3cf9b9996595964153360089658f082255))
+add an off-device-tested optional Windows AE cap of 667 sensor lines (about
+20 ms), 4× analog gain (ISO 400), and no ISP digital gain. That option is for
+the sensor plugin and remains off by default; it is not evidence that the
+Camera2 probe should clamp its diagnostic controls. The same commit documents
+Windows' left 300-column crop and overlapping two-view split. An offline
+converter is available at
+[`tools/iris-capture/windows_frame.py`](../../tools/iris-capture/windows_frame.py)
+for an actual RAW10/RAW16 capture with known dimensions and stride. The exact
+Windows tone mapping and Cityman rotation remain unresolved, and this converter
+does not handle the app's current YUV capture or provide a matcher input.
+
+CameraService readback on 2026-11-06 confirmed iris camera ID 2 advertises
+full-array RAW10 (format 37), RAW16 (format 32) and RAW_OPAQUE outputs at
+1920×1088, with the RAW capability set. One bounded IR-off RAW10 still request
+then delivered an image plane: 1920×1088, row stride 2400, pixel stride 0,
+2,611,200 bytes, full-frame crop. Its timestamp matched the capture result.
+The packed row size matches four 10-bit pixels in five bytes; the in-memory
+decoder completed and discarded the pixels. The standalone file converter
+has not yet processed a real sensor file because no pixel data were saved.
+The result also reported ISO 3922, above the advertised 100–800 range, so AE
+metadata needs separate investigation before exposure tuning. See
+[`phone-raw10-callback-2026-11-06.json`](phone-raw10-callback-2026-11-06.json)
+and the static capability
+[`raw-stream-capability-readback-2026-11-06.json`](raw-stream-capability-readback-2026-11-06.json).
+
+The follow-up manual YUV capture requested 100 ms / ISO 800 and received
+99.996 ms / ISO 800, with no post-RAW boost and AE inactive. This shows the
+manual-sensitivity path applies the requested value; it does not explain the
+single AE result that reported ISO 3922. The frame was IR-off, was not saved,
+and contained no detected face/eye ROI. See
+[`phone-manual-100ms-iso800-2026-11-06.json`](phone-manual-100ms-iso800-2026-11-06.json).
+
+The Advanced controls now include a separate one-shot **Save one RAW10 frame**
+action. A confirmation dialog requires the operator to aim only at a diffuse,
+non-person target. It requests exactly one still with the emitter disabled,
+saves packed RAW10 bytes and geometry metadata only under app-private files,
+and permits one save per app installation; it detects an existing RAW file
+after activity recreation. Clear this app's data or reinstall it to reset the
+one-shot gate after retrieving the file. It does not enable IR, run enrollment,
+or upload pixels. The control is installed but still needs a phone capture
+before the file-based converter and rotation can be validated. Retrieve the
+files with `adb exec-out run-as <package> cat <private-file>`; use the JSON
+sidecar's width, height and row stride with `tools/iris-capture/windows_frame.py`.
+The converter passed a synthetic packed-RAW10 fixture with padded rows, but
+this does not validate real sensor bytes or resolve Cityman's Windows rotation;
+see [`synthetic converter check`](../../tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json).
 
 ## Build
 

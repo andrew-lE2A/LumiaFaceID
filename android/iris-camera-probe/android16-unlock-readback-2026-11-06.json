@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-06",
+  "method": "read-only ADB service, biometric, camera, and LED inspection",
+  "build_display_id": "BP4A.251205.006 test-keys",
+  "services": {
+    "iris": "not found",
+    "biometric": "found"
+  },
+  "package_features": {
+    "android.hardware.iris": false
+  },
+  "storage_security": {
+    "ro.crypto.state": "unsupported"
+  },
+  "biometric_dump": {
+    "legacy_settings": false,
+    "sensors": [],
+    "current_session": null
+  },
+  "cameras": {
+    "device_count": 3,
+    "normal_count": 3,
+    "public_api1_count": 3,
+    "ids": [
+      "0",
+      "1",
+      "2"
+    ],
+    "active_clients": []
+  },
+  "led_brightness": {
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "probe_runtime": {
+    "com.lumia.irisprobe.demo_installed": true,
+    "com.lumia.irisprobe.demo_process_active": true,
+    "phone_local_pulse_helper_active": true,
+    "adb_forwards": []
+  },
+  "changes_made": [],
+  "interpretation": "The installed ROM does not contain the local iris framework patches. It exposes the camera but has no iris Binder service, registered biometric sensor, or active biometric session. This readback does not validate an authenticator or unlock path."
+}

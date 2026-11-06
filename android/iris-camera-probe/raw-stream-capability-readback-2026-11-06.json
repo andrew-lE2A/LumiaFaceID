@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-06",
+  "device": "Lumia 950 XL (cityman), LineageOS 23.2 / Android 16",
+  "source": "adb shell dumpsys media.camera; read-only CameraService metadata inspection",
+  "camera_id": "2",
+  "camera_role": "front-facing iris sensor, identified by 1920x1088 pixel array",
+  "active_clients_before_and_after": [],
+  "advertised_capabilities": [
+    "BACKWARD_COMPATIBLE",
+    "MANUAL_SENSOR",
+    "MANUAL_POST_PROCESSING",
+    "READ_SENSOR_SETTINGS",
+    "BURST_CAPTURE",
+    "PRIVATE_REPROCESSING",
+    "YUV_REPROCESSING",
+    "RAW"
+  ],
+  "advertised_formats": [
+    {"format_id": 37, "name": "RAW10", "width": 1920, "height": 1088, "direction": "OUTPUT"},
+    {"format_id": 32, "name": "RAW16 / RAW_SENSOR", "width": 1920, "height": 1088, "direction": "OUTPUT"},
+    {"format_id": 36, "name": "RAW_OPAQUE", "width": 1920, "height": 1088, "direction": "OUTPUT"}
+  ],
+  "additional_metadata": {
+    "available_raw_size": [1920, 1088],
+    "sensor_white_level": 1023,
+    "color_filter_arrangement": "GRBG",
+    "opaque_raw_size_bytes": 4177920,
+    "vendor_opaque_raw_strides": [1920, 1088, 1920],
+    "minimal_frame_duration_raw10_ns": 33333333,
+    "sensor_timestamp_source": "UNKNOWN"
+  },
+  "illumination": "not requested; no emitter test was run",
+  "interpretation": "CameraService advertises full-resolution RAW10 and RAW16 outputs for camera 2. This proves the HAL metadata path accepts these stream configurations, not that a capture session can produce a frame or that the RAW10 byte layout matches the offline converter.",
+  "next_step": "Open only camera 2 with a one-shot RAW10 ImageReader, keep IR off, record Image plane rowStride/pixelStride and capture-result metadata, save one frame only if its scene is a non-person target, and close the camera immediately.",
+  "security_status": "No change: Android has no iris authenticator, protected iris enrollment, or iris unlock path."
+}

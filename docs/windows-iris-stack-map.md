@@ -437,6 +437,17 @@ settings, though the lower-resolution clamp mismatch remains unresolved. This
 also does not prove that this helper alone rotates or converts the image, and
 does not justify an Android-side YUV plane-order or conversion change.
 
+The Android probe has a deliberately limited diagnostic port of this result
+in `WindowsIrisSplitGeometry.java`: it computes the two source rectangles and
+reports per-rectangle luma statistics during a one-frame analysis. It uses the
+Android sensor-orientation metadata as an experimental input because the
+Windows context-field mapping is not yet verified. It does not materialize
+Windows-style buffers, alter pixels, or feed the matcher. The Windows payload
+format, normalization, crop, and orientation are still unresolved, so this
+port demonstrates only that the geometry can be represented in the current
+probe; it is not evidence that Android frames now match the Windows input
+contract.
+
 The sensor adapter's returned interface table is also version 3.0 (`Type=1`,
 `Size=0x7c`). Its `PushDataToEngine` entry resolves to `0x1000eef9`. Static
 disassembly shows that path reads the sample buffer and total byte count from
@@ -869,6 +880,43 @@ and evaluation.
 6. Compare the recovered API contract with Android's camera path. Keep
    experimental matching outside Keyguard until matching, liveness, protected
    storage/result delivery, cancellation and lockout are evaluated.
+
+## Upstream update: Windows-shaped RAW input and AE limits
+
+The latest inspected `leojukic03/lumia-iris-notes` commit is
+[`eb1fca3`](https://github.com/leojukic03/lumia-iris-notes/commit/eb1fca3cf9b9996595964153360089658f082255),
+whose additions are static-analysis/experimental-code updates, not new phone
+measurements. Its `android/tools/iris-capture/windows_frame.py` describes an
+input approximation for the recovered engine: convert RAW10 to 8-bit by taking
+the high eight bits, crop 300 columns from the left, then split into two
+overlapping views (overlap up to 300 pixels), splitting across width for 0/180
+and across height for 90/270, with the halves swapped for 180/270. The exact
+Windows pixel normalization and Cityman rotation remain unknown.
+
+The notes also add an opt-in sensor-plugin AE cap:
+
+- maximum 667 sensor lines (about 20 ms),
+- maximum 4× analog gain (ISO 400),
+- no ISP digital gain.
+
+The option is off by default. The commit describes this as matching Windows'
+iris AE limits and notes that those limits were exercised off-device only.
+These are exposure-policy settings, not safety limits and not a reason to
+change the Camera2 diagnostic's exposure settings.
+
+This repository now has the independent offline converter
+[`tools/iris-capture/windows_frame.py`](../tools/iris-capture/windows_frame.py)
+for a captured RAW frame. It writes a cropped frame plus the two diagnostic
+eye views and prints Windows-used percentile statistics. A bounded IR-off
+Camera2 test delivered one RAW10 image in memory: 1920×1088, row stride 2400,
+pixel stride 0, and 2,611,200 bytes. The image and result timestamps matched;
+the row stride equals the packed RAW10 requirement. The decoder processed the
+buffer in memory, then the pixels were discarded. No RAW bytes were saved, so
+the standalone file converter still needs a real RAW file to validate its
+packing and output; the app's YUV diagnostic is not equivalent. After an
+explicitly saved non-person target frame is available, inspect rotations 0
+and 90. Do not use the converter's outputs as enrollment or matching
+templates.
 
 The Mobile FFU, extracted ARM32 Icaros and WinBio iris components are available
 outside Git. The main static-analysis gap is tracing the WinBio adapter-to-

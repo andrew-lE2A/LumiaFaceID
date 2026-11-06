@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "camera": {
+    "id": "2",
+    "selected_by": "unique 1920x1088 iris sensor characteristics",
+    "sensor_orientation_degrees": 90,
+    "other_camera_streamed_concurrently": false
+  },
+  "capture": {
+    "operation": "one in-memory Analyze one IR-off frame request",
+    "format": "YUV_420_888",
+    "buffer_size": [
+      1920,
+      1080
+    ],
+    "crop": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "buffer_timestamp_ns": 3397458897323,
+    "capture_result_timestamp_ns": 3397458897323,
+    "timestamp_source": "UNKNOWN",
+    "ir_enabled": false,
+    "frame_saved": false,
+    "exposure_ns": 75004280,
+    "sensitivity_iso_reported": 2386,
+    "advertised_sensitivity_range_iso": [
+      100,
+      800
+    ],
+    "post_raw_sensitivity_boost_percent": 100,
+    "frame_duration_ns": 75184080,
+    "ae_state": "CONVERGED"
+  },
+  "observed": {
+    "whole_frame_luma": {
+      "p05": 123,
+      "p50": 140,
+      "p95": 153,
+      "mean_absolute_gradient_horizontal": 0.91,
+      "mean_absolute_gradient_vertical": 0.9
+    },
+    "windows_split_geometry_trial": {
+      "orientation_index": 1,
+      "overlap": 300,
+      "view_a": {
+        "rectangle_xywh": [
+          0,
+          0,
+          1920,
+          690
+        ],
+        "p95": 151
+      },
+      "view_b": {
+        "rectangle_xywh": [
+          0,
+          390,
+          1920,
+          690
+        ],
+        "p95": 153
+      },
+      "face_or_eye_roi": "none"
+    },
+    "camera_client_after_close": [],
+    "led_brightness_after_close": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    }
+  },
+  "interpretation": "This confirms that the experimental Windows-derived split-statistics path ran on an IR-off Camera2 frame and that the YUV buffer timestamp matched its capture result. The image had measurable luma variation. The high reported ISO is outside the advertised range and repeats the known AE metadata anomaly. No face/eye ROI was found. The test does not establish Windows BIR pixel-format equivalence, iris localization, matching, enrollment, illumination timing, or Android authentication.",
+  "teardown": "Iris camera closed; no camera clients remained; all four LED channels read zero."
+}

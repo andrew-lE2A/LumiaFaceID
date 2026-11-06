@@ -1,0 +1,46 @@
+{
+  "host_date": "2026-11-06",
+  "device_build": "BP4A.251205.006 test-keys",
+  "android_release": "16",
+  "method": "One-property QSEECOM DT variant, booted with fastboot boot only; temporary KeyInfo APK generated an AES AndroidKeyStore key requiring device-credential authentication, read KeyInfo, then deleted the alias.",
+  "boot_variant": {
+    "image": "/private/tmp/lumia-qsee-appsbl-01/cityman-qsee-appsbl-test.img",
+    "sha256": "3f04c9be216a000af0bd81e617f15ff42f2beba87e5a7e2867490f7bbbe1a9b1",
+    "change": "Added qcom,appsbl-qseecom-support to /soc/qcom,qseecom@6500000; kernel payload and ramdisk match the base image.",
+    "boot_method": "fastboot boot; no partition flashed"
+  },
+  "qseecom": {
+    "device_node": "/dev/qseecom present (major 240, minor 0)",
+    "driver": "platform device bound to qseecom",
+    "appsbl_support_property": "1"
+  },
+  "android_user": "RUNNING_UNLOCKED when the probe was launched",
+  "key_info": {
+    "key_type": "AES",
+    "security_level": 0,
+    "security_level_name": "SECURITY_LEVEL_SOFTWARE",
+    "inside_secure_hardware": false,
+    "auth_required": true,
+    "auth_type": 1,
+    "auth_type_name": "AUTH_DEVICE_CREDENTIAL",
+    "auth_requirement_enforced_in_secure_hardware": false
+  },
+  "interpretation": "Binding QSEECOM with the bootloader-support DT flag did not make the tested AndroidKeyStore credential-authenticated AES key TEE-backed. This confirms the tested Android Keymaster path remains software-level under this temporary boot. It does not establish the backing of every possible vendor key path.",
+  "cleanup": {
+    "temporary_alias_deleted_by_probe": true,
+    "temporary_apk_uninstalled": true,
+    "rebooted_to_installed_kernel": true,
+    "installed_kernel": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026",
+    "installed_kernel_qseecom_node": "absent as expected without the temporary DT property",
+    "camera_devices": "3 enumerated; no active camera client observed",
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "camera_opened_by_probe": false,
+    "device_partition_written": false,
+    "original_boot_backup_and_private_profile": "preserved"
+  }
+}

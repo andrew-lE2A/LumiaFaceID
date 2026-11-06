@@ -28,6 +28,7 @@ javac -source 8 -target 8 -classpath "$PLATFORM" -d "$CLASSES" \
     "$APP_DIR/src/com/lumia/irisprobe/CircularBoundaryProposal.java" \
     "$APP_DIR/src/com/lumia/irisprobe/DiagnosticFrameQuality.java" \
     "$APP_DIR/src/com/lumia/irisprobe/YuvPlaneCopier.java" \
+    "$APP_DIR/src/com/lumia/irisprobe/WindowsIrisSplitGeometry.java" \
     "$APP_DIR/src/com/lumia/irisprobe/LogGaborIrisCodePrototype.java"
 jar cf "$OUT/classes.jar" -C "$CLASSES" .
 "$BUILD_TOOLS/d8" --min-api 26 --lib "$PLATFORM" --output "$DEX" "$OUT/classes.jar"

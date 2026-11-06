@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-06",
+  "base_revision": "daf2b33fac918a464f6f7193214b27d164d39bea",
+  "patch": "0008-lineage-iris-generic-auth-fail-closed.patch",
+  "scope": "generic biometric request fail-closed behavior for the placeholder iris authenticator",
+  "change": "prepareForAuthentication reports BIOMETRIC_ERROR_HW_UNAVAILABLE to the provided sensor receiver while no camera-backed authenticator is installed",
+  "validation": {
+    "patch_0003_applied_to_disposable_source": true,
+    "patch_0008_dry_run_after_patch_0003": true,
+    "patch_0008_applied_to_disposable_source": true,
+    "java_or_aidl_compilation": false,
+    "phone_installation": false
+  },
+  "limits": [
+    "This does not implement camera capture, enrollment, matching, liveness, lockout, or secure template storage.",
+    "Keyguard's custom request continues to return BIOMETRIC_ERROR_HW_UNAVAILABLE.",
+    "Patch is local and uncommitted."
+  ]
+}

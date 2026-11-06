@@ -4,10 +4,10 @@ set -eu
 APP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ADB_BIN=${ADB_BIN:-adb}
 APK="$APP_DIR/build/LumiaIrisProbe.apk"
-HELPER="$APP_DIR/iris-torch-server.sh"
 REMOTE_HELPER=/data/local/tmp/lumia-iris-torch-demo.sh
 REMOTE_PID=/data/local/tmp/lumia-iris-torch-demo.pid
 REMOTE_LOG=/data/local/tmp/lumia-iris-torch-demo.log
+HELPER="$APP_DIR/iris-torch-server.sh"
 SERIAL=${1:-}
 
 adb_cmd() {
@@ -20,6 +20,10 @@ adb_cmd() {
 
 if [ ! -f "$APK" ]; then
     echo "Missing $APK. Build the feedback manifest variant first." >&2
+    exit 1
+fi
+if [ ! -f "$HELPER" ]; then
+    echo "Missing $HELPER." >&2
     exit 1
 fi
 
@@ -42,15 +46,17 @@ fi
 
 adb_cmd shell "if [ -f '$REMOTE_PID' ]; then kill -TERM \"\$(cat '$REMOTE_PID')\" 2>/dev/null || true; sleep 1; fi"
 adb_cmd shell "for f in /sys/class/leds/led:torch_0/brightness /sys/class/leds/led:torch_1/brightness /sys/class/leds/led:flash_0/brightness /sys/class/leds/led:flash_1/brightness; do echo 0 > \"\$f\"; done"
-adb_cmd install -r "$APK"
+adb_cmd shell "rm -f '$REMOTE_PID' '$REMOTE_HELPER' '$REMOTE_LOG'"
+# Keep the pulse service on device loopback; do not create an ADB forward.
+adb_cmd forward --remove tcp:18761 >/dev/null 2>&1 || true
 adb_cmd push "$HELPER" "$REMOTE_HELPER" >/dev/null
 adb_cmd shell "chmod 700 '$REMOTE_HELPER'; nohup /system/bin/sh '$REMOTE_HELPER' >'$REMOTE_LOG' 2>&1 </dev/null &"
-adb_cmd forward --remove tcp:18761 >/dev/null 2>&1 || true
-adb_cmd forward tcp:18761 tcp:18761 >/dev/null
+adb_cmd shell "for n in 1 2 3 4 5; do [ -f '$REMOTE_PID' ] && break; sleep 1; done; test -f '$REMOTE_PID'"
+adb_cmd install -r "$APK"
+adb_cmd shell am force-stop com.lumia.irisprobe.demo 2>/dev/null || true
 adb_cmd shell am force-stop com.lumia.irisprobe.feedback 2>/dev/null || true
 adb_cmd shell am start -n com.lumia.irisprobe.demo/com.lumia.irisprobe.IrisProbeActivity
 
-echo "Demo ready. Open iris; tap Start enrollment, then tap that same button three times for IR-assisted samples."
-echo "After a usable consensus is built, tap Demo unlock for one IR-assisted comparison frame."
-echo "The helper is idle with all LEDs off and only accepts one bounded pulse per frame."
+echo "Demo ready. Enrollment/comparison remain IR-off. Advanced controls offer a confirmed 250 ms minimum IR pulse for a diffuse target only."
+echo "The helper is reachable only on phone loopback; no ADB port forward is created."
 echo "To close the demo and clean up, run: $APP_DIR/demo-off-phone.sh${SERIAL:+ $SERIAL}"

@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "attempt": "bounded manual exposure/sensitivity capture; no still frame requested",
+  "observed": {
+    "camera_before_abort": "iris camera ID 2 active for preview",
+    "visible_ui": "system Clock app; probe controls unavailable",
+    "capture_settings_changed": false,
+    "manual_exposure_capture_completed": false,
+    "ir_enabled": false
+  },
+  "recovery": {
+    "action": "force-stopped only the temporary probe package",
+    "active_camera_clients_after_stop": [],
+    "led_brightness_after_stop": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "top_activity_after_stop": "com.android.launcher3/.uioverrides.QuickstepLauncher"
+  },
+  "interpretation": "No manual exposure result was obtained. The test was stopped because the system Clock was foreground while the iris preview client remained active. Force-stop released camera 2; no device settings, biometric data, or emitter controls were changed."
+}

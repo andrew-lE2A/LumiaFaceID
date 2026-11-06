@@ -15,12 +15,12 @@ unlocks Android or persists an enrollment template.
 | Area | What is known |
 | --- | --- |
 | Sensor | Model `0x0861`; Android exposes three cameras and the iris is camera ID 2, reported as front-facing. The normal front camera remains its own slot. |
-| Image path | Camera2 preview and 1920×1080 YUV callbacks have been observed from the iris camera. The frames captured so far are too dark or lack a usable eye region; segmentation and orientation/geometry are not validated. |
+| Image path | Camera2 preview/YUV callbacks and one IR-off RAW10 frame have arrived. RAW10 was 1920×1088 with packed stride 2400; those pixels were discarded. A one-shot RAW10 save control is now installed, but has not yet captured a file. A 100 ms / ISO 800 manual request returned 99.996 ms / ISO 800, so manual sensitivity works; one AE result's ISO 3922 remains unexplained. The file converter passes a synthetic packed-RAW10 fixture, but real sensor bytes, image quality, segmentation and Cityman rotation remain unvalidated. See the [manual capture record](android/iris-camera-probe/phone-manual-100ms-iso800-2026-11-06.json), [RAW-save build readback](android/iris-camera-probe/raw10-save-control-build-2026-11-06.json) and [synthetic converter check](tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json). |
 | Kernel diagnostic | MCLK is about 9.6 MHz, CSID3 core about 240 MHz and PHY2 timer about 200 MHz. CSI selection register `0x0111` reads back `2`. The separate direct stream diagnostic has recorded zero sensor-counter increments and zero CSID3 packet/ECC/CRC deltas. These measurements are from that diagnostic path and do not negate the Camera2 callbacks through the Android camera stack. |
-| IR emitter | A previous single minimum-level `torch_0` request (brightness 14, corresponding to the lowest measured nonzero hardware code) returned ON/OFF, and the user reported a faint red glow. A matching Camera2 result/YUV frame was received in that run. The software helper turns the LED off on capture completion or after its one-second maximum. Optical output and actual LED-to-exposure timing were not measured. |
-| Live preview IR | **Not implemented.** The repeating preview remains IR-off. Enrollment and comparison requests pulse the LED around an individual still capture; this is not the Windows per-frame camera/KMD illumination path. |
-| Windows comparison | Static analysis found that Windows carries pulsing-mode and IR-current settings in a per-frame camera result submitted to a camera KMD IOCTL. The receiving implementation, Cityman pin/output route, Android timing equivalent and current-code mapping are unresolved. |
-| Unlock | No iris biometric service is registered in the installed Android build. No protected template store, validated matcher, liveness detection, lockout policy or successful Android screen unlock exists. |
+| IR emitter | A previous bounded minimum-level `torch_0` request (brightness 14, lowest measured nonzero code) returned ON/OFF; the user reported a faint red glow, and a Camera2 result/YUV frame arrived in that historical run. Optical output, eye-safety limits and LED-to-exposure timing were not measured. The current enrollment/comparison flow does not activate IR. |
+| Live preview IR | **Not implemented.** The repeating preview and enrollment/comparison are IR-off. An advanced button can request one 250 ms minimum-level `torch_0` pulse for a confirmed diffuse-target diagnostic; it is not synchronized to exposure or an eye-safety validation. |
+| Windows comparison | Static analysis found that Windows carries pulsing-mode and IR-current settings in a per-frame camera result. Commit [a53c69a](https://github.com/leojukic03/lumia-iris-notes/commit/a53c69ad38a9bd7884067e84c771776945c13a60) decodes LED-7 assist settings 13/20/30/100% to PMI8994 flash-field codes 10/15/23/22 (about 125–291 mA by the Linux scale). Exact Cityman LED mapping, active default level, and Android camera-synchronized pulse path remain unresolved. `iris.sys` uses GPIO output index 0; its selector is separate. The test helper stays on phone loopback; no ADB forward is created. |
+| Unlock | No iris biometric service is registered in the installed Android build. Local framework patches 0003-0008 add Keyguard plumbing and explicit fail-closed behavior, but are not built or installed. The phone reports `ro.crypto.state=unsupported`; there is no protected template store, validated matcher, liveness detection, lockout policy or successful Android screen unlock. |
 
 The Windows flash driver's accepted levels and pulse limits are **not** Android
 brightness conversions or validated eye-safety limits. Do not raise the
@@ -34,15 +34,15 @@ The experimental app source and device instructions are in
 flow is:
 
 1. Open the iris camera.
-2. Start an in-memory enrollment and capture three IR-assisted frames.
-3. Capture one more IR-assisted frame for the demo comparison indicator.
+2. Start an in-memory enrollment and capture three IR-off diagnostic frames.
+3. Capture one more IR-off frame for the demo comparison indicator.
 
-The app stops repeating preview during each still capture, requests the
-minimum-level torch pulse, then asks the helper to turn it off when Camera2
-reports that exposure complete. The matcher is an unvalidated log-Gabor
-prototype with an uncalibrated demo cutoff. **“Demo unlock” changes only the
-app's display; it does not authenticate the user or unlock Android.** Captured
-pixels and templates are transient and are not saved by this enrollment flow.
+The current app flow does not turn on the emitter. Its matcher is an
+unvalidated log-Gabor prototype with an uncalibrated demo cutoff. **“Demo
+compare” changes only the app's display; it does not authenticate the user or
+unlock Android.** Captured pixels and templates are transient and are not
+saved by this enrollment flow. Do not restore the old ADB forward: it made the
+helper's pulse request available to local host processes.
 
 To build the feedback/demo APK, set the Android SDK and signing variables
 documented in [`android/iris-camera-probe/build.sh`](android/iris-camera-probe/build.sh),
@@ -53,9 +53,9 @@ PROBE_MANIFEST=android/iris-camera-probe/AndroidManifest.feedback.xml \
   sh android/iris-camera-probe/build.sh
 ```
 
-The built APK is ignored by Git. With the phone connected, the helper scripts
-install/launch the demo or stop it, remove its ADB forward, and force all four
-LED channels off:
+The built APK is ignored by Git. With the phone connected, the scripts
+install/launch the IR-off demo or stop it, remove any stale ADB forward, and
+force all four LED channels off:
 
 ```sh
 android/iris-camera-probe/demo-on-phone.sh [adb-serial]
@@ -67,27 +67,48 @@ metal can or reflective enclosure. For any authorized emitter observation,
 use a diffuse target with no person or animal in the direct or reflected path.
 The software timeout is not an eye-safety limit.
 
-## Main blockers and next work
+## Missing pieces before iris unlock
 
-1. **Recover the real illumination route and timing.** Linux's pinned CCI GPIO
-   write path is a no-op. Windows CCI queue/output mapping and the camera KMD
-   receiver are not resolved. GPIO21 has a CCI_TIMER0 mux option in SoC data,
-   but it was unclaimed in the observed Android state and the live device tree
-   has no active CCI timer group. The service-schematic text is not enough to
-   prove that this signal reaches the front IR emitter. Avoid guessed GPIO,
-   register or pinmux writes.
-2. **Reproduce camera-synchronized IR safely.** Windows sends per-frame pulse
-   and current metadata through its camera stack. Android currently has only
-   a bounded software pulse per still request, with no measured optical edge
-   timing. The emitter's output, current mapping, thermal behavior and safe
-   exposure remain unknown.
-3. **Get usable images.** Capture repeatable frames with visible iris detail,
-   confirm orientation and eye geometry, and build reliable pupil/iris
-   segmentation and quality rejection on representative phone samples.
-4. **Validate recognition before authentication.** The prototype matcher has
-   no calibrated false-accept/false-reject rates or presentation-attack
-   resistance. Android biometric framework scaffolding is source-only and
-   does not provide a camera-backed authenticator.
+1. **Validate real image bytes.** The installed probe has a guarded button to
+   save one IR-off RAW10 frame and geometry sidecar in app-private storage.
+   Capture it only while aimed at a diffuse, non-person target. No sensor
+   pixels have been saved yet. The offline converter passed a synthetic
+   packed-RAW10 fixture, but it still needs a real frame; normalization and
+   Cityman rotation remain unknown.
+2. **Recover Windows-equivalent image geometry and useful eye detail.** Confirm
+   RAW normalization, orientation, the two-view split and eye coordinates on
+   representative IR0861 frames. Current proposals did not yield repeatable
+   eye regions. Implement pupil/iris segmentation and quality rejection only
+   after those inputs are understood.
+3. **Resolve illumination routing and timing.** Linux's pinned CCI GPIO write
+   path is a no-op. The iris sequence requests CCI GPIO output index 0; its
+   configured selector is a separate request field. Windows CCI queue/output
+   mapping and the camera KMD receiver are not resolved. GPIO21 has a
+   CCI_TIMER0 mux option in SoC data, but it was unclaimed in the observed
+   Android state and the live device tree has no active CCI timer group. The
+   service-schematic text does not prove that this reaches the front IR
+   emitter. Avoid guessed GPIO, register or pinmux writes.
+4. **Establish optical limits and camera-synchronized IR.** Windows carries
+   per-frame pulse/current metadata, but the prior Android software pulse did
+   not measure optical timing or eye exposure. Driver codes and the lowest
+   Android brightness are not safety limits. Do not use IR for eye-facing
+   enrollment until routing, current, thermal behavior, timing and safe
+   exposure are independently established.
+5. **Build and evaluate a real matcher.** The current log-Gabor code is a
+   diagnostic prototype, with no representative Lumia enrollment set,
+   calibrated false-accept/false-reject results or presentation-attack
+   resistance. No iris identity decision is suitable for authentication.
+6. **Implement the Android biometric path.** There is no camera-backed iris
+   authenticator, enrollment/removal service, camera arbitration against the
+   normal front camera, lockout policy or tested Keyguard integration. Local
+   framework patches are source-only; the experimental app's demo comparison
+   never unlocks Android.
+7. **Provide hardware-backed template protection and result trust.** The
+   phone reports `ro.crypto.state=unsupported`. A credential-authenticated
+   AndroidKeyStore key remained software-backed even during a temporary boot
+   where QSEECOM bound and `/dev/qseecom` existed. This tested path cannot
+   protect iris templates or attest a trusted match; do not enable enrollment
+   or unlock on it.
 
 See the living [development checklist](LumiaFaceID-checklist.txt), the
 [Windows driver analysis](docs/windows-driver-analysis.md), the

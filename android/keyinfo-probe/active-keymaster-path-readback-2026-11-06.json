@@ -1,0 +1,45 @@
+{
+  "host_date": "2026-11-06",
+  "device_build_display": "BP4A.251205.006 test-keys",
+  "android_release": "16",
+  "kernel": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026",
+  "kernel_cmdline_dtb_index": 1,
+  "read_only_runtime": {
+    "keymaster_hidl": "android.hardware.keymaster@3.0::IKeymasterDevice/default running as PID 507",
+    "keystore2": "running as PID 506",
+    "keymaster_service_mapped_libraries": [
+      "/vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so",
+      "/vendor/lib64/libkeymaster3device.so",
+      "/vendor/lib64/libsoftkeymasterdevice.so",
+      "/vendor/lib64/libkeymaster_portable.so",
+      "/vendor/lib64/libkeymaster_messages.so"
+    ],
+    "qseecom_client_library": "/vendor/lib64/libQSEEComAPI.so exists but was not mapped in the Keymaster service process",
+    "qseecom_kernel_config": "CONFIG_QSEECOM=y in /proc/config.gz",
+    "qseecom_kernel_symbols": "qseecom_probe and qseecom_init are present in /proc/kallsyms",
+    "active_qsee_platform_device": "/sys/bus/platform/devices/6500000.qcom,qseecom exists; compatible qcom,qseecom",
+    "qsee_driver_binding": "The device has no driver symlink; /sys/bus/platform/drivers/qseecom is empty",
+    "qseecom_device_node": false,
+    "qseecom_misc_entry": false,
+    "qseecomd": "running; sys.listeners.registered=true",
+    "kernel_log": "No qseecom/QSEE probe lines found in readable current dmesg; pstore contained no probe result. Device uptime was about 142001 seconds, so early dmesg may have rolled over."
+  },
+  "static_source_trace": {
+    "probe": "The local qseecom.c qseecom_probe creates the char device, queries QSEOS version over SCM, initializes the ION client, reads QSEE/FDE/PFE and clock properties, and notifies the secure world of the secure-app memory region.",
+    "failure_cleanup": "Probe error labels destroy the cdev/device/class and return the error; therefore an unbound platform device with no /dev/qseecom is consistent with probe failure.",
+    "active_tree": "DTB index 1 is Cityman (qcom,msm8994, mmo,cityman). The matching boot-image DTB has qcom,qseecom at /soc/qcom,qseecom@6500000 with reg 0x06500000 size 0x00500000; status is absent (enabled by default)."
+  },
+  "interpretation": "Direct evidence shows that the running Android Keymaster service loads the software device implementation. QSEECOM code and the platform node exist, but the driver is not bound and its device node is absent. The precise probe failure is not yet known because early kernel messages are unavailable. Do not enable iris enrollment or unlock on this software path.",
+  "cleanup": {
+    "device_configuration_changed": false,
+    "rebooted": false,
+    "camera_accessed": false,
+    "ir_or_led_controlled": false
+  },
+  "recorded_boot_image": {
+    "path": "/private/tmp/cityman-iris-android-03.img",
+    "sha256": "f0699d7737af61254e531ce2475ba841e50a1cdef2924594f0dab8954d1d8f55",
+    "basis": "Matches the prior read-only boot-partition readback and flashed-image record; current uname reports the same kernel build identifier.",
+    "cityman_dtb_sha256": "349a01863a05cf56096806e6703fccefd704abdc87bf9356947c7d5a8adc0eb2"
+  }
+}

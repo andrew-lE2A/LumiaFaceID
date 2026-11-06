@@ -1,0 +1,16 @@
+--- a/services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java
++++ b/services/core/java/com/android/server/biometrics/sensors/iris/IrisAuthenticator.java
+@@ -20,1 +20,2 @@
+ import android.annotation.NonNull;
++import android.hardware.biometrics.BiometricConstants;
+@@ -63,4 +64,10 @@ public final class IrisAuthenticator extends IBiometricAuthenticator.Stub {
+             String opPackageName, long requestId, int cookie, boolean allowBackgroundAuthentication,
+             boolean isForLegacyFingerprintManager, boolean isMandatoryBiometrics)
+             throws RemoteException {
++        // This sensor is registered for discovery, but no camera-backed authenticator is
++        // installed yet. Complete generic requests instead of leaving clients waiting.
++        if (sensorReceiver != null) {
++            sensorReceiver.onError(mSensorProperties.sensorId, cookie,
++                    BiometricConstants.BIOMETRIC_ERROR_HW_UNAVAILABLE, 0 /* vendorCode */);
++        }
+     }

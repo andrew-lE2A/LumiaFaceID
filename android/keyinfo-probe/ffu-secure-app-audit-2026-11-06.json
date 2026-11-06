@@ -1,0 +1,37 @@
+{
+  "host_date": "2026-11-06",
+  "source": "local Windows 10 Mobile FFU; original file preserved",
+  "ffu_platform": "Microsoft.MSM8994.P6211",
+  "partitions": {
+    "TZAPPS": {
+      "size_bytes": 16777216,
+      "filesystem": "FAT16",
+      "root_entries": [
+        "UEFI_SEC.MBN",
+        "ISSW_APE.MBN",
+        "CMNLIB.MBN",
+        "PR_3_0.MBN",
+        "DXHDCP2.MBN",
+        "ISSW0.MBN",
+        "ISSW1.MBN",
+        "ISSWRAML.MBN"
+      ],
+      "extracted_sha256": "492aaf8304cb7f1eddb5a1073c96c2ee8c8c11ad90f5c0ac4b79e4f2892fd8fe",
+      "plain_string_search": "No keymaster, keystore, gatekeeper, biometric or iris match was found in printable strings from this partition."
+    },
+    "WINSECAPP": {
+      "size_bytes": 524288,
+      "format": "32-bit ARM EABI5 statically linked ELF",
+      "extracted_sha256": "0c2d0eb9ccd6eda7bf30833a280b40342f1ee49bd3855109a3dee493f9aa74c2",
+      "identifying_strings": [
+        "qcom.tz.winsecapp",
+        "fTPM",
+        "TPM2_HierarchyChangeAuth",
+        "TPM2_Certify"
+      ],
+      "interpretation": "This is the Windows secure TPM application, not an Android Keymaster HAL or an identified Keymaster trusted application."
+    }
+  },
+  "conclusion": "The FFU's visible TZAPPS file set does not expose a separately named Android Keymaster trustlet, and WINSECAPP is a TPM app. This supports the view that the current Android image lacks or does not bind a TEE Keymaster backend, but plain-string absence cannot prove that no relevant function is embedded in ISSW or another secure firmware component. The exact Android vendor module and active DT binding remain unresolved.",
+  "cleanup": "Temporary extracted partition images were removed; the original FFU was not modified."
+}

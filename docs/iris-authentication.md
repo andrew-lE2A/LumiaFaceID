@@ -106,9 +106,10 @@ the 13/20/30/100 values be copied into Android's current field until the
 Windows LED-7 code units and result-record-to-PMIC consumer are resolved. The
 duration caps are useful source-derived ceilings for a future iris-specific
 pulse controller, but modes 1/2/3 are not yet mapped to the Android operation.
-Keep the existing one-shot control disabled until a bounded, iris-only path
-enforces a hard off timeout and its actual current is known. The Windows
-thermal thresholds do not fill that safety gap.
+Keep the existing minimum-level one-shot control restricted to a confirmed
+diffuse-target diagnostic. Do not use it for people or eyes, and do not raise
+its level or treat its timeout as an eye-safety control. The Windows thermal
+thresholds do not fill that safety gap.
 
 A follow-up read of the Windows disassembly confirms the LED-7 mapping function
 returns those codes to a PMIC configuration helper, but does not expose a unit
@@ -116,9 +117,47 @@ conversion in the caller. In this Linux tree the user brightness for `torch_0`
 is requested milliamps: nonzero values below 13 are clamped to 13, and the
 current register is programmed as `requested_mA * 15 / configured_max_mA`.
 Thus brightness 14 requests 14 mA and quantizes to register code 1 with the
-current 200 mA maximum. This makes the Linux scale explicit, but still does
-not establish whether Windows codes 10/15/23/22 are milliamps or how those
-values relate to Linux's 0–15 register code. No conversion is safe to port yet.
+current 200 mA maximum. This makes the Android torch scale explicit, but not
+equivalent to Windows' current field.
+
+### Windows IR assist current decode (2026-11-06)
+
+Static analysis added in
+[`lumia-iris-notes` commit a53c69a](https://github.com/leojukic03/lumia-iris-notes/commit/a53c69ad38a9bd7884067e84c771776945c13a60)
+decodes `tff_ir1_assist_current_cfg`: LED ID 7 maps the accepted 13%, 20%,
+30%, and 100% settings to PMI8994 current-field codes 10, 15, 23, and 22.
+The PMIC request places the code in the field limited to `0x4f`, with the
+separate field limited to `0x0f` set to zero. Together with the PMI8994 driver
+limits, this strongly indicates that Windows requests the flash-current field
+and leaves the torch-current field at zero. The precise board LED mapping and
+whether the default 100% setting is applied to iris frames remain unresolved.
+
+The [PMI8994/PMI8996 specification](https://manuals.plus/m/56e431a42b3a8efa99c52e6976e00c62a9007195406273cf6640615b1d997d2a.pdf)
+specifies 12.5 mA current steps, up to 1 A in flash mode and 200 mA in torch
+mode. On that nominal scale, codes 10/15/23/22 correspond to about
+125/188/288/275 mA. The pinned Linux driver maps flash requests linearly as
+`requested_mA * 0x4f / configured_max_mA`; with the Cityman 1000 mA maximum,
+that gives approximately 127/190/291/278 mA. These are register-derived
+estimates, not optical measurements. The notes' alternate `(code + 1) * 12.5`
+column is not supported by the specification's per-step description; use
+`code * 12.5` for its nominal scale.
+
+The earlier Android check requested `torch_0` brightness 14, which the Linux
+driver converts to current code 1 (about 13 mA). That is roughly an order of
+magnitude below Windows' lowest decoded flash-current setting and uses torch
+mode. This explains why the minimum Android glow may be much weaker than
+Windows' illuminator, but it does not justify raising Android output. The
+Windows pulse caps and thermal cooldown are driver controls, not validated
+eye-safety limits. The notes' proposed step-up-until-mean-luma-70 procedure is
+not a safe exposure calibration: image luma does not measure retinal
+exposure, and Windows' target-average statistic is not an eye-safety target.
+Do not run that sweep or use the Windows codes directly on Android.
+
+Implementation implication: investigate and reproduce the camera-controlled,
+time-bounded flash path and confirm that Windows LED ID 7 corresponds to the
+Cityman iris emitter before changing the Android torch test. A continuous
+torch cannot stand in for Windows' short flash pulses. No phone test or LED
+change was made for this finding.
 
 The new one-frame Android YUV capture is **not** the original Windows Hello
 enrollment or authentication algorithm. It only checks the camera-to-frame
@@ -135,26 +174,17 @@ cover that general model.
 
 ## Current illumination implementation
 
-The development probe's one-shot **IR + capture** path asks the
-root-localhost helper to set `torch_0` to brightness 14. After `ON`, it requests
-one YUV still, analyzes the pixels in memory, and discards them; it does not
-persist the illuminated frame. Once the `ImageReader` receives the image (or
-the request fails), the app sends `STOP` and waits for the helper's `OFF`
-confirmation. Client disconnect, helper exit and its one-second timed read
-force the LED off. This couples the pulse to one completed buffer
-rather than a UI timer, but optical timing and exposure overlap remain
-unmeasured. Host tests use a temporary fake LED file to check `STOP`,
-disconnect, signal and watchdog cleanup. One physical minimum-code pulse has
-now delivered a high-signal YUV frame on Camera2 camera 2; it ran with the
-phone in an owner-reported white thin box, whose material reflectance was not
-measured. The frame had no face-derived eye ROI and the whole-frame contrast
-proposal was display-only. This is not an eye-safety validation or proof of
-usable iris detail; see the
-[`phone result`](../android/iris-camera-probe/phone-min-current-ir-analysis-2026-11-05.json).
-Never use IR while the phone is under a metal can or reflective enclosure, or
-point it at people/eyes. Any further emitter test needs a confirmed diffuse
-target, no person in the reflected path, and a readback confirming the channel
-is zero.
+The current app exposes a separate advanced one-shot target test. After an
+on-device confirmation it asks the root-localhost helper for `torch_0`
+brightness 14 for about 250 ms; enrollment and comparison remain IR-off. The
+phone-local helper turns the channel off on STOP, disconnect, signal or its
+one-second timeout. No ADB forward is created. The current UI pulse is not
+coupled to a capture callback and does not measure optical timing. A prior
+build did bracket a Camera2 frame with a minimum-code pulse; that frame had no
+face-derived eye ROI and its whole-frame contrast proposal was display-only.
+Neither run validates eye safety or usable iris detail. Never use IR toward
+people/eyes, mirrors, or reflective enclosures. Any further emitter test
+needs a confirmed diffuse target and a clear reflected path.
 
 Before considering per-frame synchronization established or using it beyond a
 bounded diagnostic:
@@ -262,12 +292,17 @@ string do not expose a Cityman TLMM pin, the CCI GPIO queue MMIO base, or a
 net-to-PMIC mapping. This is a useful platform-driver boundary, not the
 missing route proof.
 
-The Windows CCI HAL disassembly also clarifies the driver's third argument:
-its GPIO-output encoder accepts an output index 0–4 and a level 0/1, then packs
-those into the GPIO command word. The iris sequence uses the configured
-selector as that output index and requests high then low. This confirms the
-logical CCI output number; it still does not map that number to a TLMM pin or
-the PMI8994 input.
+**Correction from the checked `iris.sys` disassembly:** the generic GPIO command
+encoder accepts an output index 0–4 and a level 0/1, then packs those into the
+GPIO command word. But the iris sequence at `0x40b134` does not pass its
+configured selector as that index. It stores the selector as a byte at
+`sp+0x16` in the CCI request record `{1, selector << 16, 0, 0}`. Both GPIO
+commands set the separate index word to constant `0`, with level `1` then `0`.
+Therefore the logical output is CCI GPIO output **0**; the selector is a CCI
+request field, consistent with the platform driver's queue-selection path, not
+a pin number. The selector field and the platform driver's selector have not
+been proven to be the same value. Output 0 still does not map to a TLMM pin or
+the PMI8994 input. Source: [FINDINGS section 27 at commit `0d2b4ae`](https://github.com/leojukic03/lumia-iris-notes/blob/0d2b4ae/FINDINGS.md).
 
 The reverse-engineered Windows queue encoder provides an implementation
 reference without providing a safe Linux register map. WAIT is encoded as
@@ -645,6 +680,63 @@ add isolated matching and protected template/camera paths; Class 3 also needs
 the hardware-backed keystore and valid HAT flow. Raw capture remains on-device
 and should not be copied off for development.
 
+The follow-up read-only inspection on 2026-11-06 confirms the legacy Keymaster
+3.0 and GateKeeper HIDL endpoints are registered and their vendor init
+services are running. `lshal` identifies the GateKeeper implementation as
+`android.hardware.gatekeeper@1.0-service.software`; it does not reveal the
+Keymaster security level. `qseecomd` processes are running and
+`sys.listeners.registered=true`, but `/dev/qseecom` is absent to the ADB shell.
+This is not enough to determine whether QSEE-backed Keymaster calls work.
+`dumpsys keystore2` and `cmd keystore2` expose no diagnostic interface on this
+build. This leaves the previous conclusion unchanged: query an Android
+`KeyInfo` security level and verify the credential confirmation flow before
+designing persistent enrollment. The exact readback is in
+[`android16-keymaster-readback-2026-11-06.json`](../android/iris-camera-probe/android16-keymaster-readback-2026-11-06.json).
+
+### On-device AndroidKeyStore probe (2026-11-06)
+
+A temporary APK then queried `KeyInfo` directly. Creating a key with
+device-credential authentication was rejected with `Secure lock screen must
+be enabled to create keys requiring user authentication`. A plain AES key was
+created and deleted; its `getSecurityLevel()` returned `0`
+(`SECURITY_LEVEL_SOFTWARE`), `isInsideSecureHardware()` was false, and the
+authentication-enforcement flag was false. Android documents level 0 as
+software enforcement and levels 1/2 as TEE/StrongBox secure hardware
+([`KeyInfo`](https://developer.android.com/reference/android/security/keystore/KeyInfo),
+[`KeyProperties`](https://developer.android.com/reference/android/security/keystore/KeyProperties#SECURITY_LEVEL_SOFTWARE)).
+This directly confirms that the tested key path is software-backed and that
+the current phone configuration cannot create an auth-bound key. It does not
+prove every Keymaster algorithm is software-only. The app alias was deleted,
+the temporary package was uninstalled, and neither camera nor emitter was
+accessed. See
+[`device-result-2026-11-06.json`](../android/keyinfo-probe/device-result-2026-11-06.json).
+
+The immediate blocker is now confirmed: the device has no secure lock screen
+enabled, and the tested AndroidKeyStore path provides software enforcement.
+The Android 16 CDD requires confirming an existing or newly configured device
+credential secured by the TEE before enrolling any biometric. Do not persist
+iris templates or wire the experimental matcher to Keyguard on the current
+configuration. A future check requires the owner to configure a device
+credential; it must then repeat the credential-bound `KeyInfo` probe before
+enrollment work proceeds.
+
+### Credential-bound KeyInfo follow-up (2026-11-06)
+
+After the owner enabled a device credential, the probe successfully generated
+an AES key requiring that credential for every use. `KeyInfo` returned
+security level `0` (`SECURITY_LEVEL_SOFTWARE`),
+`isInsideSecureHardware=false`, `isUserAuthenticationRequired=true`, auth type
+`1` (`AUTH_DEVICE_CREDENTIAL`), and
+`isUserAuthenticationRequirementEnforcedBySecureHardware=false`. The probe
+deleted its alias and was uninstalled. It did not use or record the credential
+value and did not access the camera or IR. This confirms that the configured
+AndroidKeyStore path remains software-backed even after a PIN is set; setting
+a screen lock alone does not provide the required TEE chain. The device's
+Keymaster/QSEE integration must be repaired or another TEE-backed credential
+path demonstrated before iris enrollment can be safely enabled. The result is
+in
+[`pinned-credential-result-2026-11-06.json`](../android/keyinfo-probe/pinned-credential-result-2026-11-06.json).
+
 The latest read-only check (2026-11-05) again found all four LED brightness
 values at zero, all three camera IDs closed, and the iris service absent. An
 older `dumpsys media.camera` history entry named the temporary frame-check
@@ -656,6 +748,14 @@ diffuse target is arranged. See
 
 The exact readback is recorded in
 [`android16-device-trust-state-2026-11-05.json`](../android/iris-camera-probe/android16-device-trust-state-2026-11-05.json).
+
+A new read-only check on 2026-11-06 found build `BP4A.251205.006 test-keys`,
+three camera IDs, but no `android.hardware.iris` package feature, `iris` Binder
+service, biometric sensor or active session. `ro.crypto.state` remains
+`unsupported`. The probe demo and phone-local pulse helper are running, but no
+camera client is active, all four LEDs are 0, and there are no ADB forwards.
+The framework patches remain source-only and are not present in this ROM. See
+[`android16-unlock-readback-2026-11-06.json`](../android/iris-camera-probe/android16-unlock-readback-2026-11-06.json).
 
 A fresh read-only ADB check on 2026-11-05 found all three camera devices
 closed, no active camera clients, and all four LED channels at zero. The iris
@@ -1257,12 +1357,15 @@ validated error rates or liveness performance. We therefore cannot connect
 its current diagnostic comparison to a screen-unlock success callback.
 
 The local patch set now includes a hidden Keyguard-only request/cancel/result
-contract (`0005`), the per-user enrollment query (`0006`), and an initial
-Keyguard lifecycle bridge (`0007`). The service still intentionally returns
-`BIOMETRIC_ERROR_HW_UNAVAILABLE`; there is no working camera authenticator.
-Do not mistake the source plumbing for a working or security-qualified
-unlock path. Patch 0007 has only been applied in a disposable source check; it
-has not been compiled or installed. Its review is recorded in
+contract (`0005`), the per-user enrollment query (`0006`), an initial Keyguard
+lifecycle bridge (`0007`), and a generic-authenticator failure response
+(`0008`). Patch `0008` makes `prepareForAuthentication()` report
+`BIOMETRIC_ERROR_HW_UNAVAILABLE` while the camera backend is absent, instead
+of leaving generic biometric clients waiting on an empty method. The Keyguard
+service still intentionally returns `BIOMETRIC_ERROR_HW_UNAVAILABLE`; there
+is no working camera authenticator. Do not mistake the source plumbing for a
+working or security-qualified unlock path. Patches 0007-0008 are local source
+only and have not been compiled or installed. The lifecycle review is recorded in
 [`framework-iris-keyguard-lifecycle-check-2026-11-05.json`](../android/patches/framework-iris-keyguard-lifecycle-check-2026-11-05.json).
 
 Source review found that patches 0005 and 0006 described the new `IrisManager`
@@ -1313,3 +1416,132 @@ enrollment, that would incorrectly permit an iris request. The separate
 face and fingerprint in `BiometricModality` and AuthService. The iris backend
 must expose per-sensor enrollment state from its own per-user template store;
 until then Keyguard must not infer iris enrollment from either aggregate API.
+
+### Credential-bound Keymaster check (2026-11-06)
+
+A temporary KeyInfo probe was rerun after a secure device credential had been
+configured. Android accepted an AES key requiring device-credential
+authentication, but `KeyInfo` reported `SECURITY_LEVEL_SOFTWARE`,
+`isInsideSecureHardware=false`, and
+`isUserAuthenticationRequirementEnforcedBySecureHardware=false`. The alias
+was deleted and the APK uninstalled. This rules out using the currently
+exposed Keymaster path for protected iris-template enrollment; it does not
+establish the security level of every key algorithm or another vendor
+service. Full result: [pinned credential readback](../android/keyinfo-probe/pinned-credential-result-2026-11-06.json).
+
+Read-only runtime inspection found the vendor Keymaster 3.0 HIDL service
+running and QSEECOM enabled in the running kernel config, while
+`/dev/qseecom` and a legacy `keystore*.so` hardware module were not present in
+the inspected device paths. The Cityman device tree packages the Keymaster
+3.0 service and `qseecomd`; package-level wiring alone does not prove the
+service reaches a trusted application. The next security-path task is to
+trace the service implementation's selected device module and QSEE device
+registration against the exact booted DT and vendor blobs. Do not enable
+iris enrollment or unlock until a credential-bound key reports TEE security
+and secure-hardware authentication enforcement.
+
+The preserved Windows Mobile FFU was also audited locally. Its `TZAPPS`
+partition's visible file set contains UEFI/ISSW, DRM and HDCP images but no
+separately named Android Keymaster trustlet; `WINSECAPP` is an ARM32 Qualcomm
+TPM application (`qcom.tz.winsecapp`). This does not prove that secure
+firmware contains no reusable Keymaster implementation, and does not rule out
+an omitted Android vendor blob. It does show that copying the Windows TPM app
+would not supply Android Keymaster. Partition inventory and hashes are in
+[`ffu-secure-app-audit-2026-11-06.json`](../android/keyinfo-probe/ffu-secure-app-audit-2026-11-06.json).
+
+The saved `iris-csi-03` kernel artifact also contains `CONFIG_QSEECOM=y` and
+an enabled-by-default `/soc/qcom,qseecom@6500000` node. At the time, it was
+unclear whether that saved artifact matched the active phone image. Details:
+[`kernel-qsee-dt-audit-2026-11-06.json`](../android/keyinfo-probe/kernel-qsee-dt-audit-2026-11-06.json).
+
+The active phone readback now narrows this further. Kernel `#18` is running
+with DTB index 1, matching the recorded flashed boot image; that image's
+Cityman DTB hash is `349a0186…adc0eb2`. Its QSEE platform device exists, and the kernel exposes
+`CONFIG_QSEECOM=y` plus `qseecom_probe` symbols, but the platform device has no
+bound driver and `/dev/qseecom` is absent. The Keymaster 3.0 process maps
+`libsoftkeymasterdevice.so`; `libQSEEComAPI.so` exists on the vendor partition
+but is not mapped by that service. The local pinned driver source creates the
+QSEE device node during probe, performs an SCM/QSEOS version query and secure
+app-region registration, then unwinds the device on probe failure. Thus the
+current evidence points to a failed or uncompleted QSEECOM probe plus an
+active software Keymaster fallback. Early kernel logs have rolled over, so
+the specific probe failure remains unknown. See
+[`active-keymaster-path-readback-2026-11-06.json`](../android/keyinfo-probe/active-keymaster-path-readback-2026-11-06.json).
+
+The next diagnostic is to capture QSEECOM messages immediately after boot.
+Avoid manually binding the platform driver: that would trigger SCM calls and
+change the live trusted-execution state. Iris enrollment and unlock remain
+disabled until credential-bound keys are TEE-backed and hardware-enforced.
+
+### Temporary QSEECOM bind experiment (2026-11-06)
+
+Fresh boot logs showed the QSEE 2.0 driver reached the secure-app registration
+call and received raw SCM `-8` for function `0x32000105` (QSEE OS app-manager
+region notification). The local SCM wrapper does not define `-8`, maps it to
+`-EINVAL`, and QSEE probe then unwinds. The Windows UEFI image also contains a
+reserved `TZ Apps` memory entry at exactly `0x06500000-0x06A00000`, the range
+from the Cityman QSEE node. That is evidence for a bootloader-managed QSEE
+region, but not proof that UEFI notified secure world.
+
+I made one boot-only DT variant adding the documented
+`qcom,appsbl-qseecom-support` property to the QSEE node. The property skips
+the failing region-notification call. The same #18 kernel and ramdisk were
+used, and a semantic DTB comparison confirmed this was the only tree change.
+On the temporary boot, the driver bound successfully and `/dev/qseecom` was
+created; `qseecomd` ran. The phone was then rebooted to its installed #18
+image, where `/dev/qseecom` is absent again. No partition was flashed. Full
+record: [QSEECOM experiment](../android/keyinfo-probe/qseecom-appsbl-experiment-2026-11-06.json).
+
+This establishes a working QSEECOM device node under the bootloader-support
+flag, not a TEE-backed Android Keymaster. The credential-bound KeyInfo check
+was not repeated because the Android user was locked after reboot; the
+temporary probe APK was removed. Next, after the owner unlocks Android, repeat
+KeyInfo with the same temporary QSEE-enabled boot. Keep iris enrollment and
+unlock disabled unless the resulting key reports TEE security and
+secure-hardware authentication enforcement.
+
+
+### KeyInfo with QSEECOM bound (2026-11-06)
+
+I repeated the credential-bound KeyInfo diagnostic under the same temporary
+boot-only DT variant that sets `qcom,appsbl-qseecom-support`. QSEECOM bound and
+created `/dev/qseecom`; Android was unlocked and launched the temporary probe.
+The credential-authenticated AES key still reported security level 0
+(`SECURITY_LEVEL_SOFTWARE`), `isInsideSecureHardware=false`, and
+`isUserAuthenticationRequirementEnforcedBySecureHardware=false`. The alias was
+deleted, the APK was uninstalled, and the phone rebooted to installed kernel
+#18. The original kernel again has no `/dev/qseecom`; all three camera devices
+remain enumerated with no active client, and every LED channel reads zero.
+
+This rules out the tested AndroidKeyStore/Keymaster path for protected iris
+template enrollment even when the QSEE device node is made available. It still
+does not prove that no separate trusted application or vendor authentication
+service could be added. Iris enrollment and unlock must remain disabled until a
+real trusted matching and template-protection path is available. Full result:
+[QSEECOM KeyInfo readback](../android/keyinfo-probe/qseecom-keyinfo-result-2026-11-06.json).
+
+The next security-path investigation should identify why the running Keymaster
+3.0 service selects `libsoftkeymasterdevice.so` and whether the local vendor
+image contains a compatible hardware Keymaster implementation and trusted app.
+Repeating the `qcom,appsbl-qseecom-support` DT boot alone is not useful: QSEECOM
+binding succeeded, but the measured credential-bound key remained software
+level. Do not make that experimental DT property permanent as a proposed fix.
+
+### Camera2 RAW10 callback (2026-11-06)
+
+CameraService advertises RAW10 at the iris camera's full 1920×1088 array. A
+temporary side-by-side probe then opened only camera ID 2 and requested one
+RAW10 still with IR off. Camera2 delivered the image plane: row stride 2400,
+pixel stride 0, 2,611,200 bytes, full-frame crop. The buffer timestamp matched
+the still result, and the in-memory decoder completed before discarding the
+pixels. The 2400-byte row equals the packed RAW10 layout (four pixels in five
+bytes); this verifies that Camera2 can produce the expected input size for the
+offline Windows-shape conversion. The image bytes were not saved, so the
+standalone converter has not yet been checked against a real file.
+
+The same AE result reported 80.0 ms exposure and ISO 3922, while camera
+metadata advertises sensitivity only through ISO 800. Treat that discrepancy
+as a HAL metadata/exposure issue, not a calibration value. The test app was
+uninstalled afterward; CameraService has no active camera client, and all four
+torch/flash channels read 0. Full readback:
+[RAW10 callback result](../android/iris-camera-probe/phone-raw10-callback-2026-11-06.json).

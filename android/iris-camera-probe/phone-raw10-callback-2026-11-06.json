@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-06",
+  "device": "Lumia 950 XL (cityman), LineageOS 23.2 / Android 16",
+  "package": "com.lumia.irisprobe.rawinspect",
+  "method": "one IR-off Camera2 RAW10 still request; buffer processed only in RAM and discarded",
+  "camera": {
+    "id": "2",
+    "sensor_array": [1920, 1088],
+    "active_clients_before_capture": ["camera 2 / com.lumia.irisprobe.rawinspect"],
+    "front_camera_opened_concurrently": false
+  },
+  "capture_result": {
+    "frame_number": 638,
+    "exposure_ns": 80008560,
+    "sensitivity_iso_reported": 3922,
+    "advertised_sensitivity_range_iso": [100, 800],
+    "sensitivity_outside_advertised_range": true,
+    "post_raw_sensitivity_boost": 100,
+    "frame_duration_ns": 80188360,
+    "ae_state": 2,
+    "sensor_timestamp_ns": 6116796476043,
+    "timestamp_source": "UNKNOWN"
+  },
+  "image": {
+    "format": "RAW10",
+    "size": [1920, 1088],
+    "crop": [0, 0, 1920, 1088],
+    "plane_count": 1,
+    "row_stride_bytes": 2400,
+    "pixel_stride_bytes": 0,
+    "buffer_bytes": 2611200,
+    "timestamp_ns": 6116796476043,
+    "image_result_timestamps_match": true
+  },
+  "derived_layout_check": {
+    "packed_raw10_row_bytes_expected": 2400,
+    "observed_row_stride_matches_packed_raw10": true,
+    "expected_full_buffer_bytes": 2611200,
+    "observed_buffer_bytes_match_stride_times_height": true,
+    "interpretation": "The delivered plane uses the packed-row size expected for four 10-bit pixels in five bytes. The in-memory decoder completed without error. The image was not written to disk, so the standalone converter has not yet processed a real sensor file."
+  },
+  "privacy_and_safety": {
+    "pixel_buffer_saved": false,
+    "pixel_values_logged": false,
+    "ir_or_flash_requested": false,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "camera_clients_after_teardown": [],
+    "temporary_app_uninstalled": true
+  },
+  "interpretation": "This confirms actual Camera2 RAW10 frame delivery and the packed stride/layout on camera 2. It does not validate the Windows tone curve, rotation, image quality, segmentation or recognition. AE reported ISO 3922 despite the advertised maximum ISO 800; investigate the HAL metadata separately before using this as exposure calibration.",
+  "unlock_status": "Unchanged: no Android iris authenticator, secure enrollment store, or iris unlock path."
+}

@@ -1,0 +1,26 @@
+{
+  "host_date": "2026-11-06",
+  "device_build": "BP4A.251205.006 test-keys",
+  "package": "com.lumia.keyinfoprobe",
+  "method": "temporary APK; AndroidKeyStore AES key generation and KeyInfo inspection",
+  "credential_authenticated_key_attempt": {
+    "result": "rejected before key creation",
+    "exception": "java.security.InvalidAlgorithmParameterException: java.lang.IllegalStateException: Secure lock screen must be enabled to create keys requiring user authentication"
+  },
+  "ordinary_key": {
+    "key_type": "AES",
+    "security_level": 0,
+    "security_level_name": "SECURITY_LEVEL_SOFTWARE",
+    "inside_secure_hardware": false,
+    "auth_required": false,
+    "auth_type": 0,
+    "auth_requirement_enforced_in_secure_hardware": false
+  },
+  "cleanup": {
+    "temporary_alias_deleted_by_probe": true,
+    "package_uninstalled": true,
+    "camera_accessed": false,
+    "ir_or_led_controlled": false
+  },
+  "interpretation": "The currently configured phone lock state does not permit credential-authenticated Keystore keys. The tested ordinary AES key is software-protected. This does not prove that every Keymaster key type is software-only, but it does establish that this tested path cannot provide a TEE-backed credential-bound enrollment key on the phone as currently configured. Do not persist iris templates or enable iris enrollment/unlock on this result."
+}

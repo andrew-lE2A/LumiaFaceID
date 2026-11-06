@@ -1,0 +1,21 @@
+{
+  "host_date": "2026-11-06",
+  "device_build": "BP4A.251205.006 test-keys",
+  "method": "read-only adb inspection; no reboot, service restart, camera access, or LED control",
+  "runtime": {
+    "keymaster_hidl": "android.hardware.keymaster@3.0::IKeymasterDevice/default is registered and served by PID 507",
+    "keystore2": "running",
+    "qseecomd": "running",
+    "gatekeeper": "software service running",
+    "qseecom_device_node": false,
+    "kernel_config_qseecom": true,
+    "legacy_keystore_hardware_module": "not found in inspected /system/lib[64]/hw and /vendor/lib[64]/hw paths",
+    "vendor_keymaster_impl": "android.hardware.keymaster@3.0-impl.so present in inspected vendor hardware-module paths"
+  },
+  "interpretation": "Runtime evidence narrows the issue: the Keymaster HIDL endpoint is up, but the tested credential-bound key is software-level and QSEECOM device node is absent. CONFIG_QSEECOM=y and a running qseecomd do not prove the driver registered or a trusted app is usable. Exact booted DT binding and service-to-device-module selection remain to be traced.",
+  "cleanup": {
+    "device_changed": false,
+    "camera_accessed": false,
+    "ir_or_led_controlled": false
+  }
+}

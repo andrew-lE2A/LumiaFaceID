@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-06",
+  "package": "com.lumia.irisprobe.devnext20261106",
+  "camera": {
+    "id": "2",
+    "sensor_orientation_degrees": 90,
+    "concurrent_cameras": false,
+    "format": "YUV_420_888",
+    "buffer_size": [
+      1920,
+      1080
+    ],
+    "crop": [
+      0,
+      0,
+      1920,
+      1080
+    ],
+    "buffer_timestamp_ns": 4351086861883,
+    "capture_result_timestamp_ns": 4351086861883,
+    "timestamp_source": "UNKNOWN",
+    "frame_saved": false,
+    "ir_enabled": false
+  },
+  "settings": {
+    "requested_exposure_ns": 100000000,
+    "returned_exposure_ns": 99995720,
+    "requested_sensitivity_iso": 800,
+    "returned_sensitivity_iso": 800,
+    "advertised_sensitivity_range_iso": [
+      100,
+      800
+    ],
+    "sensitivity_outside_range": false,
+    "post_raw_sensitivity_boost_percent": 100,
+    "requested_frame_duration_ns": 103500000,
+    "returned_frame_duration_ns": 103441784,
+    "ae_state": "INACTIVE"
+  },
+  "analysis": {
+    "whole_frame_luma": {
+      "p05": 68,
+      "p50": 85,
+      "p95": 102,
+      "mean_absolute_gradient_horizontal": 4.38,
+      "mean_absolute_gradient_vertical": 4.27
+    },
+    "split": {
+      "orientation_index": 1,
+      "overlap": 300,
+      "view_a": {
+        "rectangle_xywh": [
+          0,
+          0,
+          1920,
+          690
+        ],
+        "p95": 101,
+        "proposal": {
+          "center_sensor_px": [
+            306,
+            234
+          ],
+          "pupil_radius_px": 24,
+          "outer_radius_px": 72,
+          "edge_strengths": [
+            0.012,
+            0.005
+          ]
+        }
+      },
+      "view_b": {
+        "rectangle_xywh": [
+          0,
+          390,
+          1920,
+          690
+        ],
+        "p95": 101,
+        "proposal": {
+          "center_sensor_px": [
+            252,
+            840
+          ],
+          "pupil_radius_px": 24,
+          "outer_radius_px": 108,
+          "edge_strengths": [
+            0.013,
+            0.004
+          ]
+        }
+      },
+      "face_or_eye_roi": null,
+      "whole_frame_contrast_proposal": null
+    }
+  },
+  "interpretation": "Camera2 applied the requested 100 ms / ISO 800 manual settings closely, but this frame's luma p95=102 was lower than the earlier AE frame's p95=160. Weak radial proposals appeared in both split views, with no face/eye ROI; these are not iris localization. This does not validate the Windows pixel format, segmentation, or matcher.",
+  "teardown": {
+    "camera_active_clients": [],
+    "led_brightness": {
+      "torch_0": 0,
+      "torch_1": 0,
+      "flash_0": 0,
+      "flash_1": 0
+    },
+    "mode_after_close": "AE is restored by the activity's camera-close path"
+  }
+}
