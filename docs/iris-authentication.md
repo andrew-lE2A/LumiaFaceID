@@ -455,13 +455,24 @@ of that pre-populated queue object and connect the Windows controller resource
 to the context. The source and physical unit of the WAIT-scale byte remain
 unresolved.
 
-The current app-level workaround is already available: it requests
-`torch_0` at brightness 14, queues one iris capture while the light is on, and
-requests OFF on the capture-result callback. One phone run delivered a
-high-signal frame (luma p95 212) with matching result/YUV timestamps, but no
-face-derived eye ROI; the sensor clock and optical LED edges were not
-measured. This is a frame-bracketed illumination check, not the Windows
-hardware-timed pulse or usable iris imaging.
+The 2026-11-07 phone run used minimum `torch_0` brightness code 14 on a
+confirmed diffuse non-person target. In the earlier start-before-request
+test, one 1920×1080 YUV frame arrived; the helper reported OFF after Camera2's
+capture-result callback, about 310 ms after its ON acknowledgement. Pixels
+were discarded, and the analysis summary was not retained. See
+[`earlier capture record`](../android/iris-camera-probe/phone-ir-min-current-frame-2026-11-07.json).
+
+A later run exercised the capture-start-triggered pulse once. Camera2 delivered
+one YUV image for frame 589 with a sensor timestamp equal to
+`onCaptureStarted` and the eventual capture result. The helper returned ON/OFF
+acknowledgements. CPU analysis blocked the Camera2 callback handler, delaying
+the result callback to about 7.06 seconds after capture start, beyond the
+app's 850 ms wait; ISO was 982, above advertised maximum 800. No pixels or
+analysis metrics were retained. The current uncommitted source moves analysis
+to a separate thread, but that refactor has not been built. The camera
+timestamp source is `UNKNOWN`; software callback times do not prove optical
+overlap. Enrollment and comparison remain IR-off. Details:
+[`capture-start test record`](../android/iris-camera-probe/capture-start-pulse-build-2026-11-07.json).
 
 ### Porting the Windows driver behavior
 
@@ -1519,6 +1530,24 @@ does not prove that no separate trusted application or vendor authentication
 service could be added. Iris enrollment and unlock must remain disabled until a
 real trusted matching and template-protection path is available. Full result:
 [QSEECOM KeyInfo readback](../android/keyinfo-probe/qseecom-keyinfo-result-2026-11-06.json).
+
+### Readable Android vendor firmware inventory (2026-11-07)
+
+A read-only inventory of the connected Cityman's mounted vendor and firmware
+trees found no separately named Keymaster trusted-app image. `/vendor/firmware`
+contains gesture/motion `.napp` files plus DSP, GPU, WLAN/BT assets; its
+`napp_list.cfg` names `uninstall`, `pickup_gesture`, `sig_motion`,
+`double_twist`, and `activity`. `/firmware/image` contains modem and MBA
+images. The visible Keymaster files are the software-device libraries, the
+Keymaster 3.0 wrapper and its service. ADB was temporarily restarted as root
+for the directory listing, then returned to normal `uid=2000(shell)` mode; no
+files or settings were changed.
+
+This narrows the missing backend to a component not present as a separately
+named trustlet in those mounted trees, or one embedded in secure-world
+firmware. The tested credential-bound AndroidKeyStore path remains
+software-backed even when QSEECOM is bound. See the [vendor inventory
+record](../android/keyinfo-probe/vendor-secure-app-inventory-2026-11-07.json).
 
 The next security-path investigation should identify why the running Keymaster
 3.0 service selects `libsoftkeymasterdevice.so` and whether the local vendor

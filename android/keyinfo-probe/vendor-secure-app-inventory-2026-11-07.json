@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-07",
+  "method": "Read-only ADB directory, filename, and secure-app launch-list inspection.",
+  "device": {
+    "serial": "d7baece4",
+    "product": "lineage_cityman",
+    "model": "Lumia_950_XL"
+  },
+  "readable_vendor_partition": {
+    "vendor_firmware_mnt_image": "absent",
+    "vendor_firmware_assets": [
+      "Data.msc",
+      "activity.napp",
+      "double_twist.napp",
+      "pickup_gesture.napp",
+      "sig_motion.napp",
+      "uninstall.napp",
+      "napp_list.cfg",
+      "ADSP and Venus firmware images",
+      "GPU, WLAN and Bluetooth firmware"
+    ],
+    "napp_list": ["uninstall", "pickup_gesture", "sig_motion", "double_twist", "activity"],
+    "keymaster_related_vendor_files": [
+      "/vendor/lib64/libsoftkeymasterdevice.so",
+      "/vendor/lib64/libpuresoftkeymasterdevice.so",
+      "/vendor/lib64/libkeymaster3device.so",
+      "/vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so",
+      "/vendor/bin/hw/android.hardware.keymaster@3.0-service"
+    ],
+    "dedicated_keymaster_trustlet_found_in_readable_vendor_tree": false
+  },
+  "protected_firmware_partition": {
+    "path": "/firmware/image",
+    "read_access": "temporary adb root",
+    "files": [
+      "mba.b00",
+      "mba.mdt",
+      "modem.b00",
+      "modem.b01",
+      "modem.b03",
+      "modem.b04",
+      "modem.b05",
+      "modem.b06",
+      "modem.b07",
+      "modem.b08",
+      "modem.b09",
+      "modem.b10",
+      "modem.b11",
+      "modem.b12",
+      "modem.b13",
+      "modem.b14",
+      "modem.b18",
+      "modem.b19",
+      "modem.b20",
+      "modem.b22",
+      "modem.mdt"
+    ],
+    "dedicated_keymaster_trustlet_found": false
+  },
+  "interpretation": "The mounted /vendor and /firmware trees expose the software Keymaster libraries/service, gesture/motion .napp files, and modem/MBA images, but no separately named Keymaster trusted-app image. This does not prove that no Keymaster function is embedded in secure-world firmware or available from another source. The previous credential-bound KeyInfo result with QSEECOM bound remains direct evidence that the tested AndroidKeyStore path is software-backed.",
+  "cleanup": {
+    "temporary_adbd_root": "enabled for listing only, then disabled",
+    "final_adb_identity": "uid=2000(shell)",
+    "active_camera_clients": [],
+    "led_brightness": {
+      "led:torch_0": 0,
+      "led:torch_1": 0,
+      "led:flash_0": 0,
+      "led:flash_1": 0,
+      "flash-torch": 0
+    },
+    "device_files_changed": false,
+    "device_configuration_changed": false,
+    "camera_opened": false,
+    "led_or_ir_controlled": false
+  }
+}

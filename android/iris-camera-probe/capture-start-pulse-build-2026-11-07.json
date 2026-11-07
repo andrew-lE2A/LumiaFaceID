@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-07",
+  "purpose": "Build and phone-test record for the Camera2 capture-start-triggered minimum torch pulse.",
+  "source": {
+    "app": "android/iris-camera-probe/src/com/lumia/irisprobe/IrisProbeActivity.java",
+    "helper": "android/iris-camera-probe/iris-torch-server.sh",
+    "appPackage": "com.lumia.irisprobe.irassist20261107"
+  },
+  "testedImplementation": {
+    "sequence": [
+      "App connects to phone-local IPv4 loopback helper and arms the transaction.",
+      "App requests one YUV still frame.",
+      "Camera2 onCaptureStarted callback sends PULSE.",
+      "Helper requests torch_0 brightness code 14 and applies an 80 ms software auto-off timeout.",
+      "App receives helper ON/OFF acknowledgements and restores the IR-off preview."
+    ],
+    "enrollmentAndComparison": "Remain IR-off.",
+    "helperLegacyProtocol": "Legacy PULSE transaction remains supported with a one-second timeout."
+  },
+  "builds": {
+    "testedCaptureStartVersion": "Built successfully using Android SDK platform 35 and a temporary local signing key; installed temporarily for the phone test.",
+    "postTestAnalysisThreadRefactor": "Not yet built. It moves CPU-heavy frame analysis off the Camera2 callback handler and keys pulse completion to YUV image delivery."
+  },
+  "phoneTest": {
+    "target": "User-confirmed diffuse, non-person target.",
+    "cameraId": "2",
+    "format": "YUV_420_888",
+    "dimensions": "1920x1080",
+    "frameNumber": 589,
+    "cameraTimestampSource": "UNKNOWN",
+    "timing": {
+      "analyzeRequestElapsedRealtimeNs": 1380166184360,
+      "captureStartedElapsedRealtimeNs": 1380462669285,
+      "captureStartedSensorTimestampNs": 1380308594323,
+      "imageCallbackElapsedRealtimeNs": 1380468244546,
+      "imageTimestampNs": 1380308594323,
+      "helperOnAckElapsedRealtimeNs": 1380468879598,
+      "helperOffAckElapsedRealtimeNs": 1380573492421,
+      "captureResultElapsedRealtimeNs": 1387524991603,
+      "onAckAfterCaptureStartedMs": 6.21,
+      "offAckAfterCaptureStartedMs": 110.82,
+      "offAckAfterOnAckMs": 104.61,
+      "captureResultAfterCaptureStartedMs": 7062.33,
+      "captureResultCallbackTimeoutMs": 850
+    },
+    "captureResult": {
+      "frameNumber": 589,
+      "exposureNs": 75004280,
+      "sensitivityIso": 982,
+      "advertisedSensitivityMaximumIso": 800,
+      "frameDurationNs": 75184080,
+      "sensorTimestampNs": 1380308594323
+    },
+    "outcome": "One YUV image arrived. Its sensor timestamp exactly matched onCaptureStarted and the later capture result for frame 589. The first app version performed CPU analysis on the Camera2 handler, delaying capture-result delivery; the app's 850 ms result wait timed out, and the result callback appeared about 7.06 seconds after onCaptureStarted when analysis completed.",
+    "pixelsSaved": false,
+    "analysisMetricsRetained": false
+  },
+  "interpretationLimits": [
+    "Equal Camera2 sensor timestamps associate the image and result with the same frame, but the timestamp source is UNKNOWN and cannot be compared directly with elapsed-realtime LED acknowledgements.",
+    "ON/OFF acknowledgements and the helper timeout are software events; optical emitter edges and overlap with exposure were not measured.",
+    "The requested 80 ms helper cutoff is not an eye-safety validation or a recovered Windows timing value. The observed ON-to-OFF acknowledgement interval was about 104.61 ms.",
+    "Only one frame was obtained; its ISO 982 exceeded the advertised maximum of 800. No image pixels were saved and no biometric match or Android authentication was tested."
+  ],
+  "teardown": {
+    "cameraClosed": true,
+    "activeCameraClients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "flash_torch": 0,
+    "temporaryHelperRemoved": true,
+    "temporaryPackageUninstalled": true,
+    "adbReturnedToShellUid": 2000
+  },
+  "subsequentSourceChange": "The working tree now contains an analyzer-thread refactor so image analysis will not block Camera2 callbacks. This changed source has not been built or phone-tested.",
+  "publication": "local only; no commit, push, or PR"
+}

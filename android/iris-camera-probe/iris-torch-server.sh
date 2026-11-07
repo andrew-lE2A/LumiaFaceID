@@ -7,6 +7,24 @@ if [ "${1:-}" = "--connection" ]; then
     trap 'exit 0' HUP INT TERM
     trap 'echo 0 > "$LED" 2>/dev/null' EXIT
     IFS= read -r request || exit 1
+    if [ "$request" = ARM ]; then
+        echo ARMED
+        IFS= read -r -t 1 request || request=TIMEOUT
+        if [ "$request" = PULSE ]; then
+            echo 14 > "$LED" || { echo ERROR; exit 1; }
+            echo ON
+            # Bound the exposure-start-triggered pulse independently of the app.
+            sleep 0.08
+            echo 0 > "$LED" 2>/dev/null || { echo ERROR; exit 1; }
+            echo OFF
+        elif [ "$request" = STOP ] || [ "$request" = TIMEOUT ]; then
+            echo 0 > "$LED" 2>/dev/null || true
+            echo OFF
+        else
+            echo REJECTED
+        fi
+        exit 0
+    fi
     if [ "$request" != PULSE ]; then
         echo REJECTED
         exit 0

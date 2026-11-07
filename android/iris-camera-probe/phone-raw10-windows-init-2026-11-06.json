@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-06",
+  "purpose": "Bounded IR-off RAW10 capture using the Android Camera2 approximation of the statically recovered Windows iris initialization exposure.",
+  "target": "Diffuse non-person target confirmed by the user.",
+  "camera": {
+    "id": "2",
+    "format": "MIPI_RAW10",
+    "width": 1920,
+    "height": 1088,
+    "rowStrideBytes": 2400,
+    "pixelStrideBytes": 0,
+    "byteCount": 2611200,
+    "crop": [0, 0, 1920, 1088],
+    "sensorOrientationDegrees": 90
+  },
+  "request": {
+    "sourceDerivedWindowsInitExposureUs": 20000,
+    "sourceDerivedWindowsInitIso": 250,
+    "requestedExposureNs": 20000000,
+    "requestedSensitivityIso": 250,
+    "requestedFrameDurationNs": 33500000,
+    "autoExposure": false,
+    "irEnabled": false,
+    "postRawSensitivityBoost": 100
+  },
+  "result": {
+    "frame": 2142,
+    "exposureNs": 19987156,
+    "sensitivityIso": 250,
+    "frameDurationNs": 33441782,
+    "aeState": 1,
+    "sensorTimestampNs": 8477126637447,
+    "sensorTimestampSource": 0,
+    "privateFilename": "iris-camera2-raw10-3075076539814545276.raw10"
+  },
+  "conversion": {
+    "tool": "tools/iris-capture/pull_and_convert_raw10.py",
+    "outputDirectory": "/private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447",
+    "candidateRotationsDegrees": [0, 90],
+    "fullArrayDecoded": true,
+    "windowsShapeCropWidth": 1620,
+    "summaryScale": "8-bit",
+    "rotation0FullFrameDistribution": {
+      "min": 9,
+      "p1": 15,
+      "median": 16,
+      "p95": 19,
+      "p99": 20,
+      "max": 25,
+      "occupiedLevels": 17,
+      "meanAbsoluteNeighborDifference": 0.712
+    },
+    "diagnosticContrastStretch": {
+      "percentiles": [1, 99],
+      "result": "A broad horizontal scene boundary is visible; the remaining texture is predominantly fine grain, with no identifiable eye or other useful fine structure.",
+      "output": "Temporary contrast-stretched previews are under /private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447/diagnostic-stretch-rotation-{0,90}.png"
+    },
+    "rotation0": {
+      "frame": {"mean": 16.5, "median": 16, "p90": 19, "p95": 19, "p99": 20},
+      "view0": {"width": 960, "height": 1088, "mean": 16.4, "p95": 19},
+      "view1": {"width": 960, "height": 1088, "mean": 16.6, "p95": 20}
+    },
+    "rotation90": {
+      "frame": {"mean": 16.5, "median": 16, "p90": 19, "p95": 19, "p99": 20},
+      "view0": {"width": 1620, "height": 694, "mean": 16.9, "p95": 20},
+      "view1": {"width": 1620, "height": 694, "mean": 15.7, "p95": 16}
+    },
+    "assessment": "Both rendered candidates are nearly black. Percentile stretching shows a broad scene boundary but mostly fine grain and no eye-like structure. Real packed RAW10 retrieval and decoding are verified, but this capture has no usable iris detail and cannot establish the correct Cityman orientation, Windows normalization, eye localization, or matcher input. Stretching is visual-only and must not be used as matcher input."
+  },
+  "teardown": {
+    "cameraServiceActiveClients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0
+  },
+  "privacy": "The raw frame and rendered pixel files remain in app-private phone storage and the listed local temporary directory; no pixel data is included in the repository.",
+  "limitations": [
+    "This was a diffuse-target diagnostic capture, not a person or eye capture.",
+    "The Windows 20 ms / ISO 250 values are static-source settings approximated with Android Camera2, not a verified Windows runtime capture result.",
+    "No IR output was used; the result says nothing about emitter routing, intensity, synchronization, or eye safety.",
+    "Image segmentation, identity matching, biometric enrollment, and Android unlock remain unimplemented or unvalidated."
+  ]
+}

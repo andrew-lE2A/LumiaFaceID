@@ -57,6 +57,6 @@ adb_cmd shell am force-stop com.lumia.irisprobe.demo 2>/dev/null || true
 adb_cmd shell am force-stop com.lumia.irisprobe.feedback 2>/dev/null || true
 adb_cmd shell am start -n com.lumia.irisprobe.demo/com.lumia.irisprobe.IrisProbeActivity
 
-echo "Demo ready. Enrollment/comparison remain IR-off. Advanced controls offer a confirmed 250 ms minimum IR pulse for a diffuse target only."
+echo "Demo ready. Enrollment/comparison remain IR-off. The confirmed diffuse-target diagnostic requests minimum IR at Camera2 capture start; helper cutoff is 80 ms."
 echo "The helper is reachable only on phone loopback; no ADB port forward is created."
 echo "To close the demo and clean up, run: $APP_DIR/demo-off-phone.sh${SERIAL:+ $SERIAL}"

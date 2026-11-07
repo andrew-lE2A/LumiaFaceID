@@ -1,0 +1,23 @@
+{
+  "date": "2026-11-06",
+  "tool": "tools/iris-capture/pull_and_convert_raw10.py",
+  "fixture": "synthetic packed MIPI RAW10 with 4x2 pixels and three padding bytes per row",
+  "adb": "fake local ADB shim serving one synthetic RAW10 plane and its sidecar",
+  "observed": {
+    "requires_explicit_non_person_target_confirmation": true,
+    "reads_only_run_as_private_files": true,
+    "validates_sidecar_format_ir_flag_dimensions_stride_crop_and_byte_count": true,
+    "produces_rotation_0_and_rotation_90_diagnostics": true,
+    "requests_no_camera_or_led_operation": true
+  },
+  "source_guards": {
+    "refuses_existing_output_capture_directory": true,
+    "rejects_non_full_frame_crop": true,
+    "rejects_ir_enabled_sidecar": true
+  },
+  "result": "pass",
+  "limits": [
+    "This host check did not connect to or capture from the Lumia.",
+    "It does not validate real sensor packing, image quality, Cityman rotation, or eye segmentation."
+  ]
+}

@@ -11,16 +11,25 @@ detail. The sensor timestamp source is unknown. **Do not point the emitter at
 a person or eye.** A minimum driver code is not an eye-safety limit. Do not use
 IR in a metal can or reflective enclosure.
 
-The helper binds to the phone's `127.0.0.1`, accepts `PULSE`, and forces
-torch_0 back to zero on STOP, disconnect, signal or its one-second timeout.
-An ADB forward for `tcp:18761` exposes that pulse request on the host's
-loopback, where any local process can reach it. The current demo starts the
-helper on phone loopback and removes stale ADB forwards; it never creates a
-forward. The app has a separate Advanced control that asks for confirmation,
-then requests one 250 ms pulse at brightness 14 (lowest measured nonzero
-code). The helper enforces its one-second maximum. This pulse is a diffuse
-target diagnostic only, is not synchronized to exposure, and is not an
-eye-safety limit. Enrollment and comparison remain IR-off.
+The helper binds to the phone's `127.0.0.1` and always forces torch_0 back to
+zero on disconnect, signal or timeout. Its current `ARM` transaction waits
+for the Camera2 `onCaptureStarted` callback, accepts one `PULSE` command, then
+turns the emitter off after 80 ms. The app reports the software callback and
+helper acknowledgements; these do not measure the optical edge. A legacy
+`PULSE` transaction retains its one-second auto-off for older app builds. An
+ADB forward for `tcp:18761` exposes pulse requests to host-local processes;
+the demo launcher removes stale forwards and never creates one. Enrollment
+and comparison stay IR-off. The 2026-11-07 diffuse-target phone run exercised
+the capture-start-triggered path once. The helper returned ON/OFF
+acknowledgements and Camera2 delivered one 1920×1080 YUV image whose sensor
+timestamp matched frame 589's `onCaptureStarted` and eventual capture result.
+CPU analysis blocked the Camera2 callback handler, so the result callback
+arrived about 7.06 seconds later, after the app's 850 ms wait expired. The
+current local source moves analysis to a separate thread; this refactor has
+not been built. The sensor timestamp source is `UNKNOWN`, so software events
+do not establish optical overlap. Neither the requested cutoff nor minimum
+brightness validates eye safety; do not point the emitter at a person or eye.
+See [`capture-start test record`](capture-start-pulse-build-2026-11-07.json).
 
 To install and open the IR-off diagnostic demo from the repository root:
 
@@ -339,13 +348,30 @@ saves packed RAW10 bytes and geometry metadata only under app-private files,
 and permits one save per app installation; it detects an existing RAW file
 after activity recreation. Clear this app's data or reinstall it to reset the
 one-shot gate after retrieving the file. It does not enable IR, run enrollment,
-or upload pixels. The control is installed but still needs a phone capture
-before the file-based converter and rotation can be validated. Retrieve the
-files with `adb exec-out run-as <package> cat <private-file>`; use the JSON
-sidecar's width, height and row stride with `tools/iris-capture/windows_frame.py`.
-The converter passed a synthetic packed-RAW10 fixture with padded rows, but
-this does not validate real sensor bytes or resolve Cityman's Windows rotation;
-see [`synthetic converter check`](../../tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json).
+or upload pixels. One real frame has been saved. The source was a confirmed
+diffuse, non-person target; the request was IR-off and returned 19.987 ms / ISO
+250. The packed RAW10 file was retrieved and decoded at candidate rotations 0
+and 90; both outputs are nearly black (p95 19–20 on the converter's 8-bit
+scale), so this does not validate useful iris detail, Windows normalization
+or orientation. The raw pixels remain outside the repository. The offline
+converter also passed a synthetic packed-RAW10 fixture with padded rows. See
+[`phone capture record`](phone-raw10-windows-init-2026-11-06.json) and
+[`synthetic converter check`](../../tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json).
+
+For another authorized diffuse non-person capture after clearing app data or
+reinstalling, retrieve and render both rotation candidates with:
+
+```sh
+python3 tools/iris-capture/pull_and_convert_raw10.py \
+  --package com.lumia.irisprobe.rawsave20261106 \
+  --output-dir /private/tmp/lumia-iris-captures \
+  --confirm-non-person-target
+```
+
+The script only reads an already saved, full-array RAW10 frame from a
+debuggable probe package. It never opens the camera or turns on the emitter;
+it refuses to overwrite an existing capture directory. The fake-ADB check
+and one real Lumia capture have both exercised the two rotation outputs.
 
 ## Build
 

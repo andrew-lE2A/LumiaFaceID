@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-07",
+  "purpose": "One minimum-code IR-assisted Camera2 YUV capture on the iris camera, aimed at a diffuse non-person target.",
+  "target": "Matte diffuse surface confirmed by the user; no person, animal, eye, mirror, or reflective enclosure in the beam path.",
+  "app": {
+    "package": "com.lumia.irisprobe.irassist20261107",
+    "isolatedTemporaryPackage": true,
+    "build": "Successful; signed with a temporary local test key.",
+    "installedPackageRemovedAfterTest": true
+  },
+  "camera": {
+    "id": "2",
+    "format": "YUV_420_888",
+    "width": 1920,
+    "height": 1080,
+    "cameraClientExclusive": true,
+    "sensorTimestampSource": 0,
+    "sensorTimestampSourceMeaning": "UNKNOWN"
+  },
+  "illumination": {
+    "channel": "torch_0",
+    "requestedBrightnessCode": 14,
+    "basis": "Previously measured lowest nonzero code; this is not an eye-safety validation.",
+    "helper": "Phone-local root helper bound to 127.0.0.1:18761; no ADB forward.",
+    "softwareTiming": {
+      "pulseRequestElapsedRealtimeNs": 70150457489529,
+      "onAckElapsedRealtimeNs": 70150472365520,
+      "captureResultElapsedRealtimeNs": 70150782341645,
+      "stopRequestElapsedRealtimeNs": 70150782623363,
+      "offAckElapsedRealtimeNs": 70150785636072,
+      "requestToCaptureResultMs": 324.85,
+      "onAckToStopRequestMs": 310.26,
+      "independentAutoOffTimeoutMs": 1000
+    },
+    "result": "Helper confirmed ON and then OFF after the Camera2 capture-result callback. The exact optical pulse-to-exposure overlap was not measured."
+  },
+  "frame": {
+    "callback": "Received one 1920x1080 YUV image and passed it to the in-memory analysis path.",
+    "captureResult": {
+      "frame": 547,
+      "exposureNs": 50012840,
+      "sensitivityIso": 747,
+      "frameDurationNs": 50192636,
+      "aeState": 2,
+      "sensorTimestampNs": 70150645148763,
+      "callbackElapsedRealtimeNs": 70150782341645
+    },
+    "pixelsSaved": false,
+    "analysisMetrics": "Not retained in the host log; the image buffer was discarded by the app after in-memory analysis."
+  },
+  "initialAttempt": {
+    "result": "No pulse occurred: Java selected IPv6 ::1 while the helper listened on IPv4 127.0.0.1; connection was refused before any LED write.",
+    "ledsAfterAttempt": "All LED brightness nodes read zero.",
+    "fix": "App now connects explicitly to 127.0.0.1; the port was checked without issuing a PULSE before retrying."
+  },
+  "teardown": {
+    "cameraServiceActiveClients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "flash_torch": 0,
+    "helperRemoved": true,
+    "adbForwardRemoved": true,
+    "adbReturnedToShellUid": 2000,
+    "temporaryAppUninstalled": true
+  },
+  "limitations": [
+    "This test did not establish a safe operating limit for human exposure.",
+    "Camera2 reports UNKNOWN sensor timestamp source, and no photodiode or hardware trigger was used; software callback timing cannot prove optical synchronization.",
+    "Only one diffuse-target frame was acquired; no eye was imaged and no biometric recognition or Android authentication was tested."
+  ],
+  "additional_ir_off_diagnostic": {
+    "result": "One RAW10 inspect request was inadvertently triggered by a screen-coordinate mis-tap after the IR-assisted capture.",
+    "illumination": "All LED channels were already off; no IR was enabled for this request.",
+    "pixelsSaved": false,
+    "cameraClosedAfterward": true
+  }
+}

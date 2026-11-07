@@ -15,10 +15,10 @@ unlocks Android or persists an enrollment template.
 | Area | What is known |
 | --- | --- |
 | Sensor | Model `0x0861`; Android exposes three cameras and the iris is camera ID 2, reported as front-facing. The normal front camera remains its own slot. |
-| Image path | Camera2 preview/YUV callbacks and one IR-off RAW10 frame have arrived. RAW10 was 1920×1088 with packed stride 2400; those pixels were discarded. A one-shot RAW10 save control is now installed, but has not yet captured a file. A 100 ms / ISO 800 manual request returned 99.996 ms / ISO 800, so manual sensitivity works; one AE result's ISO 3922 remains unexplained. The file converter passes a synthetic packed-RAW10 fixture, but real sensor bytes, image quality, segmentation and Cityman rotation remain unvalidated. See the [manual capture record](android/iris-camera-probe/phone-manual-100ms-iso800-2026-11-06.json), [RAW-save build readback](android/iris-camera-probe/raw10-save-control-build-2026-11-06.json) and [synthetic converter check](tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json). |
+| Image path | Camera2 preview/YUV callbacks and a saved IR-off RAW10 frame have arrived. A requested Windows init preset (20 ms / ISO 250) returned 19.987 ms / ISO 250; the 1920×1088 packed RAW10 file decoded at stride 2400. Values span 9–25 on the converter's 8-bit scale, with 98% between 15 and 20. A diagnostic contrast stretch shows a broad horizontal boundary and fine grain, but no eye detail; orientation remains unknown. Pixel data is outside Git. See the [Windows-init capture record](android/iris-camera-probe/phone-raw10-windows-init-2026-11-06.json), [manual capture record](android/iris-camera-probe/phone-manual-100ms-iso800-2026-11-06.json), [RAW-save build readback](android/iris-camera-probe/raw10-save-control-build-2026-11-06.json) and [synthetic converter check](tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json). |
 | Kernel diagnostic | MCLK is about 9.6 MHz, CSID3 core about 240 MHz and PHY2 timer about 200 MHz. CSI selection register `0x0111` reads back `2`. The separate direct stream diagnostic has recorded zero sensor-counter increments and zero CSID3 packet/ECC/CRC deltas. These measurements are from that diagnostic path and do not negate the Camera2 callbacks through the Android camera stack. |
-| IR emitter | A previous bounded minimum-level `torch_0` request (brightness 14, lowest measured nonzero code) returned ON/OFF; the user reported a faint red glow, and a Camera2 result/YUV frame arrived in that historical run. Optical output, eye-safety limits and LED-to-exposure timing were not measured. The current enrollment/comparison flow does not activate IR. |
-| Live preview IR | **Not implemented.** The repeating preview and enrollment/comparison are IR-off. An advanced button can request one 250 ms minimum-level `torch_0` pulse for a confirmed diffuse-target diagnostic; it is not synchronized to exposure or an eye-safety validation. |
+| IR emitter | A minimum-code `torch_0` request (brightness 14) returned ON/OFF during one diffuse-target Camera2 capture; the frame arrived and was analyzed in memory. The exact optical pulse edge was not measured, and the analysis summary was not retained. See the [capture record](android/iris-camera-probe/phone-ir-min-current-frame-2026-11-07.json). |
+| Capture pulse | Enrollment, comparison and repeating preview remain IR-off. One phone run of the capture-start-triggered minimum `torch_0` pulse returned ON/OFF acknowledgements and one matching YUV frame. Analysis blocked the Camera2 callback handler, so the result callback arrived about 7.06 s later, after the 850 ms app timeout; ISO was 982 (above advertised maximum 800). The current uncommitted source moves analysis to a separate thread, but that refactor has not been built. Sensor timestamps are `UNKNOWN`; optical overlap is unverified. See [capture test record](android/iris-camera-probe/capture-start-pulse-build-2026-11-07.json). |
 | Windows comparison | Static analysis found that Windows carries pulsing-mode and IR-current settings in a per-frame camera result. Commit [a53c69a](https://github.com/leojukic03/lumia-iris-notes/commit/a53c69ad38a9bd7884067e84c771776945c13a60) decodes LED-7 assist settings 13/20/30/100% to PMI8994 flash-field codes 10/15/23/22 (about 125–291 mA by the Linux scale). Exact Cityman LED mapping, active default level, and Android camera-synchronized pulse path remain unresolved. `iris.sys` uses GPIO output index 0; its selector is separate. The test helper stays on phone loopback; no ADB forward is created. |
 | Unlock | No iris biometric service is registered in the installed Android build. Local framework patches 0003-0008 add Keyguard plumbing and explicit fail-closed behavior, but are not built or installed. The phone reports `ro.crypto.state=unsupported`; there is no protected template store, validated matcher, liveness detection, lockout policy or successful Android screen unlock. |
 
@@ -37,7 +37,8 @@ flow is:
 2. Start an in-memory enrollment and capture three IR-off diagnostic frames.
 3. Capture one more IR-off frame for the demo comparison indicator.
 
-The current app flow does not turn on the emitter. Its matcher is an
+Enrollment and comparison do not turn on the emitter. The app has a separate
+confirmed diffuse-target one-frame illumination diagnostic. Its matcher is an
 unvalidated log-Gabor prototype with an uncalibrated demo cutoff. **“Demo
 compare” changes only the app's display; it does not authenticate the user or
 unlock Android.** Captured pixels and templates are transient and are not
@@ -69,12 +70,18 @@ The software timeout is not an eye-safety limit.
 
 ## Missing pieces before iris unlock
 
-1. **Validate real image bytes.** The installed probe has a guarded button to
-   save one IR-off RAW10 frame and geometry sidecar in app-private storage.
-   Capture it only while aimed at a diffuse, non-person target. No sensor
-   pixels have been saved yet. The offline converter passed a synthetic
-   packed-RAW10 fixture, but it still needs a real frame; normalization and
-   Cityman rotation remain unknown.
+1. **Get useful image detail and validate geometry.** One IR-off RAW10 still
+   has been saved on a confirmed diffuse, non-person target, retrieved and
+   decoded at candidate rotations 0 and 90. The frame spans only 9–25 on the
+   converter's 8-bit scale; a diagnostic contrast stretch shows a broad
+   horizontal boundary and mostly fine grain, with no eye detail. This proves
+   the file path and packed-row handling on a real capture, but does not settle
+   orientation or Windows normalization. The source RAW remains app-private
+   on the phone and in local temporary storage, not in Git. See the
+   [capture record](android/iris-camera-probe/phone-raw10-windows-init-2026-11-06.json).
+   A next useful image test needs a brighter diffuse target/scene with IR
+   disabled, or a separately justified emitter investigation; do not aim IR
+   at a person or eye.
 2. **Recover Windows-equivalent image geometry and useful eye detail.** Confirm
    RAW normalization, orientation, the two-view split and eye coordinates on
    representative IR0861 frames. Current proposals did not yield repeatable
@@ -108,7 +115,9 @@ The software timeout is not an eye-safety limit.
    AndroidKeyStore key remained software-backed even during a temporary boot
    where QSEECOM bound and `/dev/qseecom` existed. This tested path cannot
    protect iris templates or attest a trusted match; do not enable enrollment
-   or unlock on it.
+   or unlock on it. A read-only inventory of the mounted vendor and firmware
+   trees found no separately named Keymaster trustlet. See the [vendor
+   secure-app inventory](android/keyinfo-probe/vendor-secure-app-inventory-2026-11-07.json).
 
 See the living [development checklist](LumiaFaceID-checklist.txt), the
 [Windows driver analysis](docs/windows-driver-analysis.md), the
