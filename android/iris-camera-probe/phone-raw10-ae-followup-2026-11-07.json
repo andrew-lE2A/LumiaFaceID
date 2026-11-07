@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-07",
+  "purpose": "Compare one additional IR-off RAW10 frame using the probe's normal auto-exposure request against the earlier Windows-init manual exposure capture.",
+  "target": "Previously user-confirmed diffuse non-person target.",
+  "capture": {
+    "cameraId": "2",
+    "format": "MIPI_RAW10",
+    "width": 1920,
+    "height": 1088,
+    "rowStrideBytes": 2400,
+    "pixelStrideBytes": 0,
+    "byteCount": 2611200,
+    "crop": [0, 0, 1920, 1088],
+    "frameNumber": 348,
+    "requestedMode": "AE",
+    "exposureNs": 75004280,
+    "sensitivityIso": 1042,
+    "advertisedSensitivityMaximumIso": 800,
+    "frameDurationNs": 75184080,
+    "aeState": 2,
+    "sensorTimestampNs": 3340527621323,
+    "sensorTimestampSource": 0,
+    "sensorTimestampSourceMeaning": "UNKNOWN",
+    "irEnabled": false
+  },
+  "file": {
+    "name": "iris-camera2-raw10-660055376860439449.raw10",
+    "sha256": "c2f4bd0641519beac2dc73c5c9dff6bfff7464df7a261b5e61472c99b22d41af",
+    "localPath": "/private/tmp/lumia-iris-captures-2026-11-07-ae/iris-camera2-raw10-660055376860439449.raw10",
+    "pixelDataInGit": false
+  },
+  "conversion": {
+    "tool": "tools/iris-capture/windows_frame.py",
+    "sourcePixelRotationApplied": false,
+    "croppedFrameDimensions": [1620, 1088],
+    "croppedFrameSha256Orientation0": "2e1f0ee163ab6a478b1dd8dca9bf8c4ef2cb3da5e35ed402ec41ee9eeba57c3e",
+    "croppedFrameSha256Orientation90": "2e1f0ee163ab6a478b1dd8dca9bf8c4ef2cb3da5e35ed402ec41ee9eeba57c3e",
+    "frameDistribution8Bit": {
+      "mean": 43.4,
+      "median": 43,
+      "p90": 50,
+      "p95": 52,
+      "p99": 55
+    },
+    "orientation0ViewDistribution8Bit": [
+      {"mean": 44.9, "p95": 53},
+      {"mean": 42.8, "p95": 52}
+    ],
+    "orientation90ViewDistribution8Bit": [
+      {"mean": 44.0, "p95": 52},
+      {"mean": 43.3, "p95": 55}
+    ],
+    "visualInspection": "The percentile-stretched frame is brighter than the earlier manual 20 ms / ISO 250 frame, but still appears as mostly fine grain; no eye or useful scene detail is identifiable."
+  },
+  "sameSessionExtraRequest": {
+    "event": "A RAW10_INSPECT request also appeared in the same app-session log during teardown; it did not save pixels.",
+    "frameNumber": 613,
+    "exposureNs": 75004280,
+    "sensitivityIso": 926,
+    "irEnabled": false
+  },
+  "comparison": {
+    "earlierManualInitCaptureP95": 19,
+    "aeFollowupP95": 52,
+    "assessment": "Auto-exposure raised the RAW10 level substantially, but no iris detail appeared. AE sensitivity exceeded the advertised maximum, so the brighter values do not establish valid sensor operation or Windows-equivalent exposure. The data still cannot settle native sensor orientation or Windows normalization."
+  },
+  "teardown": {
+    "cameraServiceActiveClients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "temporaryPackageUninstalled": true,
+    "adbReturnedToShellUid": 2000,
+    "temporaryUiHierarchyRemoved": true
+  },
+  "limitations": [
+    "This was a diffuse non-person IR-off capture; no eye was imaged.",
+    "The converter's orientation inputs change split axis/order only and do not rotate pixels.",
+    "Image quality, segmentation, matching, enrollment and Android unlock remain unproven."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

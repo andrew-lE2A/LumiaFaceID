@@ -25,8 +25,10 @@ acknowledgements and Camera2 delivered one 1920×1080 YUV image whose sensor
 timestamp matched frame 589's `onCaptureStarted` and eventual capture result.
 CPU analysis blocked the Camera2 callback handler, so the result callback
 arrived about 7.06 seconds later, after the app's 850 ms wait expired. The
-current local source moves analysis to a separate thread; this refactor has
-not been built. The sensor timestamp source is `UNKNOWN`, so software events
+current local source moves analysis to a separate thread. It now builds and
+an IR-off phone run confirmed prompt Camera2 callbacks and analyzer-worker
+completion; the revised IR pulse path itself has not been rerun. The sensor
+timestamp source is `UNKNOWN`, so software events
 do not establish optical overlap. Neither the requested cutoff nor minimum
 brightness validates eye safety; do not point the emitter at a person or eye.
 See [`capture-start test record`](capture-start-pulse-build-2026-11-07.json).
@@ -350,16 +352,21 @@ after activity recreation. Clear this app's data or reinstall it to reset the
 one-shot gate after retrieving the file. It does not enable IR, run enrollment,
 or upload pixels. One real frame has been saved. The source was a confirmed
 diffuse, non-person target; the request was IR-off and returned 19.987 ms / ISO
-250. The packed RAW10 file was retrieved and decoded at candidate rotations 0
-and 90; both outputs are nearly black (p95 19–20 on the converter's 8-bit
-scale), so this does not validate useful iris detail, Windows normalization
-or orientation. The raw pixels remain outside the repository. The offline
-converter also passed a synthetic packed-RAW10 fixture with padded rows. See
+250. The packed RAW10 file was retrieved and decoded using engine orientation
+inputs 0 and 90. These inputs change only the Windows split axis/order; the
+converter does not rotate the pixel array, and the full-frame outputs are
+byte-identical. A second IR-off AE capture returned 75.004 ms / ISO 1042 and
+p95 52 on the converter's 8-bit scale, but visual inspection still showed
+only fine grain and no eye detail; the ISO exceeded the advertised maximum
+800. Neither capture validates useful iris detail, Windows normalization, or
+physical sensor orientation. The raw pixels remain outside the repository.
+See the [AE follow-up](phone-raw10-ae-followup-2026-11-07.json), the
+[orientation-mode review](raw10-orientation-mode-review-2026-11-07.json),
 [`phone capture record`](phone-raw10-windows-init-2026-11-06.json) and
 [`synthetic converter check`](../../tools/iris-capture/synthetic-raw10-converter-check-2026-11-06.json).
 
 For another authorized diffuse non-person capture after clearing app data or
-reinstalling, retrieve and render both rotation candidates with:
+reinstalling, retrieve and render both Windows split modes with:
 
 ```sh
 python3 tools/iris-capture/pull_and_convert_raw10.py \
@@ -371,7 +378,8 @@ python3 tools/iris-capture/pull_and_convert_raw10.py \
 The script only reads an already saved, full-array RAW10 frame from a
 debuggable probe package. It never opens the camera or turns on the emitter;
 it refuses to overwrite an existing capture directory. The fake-ADB check
-and one real Lumia capture have both exercised the two rotation outputs.
+and one real Lumia capture have both exercised the two split modes. They do
+not rotate the source pixel matrix or resolve sensor orientation.
 
 ## Build
 

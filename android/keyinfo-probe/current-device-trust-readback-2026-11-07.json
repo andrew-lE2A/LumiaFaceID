@@ -1,0 +1,43 @@
+{
+  "host_date": "2026-11-07",
+  "device": {
+    "serial": "d7baece4",
+    "product": "lineage_cityman",
+    "model": "Lumia_950_XL",
+    "product_model_property": "Lumia 950 XL",
+    "product_device_property": "cityman",
+    "product_name_property": "lineage_cityman",
+    "lineage_version": "23.2-20261102-UNOFFICIAL-cityman",
+    "android_release": "16",
+    "sdk": 36,
+    "kernel": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026",
+    "build_fingerprint_property": "google/bullhead/bullhead:8.1.0/OPM3.171019.014/4503998:user/release-keys",
+    "fingerprint_note": "The fingerprint property conflicts with the product, Lineage version, Android release and kernel; do not use it as device/build identity without investigating the spoofed property."
+  },
+  "read_only_observations": {
+    "ro_crypto_state": "unsupported",
+    "ro_boot_flash_locked": "1",
+    "keymaster_hidl": "android.hardware.keymaster@3.0::IKeymasterDevice/default present in lshal; process PID 508",
+    "gatekeeper_hidl": "android.hardware.gatekeeper@1.0::IGatekeeper/default present in lshal; software Gatekeeper process PID 880",
+    "keystore2": "running, PID 507",
+    "keymaster_init_service": "/vendor/bin/hw/android.hardware.keymaster@3.0-service from /vendor/etc/init/android.hardware.keymaster@3.0-service.rc",
+    "qseecomd": "running",
+    "qseecom_device_node": false,
+    "service_process_maps": "Not read in this snapshot; previous root-only path inspection found libsoftkeymasterdevice.so loaded and libQSEEComAPI.so not mapped."
+  },
+  "credential_key_evidence": {
+    "same_boot_keyinfo_test_run": false,
+    "latest_existing_test": "android/keyinfo-probe/qseecom-keyinfo-result-2026-11-06.json",
+    "latest_existing_result": "SECURITY_LEVEL_SOFTWARE, inside_secure_hardware=false, auth_required=true, auth_requirement_enforced_in_secure_hardware=false",
+    "scope": "The previous credential-bound AES test was software-backed even when QSEECOM was bound in a temporary boot. This new snapshot confirms the current QSEECOM node is absent; it does not itself generate or inspect a key."
+  },
+  "interpretation": "The running Android 16 Cityman exposes legacy Keymaster and Gatekeeper services, but current crypto state remains unsupported and QSEECOM is not bound/exposed as a device node. Together with the prior credential-bound KeyInfo result, there is still no demonstrated hardware-backed template key or trusted iris result path. Iris enrollment and unlock must remain disabled until this changes.",
+  "cleanup": {
+    "device_files_changed": false,
+    "configuration_changed": false,
+    "camera_opened": false,
+    "led_or_ir_controlled": false,
+    "adb_identity": "shell"
+  },
+  "publication": "local only; no commit, push, or PR"
+}

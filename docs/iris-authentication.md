@@ -1,9 +1,9 @@
 # Iris illumination, enrollment and Android unlock path
 
 This document separates the working camera path from the work required for an
-enrollment UI and lock-screen authentication. The installed phone still has
-the experimental IR camera slot and probe APK; this document does not claim
-that iris matching or Android authentication works.
+enrollment UI and lock-screen authentication. The phone exposes the experimental
+IR camera slot; the temporary probe APK used for the latest capture was removed
+during teardown. Iris matching and Android authentication do not work yet.
 
 ## Windows driver findings
 
@@ -468,10 +468,13 @@ one YUV image for frame 589 with a sensor timestamp equal to
 acknowledgements. CPU analysis blocked the Camera2 callback handler, delaying
 the result callback to about 7.06 seconds after capture start, beyond the
 app's 850 ms wait; ISO was 982, above advertised maximum 800. No pixels or
-analysis metrics were retained. The current uncommitted source moves analysis
-to a separate thread, but that refactor has not been built. The camera
-timestamp source is `UNKNOWN`; software callback times do not prove optical
-overlap. Enrollment and comparison remain IR-off. Details:
+analysis metrics were retained. The current local source moves analysis to a
+separate thread. It has now been built and exercised with an IR-off frame: the
+YUV and result callbacks arrived about 1.3 ms apart, and the worker reported
+completion and buffer closure. The revised capture-start IR pulse itself has
+not been rerun. The camera timestamp source is `UNKNOWN`; software callback
+times do not prove optical overlap. Enrollment and comparison remain IR-off.
+Details:
 [`capture-start test record`](../android/iris-camera-probe/capture-start-pulse-build-2026-11-07.json).
 
 ### Porting the Windows driver behavior
@@ -1555,6 +1558,50 @@ image contains a compatible hardware Keymaster implementation and trusted app.
 Repeating the `qcom,appsbl-qseecom-support` DT boot alone is not useful: QSEECOM
 binding succeeded, but the measured credential-bound key remained software
 level. Do not make that experimental DT property permanent as a proposed fix.
+
+### Current runtime trust-state confirmation (2026-11-07)
+
+A fresh read-only ADB snapshot confirms the current phone is the Lumia 950 XL
+Cityman running LineageOS 23.2 / Android 16 and kernel
+`3.10.108-perf-gcc84cab9 #18`. It still reports `ro.crypto.state=unsupported`;
+the Keymaster 3.0 and software Gatekeeper HIDL services are present, while
+`/dev/qseecom` is absent. The `ro.build.fingerprint` property claims
+`google/bullhead` / Android 8.1 despite the Cityman product properties and
+Android 16 version, so it is not reliable build identity evidence. The
+credential-bound key result remains the prior direct KeyInfo measurement; this
+readback did not create a key. See the [current state record](../android/keyinfo-probe/current-device-trust-readback-2026-11-07.json).
+
+A static audit of the exact installed `android.hardware.keymaster@3.0-impl.so`
+and the device's hardware-module directories identifies the immediate
+software-fallback mechanism: neither `/vendor/lib[64]/hw/` nor
+`/system/lib[64]/hw/` contains a `keystore.*.so` device module, while the
+installed directories do contain the generic Keymaster 3.0 HIDL wrapper and
+software Keymaster libraries. The wrapper's embedded fallback string matches
+AOSP's `KeymasterDevice.cpp`: the `default` HIDL factory asks
+`hw_get_module_by_class(KEYSTORE_HARDWARE_MODULE_ID, NULL, ...)` for a hardware
+device and uses the software-only implementation if none is found. The
+installed wrapper has no `libQSEEComAPI.so` dynamic dependency, and
+`/dev/qseecom` is absent. Current module-selection properties are
+`ro.hardware=cityman`, `ro.board.platform=msm8992`, and empty
+`ro.hardware.keystore`; therefore a file named `keystore.msm8994.so` would
+not be selected without a class-specific override or a matching module name.
+AOSP's Qualcomm Keymaster reference calls QSEECom to load the trusted app
+from `/vendor/firmware/keymaster` with app name `keymaster`; no such Keymaster
+app was found in the inspected Cityman runtime/FFU firmware sets. See the
+[module audit](../android/keyinfo-probe/keymaster-runtime-module-audit-2026-11-07.json),
+[AOSP Keymaster factory](https://android.googlesource.com/platform/hardware/interfaces/+/master/keymaster/3.0/default/KeymasterDevice.cpp),
+[AOSP HAL module-selection logic](https://android.googlesource.com/platform/hardware/libhardware/+/534098cb29e1e4151ba2ed83d6a911d0b6f48522/hardware.c), and
+[AOSP Qualcomm Keymaster QSEE call](https://android.googlesource.com/platform/hardware/qcom/keymaster/+/master/keymaster_qcom.cpp).
+
+The next concrete investigation is whether a compatible MSM8994 hardware
+`keystore` module and its matching signed Keymaster trusted application exist
+in a firmware/source set that can run with Cityman's TrustZone. A
+`ro.hardware.keystore=msm8994` override may be required to select a module with
+that name, but it is not a fix without the corresponding module, QSEE app,
+compatible TrustZone ABI/signature, and a successful hardware-backed KeyInfo
+result. Porting only the Android HAL wrapper or making QSEECOM appear does not
+supply the missing trusted application. Do not install a guessed module or
+claim software-backed keys as protected biometric storage.
 
 ### Camera2 RAW10 callback (2026-11-06)
 

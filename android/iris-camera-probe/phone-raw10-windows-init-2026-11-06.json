@@ -36,11 +36,13 @@
   "conversion": {
     "tool": "tools/iris-capture/pull_and_convert_raw10.py",
     "outputDirectory": "/private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447",
-    "candidateRotationsDegrees": [0, 90],
+    "candidateEngineOrientationInputsDegrees": [0, 90],
+    "converterPhysicallyRotatesPixelArray": false,
+    "orientationInputEffects": "The converter retains the same cropped pixel array and changes only the Windows split axis and view ordering. These outputs do not test physical sensor rotation.",
     "fullArrayDecoded": true,
     "windowsShapeCropWidth": 1620,
     "summaryScale": "8-bit",
-    "rotation0FullFrameDistribution": {
+    "orientationInput0FullFrameDistribution": {
       "min": 9,
       "p1": 15,
       "median": 16,
@@ -53,19 +55,19 @@
     "diagnosticContrastStretch": {
       "percentiles": [1, 99],
       "result": "A broad horizontal scene boundary is visible; the remaining texture is predominantly fine grain, with no identifiable eye or other useful fine structure.",
-      "output": "Temporary contrast-stretched previews are under /private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447/diagnostic-stretch-rotation-{0,90}.png"
+      "output": "Temporary previews under /private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447/diagnostic-stretch-rotation-{0,90}.png use the same unrotated cropped pixels; only their split mode differs."
     },
-    "rotation0": {
+    "orientationInput0": {
       "frame": {"mean": 16.5, "median": 16, "p90": 19, "p95": 19, "p99": 20},
       "view0": {"width": 960, "height": 1088, "mean": 16.4, "p95": 19},
       "view1": {"width": 960, "height": 1088, "mean": 16.6, "p95": 20}
     },
-    "rotation90": {
+    "orientationInput90": {
       "frame": {"mean": 16.5, "median": 16, "p90": 19, "p95": 19, "p99": 20},
       "view0": {"width": 1620, "height": 694, "mean": 16.9, "p95": 20},
       "view1": {"width": 1620, "height": 694, "mean": 15.7, "p95": 16}
     },
-    "assessment": "Both rendered candidates are nearly black. Percentile stretching shows a broad scene boundary but mostly fine grain and no eye-like structure. Real packed RAW10 retrieval and decoding are verified, but this capture has no usable iris detail and cannot establish the correct Cityman orientation, Windows normalization, eye localization, or matcher input. Stretching is visual-only and must not be used as matcher input."
+    "assessment": "Both engine split modes use the exact same cropped frame pixels (verified by identical full-frame output hashes) and are nearly black. Percentile stretching shows a broad scene boundary but mostly fine grain and no eye-like structure. Real packed RAW10 retrieval and decoding are verified, but this capture has no usable iris detail and cannot establish the physical Cityman orientation, Windows normalization, eye localization, or matcher input. Stretching is visual-only and must not be used as matcher input."
   },
   "teardown": {
     "cameraServiceActiveClients": [],

@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-07",
+  "device": {
+    "serial": "d7baece4",
+    "product": "lineage_cityman",
+    "android_release": "16",
+    "kernel": "3.10.108-perf-gcc84cab9 #18 SMP PREEMPT Wed Nov 4 17:36:19 UTC 2026"
+  },
+  "method": "Read-only inspection of the running vendor filesystem; copied the Keymaster service and modules to /private/tmp and inspected ELF dependencies/strings. No device files changed.",
+  "installed_keymaster_modules": {
+    "vendor_lib64_hw": ["android.hardware.keymaster@3.0-impl.so"],
+    "vendor_lib_hw": ["android.hardware.keymaster@3.0-impl.so"],
+    "keystore_class_modules_found": [],
+    "qseecom_library_present": ["/vendor/lib64/libQSEEComAPI.so", "/vendor/lib/libQSEEComAPI.so"],
+    "qseecom_device_node_present": false
+  },
+  "module_name_resolution": {
+    "properties": {
+      "ro.hardware.keystore": "",
+      "ro.hardware": "cityman",
+      "ro.product.board": "",
+      "ro.board.platform": "msm8992",
+      "ro.arch": ""
+    },
+    "aosp_loader_source": "https://android.googlesource.com/platform/hardware/libhardware/+/534098cb29e1e4151ba2ed83d6a911d0b6f48522/hardware.c",
+    "aosp_loader_behavior": "hw_get_module_by_class first checks ro.hardware.<class>; then tries class.<variant>.so for ro.hardware, ro.product.board, ro.board.platform and ro.arch; finally it tries class.default.so.",
+    "effective_existing_keystore_names_to_try": ["keystore.cityman.so", "keystore.msm8992.so", "keystore.default.so"],
+    "candidate_msm8994_module": "keystore.msm8994.so would not match the current property variants unless ro.hardware.keystore is set to msm8994 or the module is packaged under a matched variant name. No such module is currently installed. A class-specific property would avoid changing global ro.hardware or ro.board.platform, but property selection alone does not provide or validate a module."
+  },
+  "keymaster_hidl_wrapper": {
+    "path": "/vendor/lib64/hw/android.hardware.keymaster@3.0-impl.so",
+    "sha256": "81922ee97f7cfbdb3f4c33aba0894bb89c52f925a533ea2003ff02bf3b80bc41",
+    "exported_factory": "HIDL_FETCH_IKeymasterDevice",
+    "dynamic_dependencies_relevant_to_backend": [
+      "libhardware.so",
+      "libkeymaster3device.so",
+      "libpuresoftkeymasterdevice.so",
+      "libsoftkeymasterdevice.so"
+    ],
+    "qseecom_dependency": false,
+    "embedded_fallback_message": "Could not find any keystore module, using software-only implementation."
+  },
+  "default_module_resolution": {
+    "service_instance": "default",
+    "configured_init_rc": "/vendor/etc/init/android.hardware.keymaster@3.0-service.rc",
+    "aosp_source": "https://android.googlesource.com/platform/hardware/interfaces/+/master/keymaster/3.0/default/KeymasterDevice.cpp",
+    "source_behavior": "The default HIDL factory calls hw_get_module_by_class(KEYSTORE_HARDWARE_MODULE_ID, NULL, &mod). When no legacy keystore hardware module is found, it logs the software-only message and returns CreateKeymasterDevice() with no hardware device.",
+    "local_runtime_inventory": "No /vendor/lib64/hw/keystore.*.so, /vendor/lib/hw/keystore.*.so, /system/lib64/hw/keystore.*.so, or /system/lib/hw/keystore.*.so was present."
+  },
+  "qualcomm_qsee_reference": {
+    "aosp_source": "https://android.googlesource.com/platform/hardware/qcom/keymaster/+/master/keymaster_qcom.cpp",
+    "legacy_module_behavior": "The AOSP Qualcomm Keymaster HAL dynamically opens libQSEEComAPI.so, then calls QSEECom_start_app with /vendor/firmware/keymaster, app name keymaster, and an 8192-byte shared buffer.",
+    "cityman_assets": "The QSEEComAPI libraries exist, but the inspected mounted firmware has no keymaster/keymaster64 app directory, /dev/qseecom is absent, and the earlier FFU/runtime inventories found no separately named Keymaster trusted app."
+  },
+  "interpretation": "This identifies the immediate Android HAL fallback mechanism: the running default Keymaster 3.0 wrapper has no separate keystore hardware module to open and includes the AOSP software-only fallback. Cityman's module variants also do not select an msm8994-named file without an explicit keystore-specific override. QSEEComAPI libraries existing on disk are insufficient: no Keymaster trusted app is identified, the current device node is absent, and the generic Keymaster wrapper has no QSEEComAPI dependency. The prior QSEECOM-enabled temporary boot still produced SECURITY_LEVEL_SOFTWARE for a credential-bound key, so merely binding the QSEE driver is not a fix.",
+  "required_next_work": [
+    "Find a matching, legally usable MSM8994 hardware keystore module and its required signed secure application from a compatible firmware/source set, then verify module selection, ABI, TrustZone version and trust-world signature compatibility.",
+    "If no compatible implementation and trusted app exist, a QSEE-backed Keymaster port would require the correct TEE interface, signed trusted application, provisioning and lifecycle integration; do not substitute a software key or report a software match as trusted.",
+    "Only after a genuine module is installed and selected, repeat credential-bound KeyInfo/attestation and HAT enforcement checks."
+  ],
+  "cleanup": {
+    "phone_changed": false,
+    "camera_opened": false,
+    "ir_or_led_controlled": false,
+    "temporary_local_copy": "/private/tmp/lumia-keymaster-runtime-20261107",
+    "pixel_or_private_profile_data": false
+  },
+  "publication": "local only; no commit, push, or PR"
+}

@@ -73,6 +73,6 @@
     "temporaryPackageUninstalled": true,
     "adbReturnedToShellUid": 2000
   },
-  "subsequentSourceChange": "The working tree now contains an analyzer-thread refactor so image analysis will not block Camera2 callbacks. This changed source has not been built or phone-tested.",
+  "subsequentSourceChange": "After this capture-start pulse run, the source was refactored to move image analysis off the Camera2 handler. A later build and IR-off phone run verified prompt YUV/result callbacks and worker completion; see phone-analysis-thread-ir-off-2026-11-07.json. The revised capture-start pulse path itself has not been rerun.",
   "publication": "local only; no commit, push, or PR"
 }

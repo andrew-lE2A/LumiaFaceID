@@ -1,0 +1,110 @@
+{
+  "date": "2026-11-07",
+  "purpose": "Raise IR-off sensor exposure within the advertised ISO range and check whether the RAW10 capture contains scene or eye detail.",
+  "target": "User-confirmed diffuse non-person target.",
+  "capture": {
+    "cameraId": "2",
+    "format": "MIPI_RAW10",
+    "width": 1920,
+    "height": 1088,
+    "rowStrideBytes": 2400,
+    "pixelStrideBytes": 0,
+    "byteCount": 2611200,
+    "frameNumber": 3263,
+    "requestedExposureNs": 300000000,
+    "exposureNs": 299987168,
+    "sensitivityIso": 800,
+    "advertisedSensitivityRangeIso": [100, 800],
+    "frameDurationNs": 303463200,
+    "aeState": 0,
+    "sensorTimestampSource": "UNKNOWN",
+    "irEnabled": false
+  },
+  "file": {
+    "name": "iris-camera2-raw10-4614723016864634646.raw10",
+    "sha256": "33ea43fd00e57a0bbe9b781339ee7c3d5c5ade64cced324500cbabc183e0b58c",
+    "localPath": "/private/tmp/lumia-iris-captures-2026-11-07-manual300/iris-camera2-raw10-4614723016864634646.raw10",
+    "metadataSidecarSha256": "ed08f6c6fdc5f40c9a088d274bd2eefc79ec15b740d28f44947fcb0368e83ddf",
+    "pixelDataInGit": false
+  },
+  "conversion": {
+    "tool": "tools/iris-capture/windows_frame.py",
+    "sourcePixelRotationApplied": false,
+    "croppedFrameDimensions": [1620, 1088],
+    "croppedFrameSha256Orientation0": "fae73ced91a182006904ac6e5f5f22ac0e3c313f39409febc7ef9b82c68b7a9b",
+    "croppedFrameSha256Orientation90": "fae73ced91a182006904ac6e5f5f22ac0e3c313f39409febc7ef9b82c68b7a9b",
+    "sameCroppedPixelArray": true,
+    "frameDistribution8Bit": {"mean": 117.9, "median": 119, "p90": 135, "p95": 139, "p99": 146},
+    "orientation0ViewDistribution8Bit": [
+      {"mean": 123.5, "p95": 141},
+      {"mean": 115.6, "p95": 139}
+    ],
+    "orientation90ViewDistribution8Bit": [
+      {"mean": 119.8, "p95": 141},
+      {"mean": 117.8, "p95": 140}
+    ],
+    "visualInspection": "Percentile stretch shows a broad soft gradient and fine grain; no identifiable eye or useful scene detail."
+  },
+  "fullBitDepthAnalysis": {
+    "tool": "tools/iris-capture/raw10_diagnostics.py",
+    "analysisOutputPath": "/private/tmp/lumia-iris-captures-2026-11-07-manual300/raw10-diagnostics.json",
+    "blackLevelSubtracted": false,
+    "fullFrame10Bit": {
+      "mean": 459.551,
+      "p0": 249,
+      "p1": 327,
+      "p5": 357,
+      "p50": 463,
+      "p90": 538,
+      "p95": 555,
+      "p99": 583,
+      "p100": 871,
+      "uniqueCodes": 401
+    },
+    "leftCropped10Bit": {
+      "mean": 472.934,
+      "p0": 275,
+      "p1": 344,
+      "p5": 376,
+      "p50": 476,
+      "p90": 543,
+      "p95": 559,
+      "p99": 586,
+      "p100": 871,
+      "uniqueCodes": 382
+    },
+    "lowTwoBitFieldHistogram": [522109, 522698, 520347, 523806],
+    "clippedCodesAt0": 0,
+    "clippedCodesAt1023": 0,
+    "croppedGridMeans10Bit": [
+      [450.793, 496.169, 513.543, 498.552, 453.908, 394.242],
+      [468.904, 518.566, 542.183, 521.471, 473.465, 412.458],
+      [460.693, 512.389, 536.785, 519.003, 467.009, 406.047],
+      [434.348, 479.747, 494.823, 480.030, 435.393, 379.898]
+    ],
+    "interpretation": "The frame is not numerically near-empty or clipped. Low two-bit fields use all four values at similar frequencies, which is consistent with varied packed data but does not by itself prove the packing or pixel interpretation. The grid reveals a broad smooth central-bright gradient; no scene/eye structure was identified."
+  },
+  "comparison": {
+    "earlierManualInitP95": 19,
+    "aeFollowupP95": 52,
+    "thisCaptureP95": 139,
+    "assessment": "Manual exposure at the advertised maximum ISO produced a substantially higher RAW level than either earlier capture. Full 10-bit analysis shows substantial code range without clipping, but only a broad smooth gradient and no useful detail. This capture alone cannot distinguish an uninformative target from an image-path response problem."
+  },
+  "teardown": {
+    "activeCameraClients": [],
+    "cameraDevices0To2Closed": true,
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "temporaryPackageUninstalled": true,
+    "adbReturnedToShellUid": 2000,
+    "temporaryUiHierarchyRemoved": true
+  },
+  "limitations": [
+    "IR was disabled; no eye was imaged.",
+    "The converter's orientation inputs change split axis/order only and do not rotate pixels.",
+    "No eye localization, segmentation, enrollment, matching, liveness or Android unlock was demonstrated."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

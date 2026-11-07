@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-07",
+  "purpose": "Clarify what the existing Windows-shaped RAW10 converter's 0/90-degree modes actually test.",
+  "input": {
+    "path": "/private/tmp/lumia-iris-captures-2026-11-06-windowinit/camera2-t8477126637447/iris-camera2-raw10-3075076539814545276.raw10",
+    "sha256": "8e93b7373305ea5e3d45392c3938046b4a58aa4e41671a051d9415850f5e2908",
+    "metadata": "android/iris-camera-probe/phone-raw10-windows-init-2026-11-06.json",
+    "format": "MIPI_RAW10",
+    "width": 1920,
+    "height": 1088,
+    "rowStrideBytes": 2400,
+    "irEnabled": false
+  },
+  "method": {
+    "tool": "tools/iris-capture/windows_frame.py",
+    "operations": [
+      "Unpack MIPI RAW10 and retain the high eight bits.",
+      "Crop 300 columns from the left.",
+      "Generate split geometry for engine orientation inputs 0 and 90 degrees."
+    ],
+    "pixelRotationApplied": false
+  },
+  "results": {
+    "orientationInput0": {
+      "splitAxis": "width",
+      "overlapPixels": 300,
+      "viewDimensions": ["960x1088", "960x1088"]
+    },
+    "orientationInput90": {
+      "splitAxis": "height",
+      "overlapPixels": 300,
+      "viewDimensions": ["1620x694", "1620x694"]
+    },
+    "croppedFullFrameSha256Orientation0": "e4e04e7d26f095ece480f14b8d7e9130f846cf0d424e84bcb9e076d71b29536a",
+    "croppedFullFrameSha256Orientation90": "e4e04e7d26f095ece480f14b8d7e9130f846cf0d424e84bcb9e076d71b29536a",
+    "sameCroppedPixelArray": true,
+    "frameDistribution8Bit": {
+      "mean": 16.5,
+      "median": 16,
+      "p90": 19,
+      "p95": 19,
+      "p99": 20,
+      "max": 25
+    },
+    "orientation0ViewDistribution8Bit": [
+      {"mean": 16.4, "p95": 19},
+      {"mean": 16.6, "p95": 20}
+    ],
+    "orientation90ViewDistribution8Bit": [
+      {"mean": 16.9, "p95": 20},
+      {"mean": 15.7, "p95": 16}
+    ],
+    "visualInspection": "Contrast stretching shows a broad horizontal boundary and mostly fine grain, with no identifiable eye detail."
+  },
+  "interpretation": "The --rotation option name was misleading: the converter models the Windows engine's orientation-dependent split axis/order, not physical rotation of the pixel matrix. The two full-frame outputs being byte-identical confirms this. The earlier wording that candidate rotations 0 and 90 were decoded did not establish or test native Cityman sensor orientation. The orientation mapping and Windows tone normalization remain unresolved.",
+  "privacy": "Raw and rendered pixels remain in /private/tmp outside the repository. No image pixels are included in this record.",
+  "publication": "local only; no commit, push, or PR"
+}

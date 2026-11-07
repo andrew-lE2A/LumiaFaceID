@@ -904,19 +904,20 @@ iris AE limits and notes that those limits were exercised off-device only.
 These are exposure-policy settings, not safety limits and not a reason to
 change the Camera2 diagnostic's exposure settings.
 
-This repository now has the independent offline converter
+This repository has the independent offline converter
 [`tools/iris-capture/windows_frame.py`](../tools/iris-capture/windows_frame.py)
-for a captured RAW frame. It writes a cropped frame plus the two diagnostic
-eye views and prints Windows-used percentile statistics. A bounded IR-off
-Camera2 test delivered one RAW10 image in memory: 1920×1088, row stride 2400,
-pixel stride 0, and 2,611,200 bytes. The image and result timestamps matched;
-the row stride equals the packed RAW10 requirement. The decoder processed the
-buffer in memory, then the pixels were discarded. No RAW bytes were saved, so
-the standalone file converter still needs a real RAW file to validate its
-packing and output; the app's YUV diagnostic is not equivalent. After an
-explicitly saved non-person target frame is available, inspect rotations 0
-and 90. Do not use the converter's outputs as enrollment or matching
-templates.
+for a captured RAW frame. Two explicitly saved IR-off RAW10 images were
+retrieved and decoded at 1920×1088, row stride 2400, pixel stride 0, and
+2,611,200 bytes. The manual init image spans 9–25 on the 8-bit scale. A later
+AE image reports 75.004 ms / ISO 1042 (above the advertised 800 maximum) and
+p95 52; it still shows only fine grain, with no eye detail. The converter's
+0°/90° options select the engine's
+orientation-dependent split axis/order; they do **not** rotate the pixel
+array. The two cropped full-frame outputs were byte-identical, so those modes
+do not establish Cityman's physical sensor orientation. Neither image
+validates normalization, eye localization, or matcher input. Keep converter
+outputs out of enrollment and matching. See
+[`RAW10 orientation-mode review`](../android/iris-camera-probe/raw10-orientation-mode-review-2026-11-07.json).
 
 The Mobile FFU, extracted ARM32 Icaros and WinBio iris components are available
 outside Git. The main static-analysis gap is tracing the WinBio adapter-to-

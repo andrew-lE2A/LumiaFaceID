@@ -256,13 +256,15 @@ public final class IrisProbeActivity extends Activity {
         root.addView(compareButton, new LinearLayout.LayoutParams(-1, -2));
 
         Button diagnosticsToggle = new Button(this);
+        ScrollView diagnosticsScroll = new ScrollView(this);
         LinearLayout diagnostics = new LinearLayout(this);
         diagnostics.setOrientation(LinearLayout.VERTICAL);
-        diagnostics.setVisibility(View.GONE);
+        diagnosticsScroll.addView(diagnostics);
+        diagnosticsScroll.setVisibility(View.GONE);
         diagnosticsToggle.setText("Show advanced controls");
         diagnosticsToggle.setOnClickListener(v -> {
-            boolean show = diagnostics.getVisibility() != View.VISIBLE;
-            diagnostics.setVisibility(show ? View.VISIBLE : View.GONE);
+            boolean show = diagnosticsScroll.getVisibility() != View.VISIBLE;
+            diagnosticsScroll.setVisibility(show ? View.VISIBLE : View.GONE);
             diagnosticsToggle.setText(show ? "Hide advanced controls" : "Show advanced controls");
         });
         root.addView(diagnosticsToggle, new LinearLayout.LayoutParams(-1, -2));
@@ -336,7 +338,7 @@ public final class IrisProbeActivity extends Activity {
         sensitivityButton.setEnabled(false);
         sensitivityButton.setOnClickListener(v -> cycleManualSensitivity());
         diagnostics.addView(sensitivityButton, new LinearLayout.LayoutParams(-1, -2));
-        root.addView(diagnostics, new LinearLayout.LayoutParams(-1, -2));
+        root.addView(diagnosticsScroll, new LinearLayout.LayoutParams(-1, 0, 0.35f));
 
         demoUnlockStatus = new TextView(this);
         demoUnlockStatus.setText("IR OFF — diagnostic only; no authentication");
@@ -408,6 +410,7 @@ public final class IrisProbeActivity extends Activity {
             long captureStartedNs = 0;
             long onAckNs = 0;
             long offAckNs = 0;
+            boolean yuvImageReceived = false;
             try (Socket socket = new Socket()) {
                 // The root helper binds IPv4 loopback explicitly. Avoid Android's
                 // preference for ::1 when that socket family has no listener.
@@ -443,8 +446,8 @@ public final class IrisProbeActivity extends Activity {
                         offAckNs = SystemClock.elapsedRealtimeNanos();
                     }
                     boolean frameSignalReceived = frameDelivered.await(850, TimeUnit.MILLISECONDS);
-                    boolean imageReceived = frameSignalReceived && pulseImageReceived.get();
-                    if (!imageReceived) {
+                    yuvImageReceived = frameSignalReceived && pulseImageReceived.get();
+                    if (!yuvImageReceived) {
                         analyzeNextFrame = false;
                         compareNextFrame = false;
                         frameOperationBusy = false;
@@ -455,7 +458,7 @@ public final class IrisProbeActivity extends Activity {
                     result = "OFF".equals(response)
                             ? (frameStarted
                                     ? (emitterOnConfirmed
-                                            ? (imageReceived
+                                            ? (yuvImageReceived
                                             ? "80 ms helper pulse OFF; matching YUV image callback received"
                                             : "80 ms helper pulse OFF; YUV image callback timed out")
                                             : "helper returned OFF without confirming emitter ON; no pulse claimed")
@@ -475,13 +478,14 @@ public final class IrisProbeActivity extends Activity {
             final long captureStartedTimestampNs = captureStartedNs;
             final long onAckTimestampNs = onAckNs;
             final long offAckTimestampNs = offAckNs;
+            final boolean frameWasDelivered = yuvImageReceived;
             runOnUiThread(() -> {
                 logLine("IR-assisted helper result: " + statusText
                         + " armedElapsedRealtimeNs=" + armedTimestampNs
                         + " cameraCaptureStartedElapsedRealtimeNs=" + captureStartedTimestampNs
                         + " onAckElapsedRealtimeNs=" + onAckTimestampNs
                         + " offAckElapsedRealtimeNs=" + offAckTimestampNs);
-                if (!analyzeNextFrame) {
+                if (!frameWasDelivered) {
                     frameOperationBusy = false;
                     if (irTestButton != null) irTestButton.setEnabled(camera != null);
                     if (irButton != null) irButton.setEnabled(camera != null);
@@ -489,6 +493,8 @@ public final class IrisProbeActivity extends Activity {
                     if (captureButton != null) captureButton.setEnabled(camera != null && !frameSaved);
                     if (compareButton != null)
                         compareButton.setEnabled(camera != null && diagnosticConsensus != null);
+                } else {
+                    logLine("Frame actions remain disabled until the analysis worker releases the delivered YUV image.");
                 }
             });
         }, "iris-ir-frame-pulse");
@@ -681,9 +687,23 @@ public final class IrisProbeActivity extends Activity {
                                 analyzeImageInMemory(analysisImage, compare);
                             } catch (Exception e) {
                                 frameOperationBusy = false;
-                                runOnUiThread(() -> logLine("YUV analysis failed: " + e));
+                                runOnUiThread(() -> {
+                                    logLine("YUV analysis failed: " + e);
+                                    if (analyzeButton != null && camera != null)
+                                        analyzeButton.setEnabled(true);
+                                    if (compareButton != null && camera != null
+                                            && diagnosticConsensus != null)
+                                        compareButton.setEnabled(true);
+                                    if (captureButton != null && camera != null && !frameSaved)
+                                        captureButton.setEnabled(true);
+                                    if (irButton != null && camera != null)
+                                        irButton.setEnabled(true);
+                                    if (irTestButton != null && camera != null)
+                                        irTestButton.setEnabled(true);
+                                });
                             } finally {
                                 analysisImage.close();
+                                logLine("YUV analysis worker finished; input image buffer closed.");
                             }
                         })) {
                             analysisImage.close();

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Convert an iris RAW frame into a diagnostic approximation of Windows input.
 
-Recovered Windows steps: take the top eight bits of RAW10, crop the leftmost
-300 columns, then split into two overlapping eye images. The actual Windows
-RAW unpacking/tone curve and rotation value for Cityman remain unknown; this
-tool makes those assumptions explicit and is for inspection only.
+Recovered Windows-shaped approximation: take the top eight bits of RAW10,
+crop the leftmost 300 columns, then split into two overlapping views. The
+orientation argument selects the engine's split axis and buffer ordering; it
+does not physically rotate the pixel array. The Cityman orientation value and
+Windows tone curve remain unknown. This tool is diagnostic only.
 """
 
 import argparse
@@ -71,7 +72,7 @@ def parse_args():
     parser.add_argument("--crop-left", type=int, default=300)
     parser.add_argument("--crop-right", type=int, default=0)
     parser.add_argument("--rotation", type=int, choices=(0, 90, 180, 270), required=True,
-                        help="Windows rotation input; Cityman's value is not yet known")
+                        help="engine orientation in degrees; selects split axis/order only, not pixel rotation")
     args = parser.parse_args()
     if min(args.width, args.height, args.stride) <= 0:
         parser.error("width, height and stride must be positive")
@@ -111,7 +112,7 @@ def main():
 
         print(f"frame {width}x{height}; engine size floor 640x480: "
               f"{'met' if width >= 640 and height >= 480 else 'not met'}")
-        print(f"rotation {args.rotation}; split axis {split_axis}; overlap {overlap}px")
+        print(f"engine orientation input {args.rotation} degrees; split axis {split_axis}; overlap {overlap}px; pixels not rotated")
         print(f"frame stats {image_stats(frame)}")
         for index, eye in enumerate(eyes):
             print(f"eye{index} {len(eye[0])}x{len(eye)} stats {image_stats(eye)}")

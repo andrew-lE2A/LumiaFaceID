@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-07",
+  "purpose": "Verify the rebuilt analysis-thread probe on the connected Lumia using IR-off camera activity only.",
+  "build": {
+    "result": "Successful; javac, D8, zipalign, and apksigner completed.",
+    "sdk": "Android SDK platform 35 / build-tools 35.0.0",
+    "signing": "Temporary build-only key stored under /private/tmp and not added to Git.",
+    "sourceState": "Includes the cleanup fix that keeps frameOperationBusy set until asynchronous image analysis finishes."
+  },
+  "device": {
+    "product": "lineage_cityman",
+    "model": "Lumia_950_XL",
+    "package": "com.lumia.irisprobe.irassist20261107",
+    "cameraId": "2",
+    "stream": "1920x1080 YUV_420_888",
+    "cameraTimestampSource": 0,
+    "cameraTimestampSourceMeaning": "UNKNOWN"
+  },
+  "irOffPreview": {
+    "firstSuccessfulOpenCallbacks": 217,
+    "secondOpenCallbacksBeforeTeardown": 847,
+    "analysisFollowupOpenCallbacksBeforeTeardown": 510,
+    "observed": "Camera ID 2 opened, the preview session configured, and repeating capture-result callbacks continued."
+  },
+  "oneFrameAnalysis": {
+    "requestElapsedRealtimeNs": 2492272917803,
+    "captureResultFrameNumber": 453,
+    "captureResultCallbackElapsedRealtimeNs": 2492642771746,
+    "yuvImageTimestampNs": 2492478183323,
+    "yuvCallbackElapsedRealtimeNs": 2492641507631,
+    "requestToCaptureResultCallbackMs": 369.85,
+    "yuvToCaptureResultCallbackMs": 1.27,
+    "exposureNs": 75004280,
+    "sensitivityIso": 1042,
+    "sensitivityOutsideAdvertisedRange": true,
+    "interpretation": "The Camera2 callback handler delivered both the YUV callback and matching capture-result callback promptly while CPU analysis was dispatched to the separate analysis thread. Equal sensor timestamps associate both callbacks with frame 453; UNKNOWN timestamp source prevents comparing that sensor timestamp with elapsed-realtime.",
+    "analysisSummary": "Not captured. The UI hierarchy snapshot was taken shortly after the request and did not include the eventual local-only analysis summary. No analyzer completion claim is made.",
+    "pixelsSaved": false,
+    "irRequested": false
+  },
+  "analysisCompletionFollowup": {
+    "requestElapsedRealtimeNs": 2687905694635,
+    "captureResultFrameNumber": 70,
+    "captureResultCallbackElapsedRealtimeNs": 2688299211289,
+    "yuvImageTimestampNs": 2688131065323,
+    "yuvCallbackElapsedRealtimeNs": 2688297891549,
+    "requestToCaptureResultCallbackMs": 393.52,
+    "yuvToCaptureResultCallbackMs": 1.32,
+    "workerCompletionObserved": true,
+    "workerCompletionEvent": "YUV analysis worker finished; input image buffer closed.",
+    "workerCompletionAfterRequestApproxMs": 7205,
+    "interpretation": "A subsequent build added a non-image completion log and async-error control recovery. One IR-off frame completed analysis on the separate worker; Camera2 delivered the corresponding result about 393.52 ms after request submission and 1.32 ms after the YUV callback.",
+    "pixelsSaved": false,
+    "irRequested": false
+  },
+  "teardown": {
+    "cameraClosed": true,
+    "activeCameraClients": [],
+    "torch_0": 0,
+    "torch_1": 0,
+    "flash_0": 0,
+    "flash_1": 0,
+    "temporaryPackageUninstalled": true,
+    "adbReturnedToShellUid": 2000
+  },
+  "limits": [
+    "This verifies successful build, callback responsiveness, analysis-worker completion and image-buffer closure, not image usefulness, matcher accuracy, biometric security, or iris unlock.",
+    "The AE result reported ISO 1042, above the advertised range; no setting was changed during this IR-off preview/analysis check.",
+    "No IR emitter channel was enabled."
+  ],
+  "publication": "local only; no commit, push, or PR"
+}

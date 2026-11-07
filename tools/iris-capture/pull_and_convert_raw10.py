@@ -2,8 +2,9 @@
 """Pull one confirmed non-person RAW10 capture from a debuggable probe app.
 
 The tool validates the app-private sidecar and RAW10 plane size, stores the
-source and sidecar under a new output subdirectory, then renders candidate
-Windows eye views at rotations 0 and 90. It never requests a camera capture.
+source and sidecar under a new output subdirectory, then renders the Windows
+split modes for engine orientation inputs 0 and 90 degrees. It does not rotate
+the pixel array and never requests a camera capture.
 """
 
 import argparse
@@ -110,7 +111,7 @@ def main():
             subprocess.run(command, check=True)
 
         print(f"Saved validated RAW10 capture and sidecar under {capture_dir}")
-        print("Candidate view images were generated for rotations 0 and 90.")
+        print("View images were generated for engine orientation inputs 0 and 90 degrees; source pixels are not rotated.")
         print("These files are diagnostic only; they are not enrollment templates or matcher inputs.")
     except (OSError, RuntimeError, ValueError, KeyError, json.JSONDecodeError,
             subprocess.CalledProcessError) as exc:
