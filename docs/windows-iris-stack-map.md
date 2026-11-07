@@ -389,6 +389,26 @@ shipping Windows image fails. Verify the exact paired DLLs and ABI before
 using this path to assign a camera rotation. The semantic name of the
 settings-field `+0x1c` remains unproven.
 
+**Import-thunk check (2026-11-07):** the suspected mismatch is not repaired by
+the adapter's thunk. In the exact extracted adapter (SHA-256
+`a38076cd...d097059`), `objdump -p` maps the second engine import,
+`irm2_init_identification`, to IAT RVA `0x1f1c4`. LLDB decodes thunk
+`0x1001d184` as `movw r12,#0xf1c4; movt r12,#0x1001; ldr.w pc,[r12]`, a
+direct tail jump with no stack adjustment or argument marshalling. The callsite
+therefore reaches the imported engine with the same outgoing stack. In the
+exact extracted engine (SHA-256 `9e8c53cd...76862a43`), aligned LLDB
+disassembly shows the initializer reads `[entry SP+8]`, checks its first DWORD
+for `0x28` or `0x2c`, and rejects null/invalid settings. This strengthens the
+static ABI discrepancy for these two files, but does not prove which copy the
+shipping Windows loader used or that this routine necessarily completed in
+the tested Windows configuration. The extracted SYSTEM hive registers this
+adapter/engine pair under iris configuration 0, but its global active
+configuration is `None`; the hive therefore proves availability, not that the
+pair is selected during the tested Windows session. The next reverse-engineering
+step is to find the provisioning/runtime selector and verify the loaded
+package pair or locate a matching engine build; do not infer rotation from
+context `+0x118` until that is resolved.
+
 The same routine calls a private buffer helper at `0x10011884` and
 `0x100121a0` (helper address `0x1001055c`). The first call passes the original
 `irm2_on_frame` buffer pointer; the later call passes a stack scratch buffer
@@ -855,10 +875,11 @@ and evaluation.
 
 ## Next offline reverse-engineering pass
 
-1. Resolve the apparent `irm2_init_identification` stack-argument mismatch:
-   verify the adapter/engine pair and calling convention, then trace the
-   settings pointer and rotation field. Only after that, reconcile context
-   rotation `+0x118` with Android `SENSOR_ORIENTATION`. Trace the BIR
+1. Resolve the revalidated `irm2_init_identification` stack-argument mismatch:
+   identify the exact adapter/engine pair loaded by Windows and determine
+   whether another supported initializer ABI or settings structure exists.
+   Then trace the settings pointer and rotation field. Only after that,
+   reconcile context rotation `+0x118` with Android `SENSOR_ORIENTATION`. Trace the BIR
    vendor-record fields from `AcceptSampleData` into `irm2_on_frame` and
    `split_frame` to identify the image bytes and validate whether the
    one-byte-per-pixel inference is correct before implementing the recovered
@@ -881,12 +902,16 @@ and evaluation.
    experimental matching outside Keyguard until matching, liveness, protected
    storage/result delivery, cancellation and lockout are evaluated.
 
-## Upstream update: Windows-shaped RAW input and AE limits
+## Upstream update: Windows-shaped RAW input, AE and IR-current correction
 
 The latest inspected `leojukic03/lumia-iris-notes` commit is
+[`bd2fcdd`](https://github.com/leojukic03/lumia-iris-notes/commit/bd2fcddaada36f718aaedef94ce8b9dbce2b733d),
+which corrects the section 28 current estimate and withdraws a proposed
+luma-based emitter step-up procedure. It adds no phone measurement. The prior
+camera-pipeline update is
 [`eb1fca3`](https://github.com/leojukic03/lumia-iris-notes/commit/eb1fca3cf9b9996595964153360089658f082255),
-whose additions are static-analysis/experimental-code updates, not new phone
-measurements. Its `android/tools/iris-capture/windows_frame.py` describes an
+whose additions are also static-analysis/experimental-code updates, not new
+phone measurements. Its `android/tools/iris-capture/windows_frame.py` describes an
 input approximation for the recovered engine: convert RAW10 to 8-bit by taking
 the high eight bits, crop 300 columns from the left, then split into two
 overlapping views (overlap up to 300 pixels), splitting across width for 0/180
@@ -918,6 +943,18 @@ do not establish Cityman's physical sensor orientation. Neither image
 validates normalization, eye localization, or matcher input. Keep converter
 outputs out of enrollment and matching. See
 [`RAW10 orientation-mode review`](../android/iris-camera-probe/raw10-orientation-mode-review-2026-11-07.json).
+
+### Section 28 correction: nominal current scale, not a safety calibration
+
+The upstream correction uses the PMI8994's nominal 12.5 mA current step:
+codes 10/15/23/22 correspond to approximately 125/188/288/275 mA. The pinned
+Linux driver scale estimates approximately 127/190/291/278 mA. These are
+register-derived current estimates, not optical output measurements. The
+upstream author withdrew the earlier suggestion to raise Android torch current
+until frame mean luma reaches 70: image luma is not an eye-exposure or safety
+measurement. Do not run that sweep or copy the Windows codes to Android. Keep
+the requirement for a verified camera-timed flash path and independent optical
+safety evidence before any eye-facing illumination.
 
 The Mobile FFU, extracted ARM32 Icaros and WinBio iris components are available
 outside Git. The main static-analysis gap is tracing the WinBio adapter-to-

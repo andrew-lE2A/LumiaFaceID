@@ -84,8 +84,9 @@ current codes and guard rails are not Android LED values or proof of safety.
 
 ### Recovered Windows illumination states and bounds (static analysis)
 
-The latest `leojukic03/lumia-iris-notes` findings (checkout
-`e6a3b02`, `FINDINGS.md` sections 5 and 24) distinguish **three illumination
+The latest checked `leojukic03/lumia-iris-notes` findings (main at
+[`bd2fcdd`](https://github.com/leojukic03/lumia-iris-notes/commit/bd2fcddaada36f718aaedef94ce8b9dbce2b733d),
+`FINDINGS.md` sections 5, 24 and 28) distinguish **three illumination
 modes**—`None`, `Pulsing`, and `ContinuousLED`—from the driver's **four accepted
 assist-power settings**: 13%, 20%, 30%, and 100%. The decompiled LED-7 mapping
 is respectively current codes 10, 15, 23, and 22. The notes do not establish
@@ -120,7 +121,7 @@ Thus brightness 14 requests 14 mA and quantizes to register code 1 with the
 current 200 mA maximum. This makes the Android torch scale explicit, but not
 equivalent to Windows' current field.
 
-### Windows IR assist current decode (2026-11-06)
+### Windows IR assist current decode (checked against upstream 2026-11-07)
 
 Static analysis added in
 [`lumia-iris-notes` commit a53c69a](https://github.com/leojukic03/lumia-iris-notes/commit/a53c69ad38a9bd7884067e84c771776945c13a60)
@@ -138,20 +139,24 @@ mode. On that nominal scale, codes 10/15/23/22 correspond to about
 125/188/288/275 mA. The pinned Linux driver maps flash requests linearly as
 `requested_mA * 0x4f / configured_max_mA`; with the Cityman 1000 mA maximum,
 that gives approximately 127/190/291/278 mA. These are register-derived
-estimates, not optical measurements. The notes' alternate `(code + 1) * 12.5`
-column is not supported by the specification's per-step description; use
-`code * 12.5` for its nominal scale.
+estimates, not optical measurements. Upstream commit `bd2fcdd` corrected its
+table: the nominal estimate is `code * 12.5`, not `(code + 1) * 12.5`. The
+nominal values are approximately 125/188/288/275 mA for codes 10/15/23/22;
+the pinned Linux scale gives approximately 127/190/291/278 mA. This revision
+changes the register-current estimate only. It provides no optical output
+measurement and no eye-safety limit.
 
 The earlier Android check requested `torch_0` brightness 14, which the Linux
-driver converts to current code 1 (about 13 mA). That is roughly an order of
-magnitude below Windows' lowest decoded flash-current setting and uses torch
-mode. This explains why the minimum Android glow may be much weaker than
-Windows' illuminator, but it does not justify raising Android output. The
-Windows pulse caps and thermal cooldown are driver controls, not validated
-eye-safety limits. The notes' proposed step-up-until-mean-luma-70 procedure is
-not a safe exposure calibration: image luma does not measure retinal
-exposure, and Windows' target-average statistic is not an eye-safety target.
-Do not run that sweep or use the Windows codes directly on Android.
+driver converts to current code 1 (about 13 mA, or 12.5 mA on the nominal
+PMI step scale). That is roughly an order of magnitude below Windows' lowest
+decoded flash-current setting and uses torch mode. This explains why the
+minimum Android glow may be much weaker than Windows' illuminator, but it does
+not justify raising Android output. The Windows pulse caps and thermal
+cooldown are driver controls, not validated eye-safety limits. Upstream
+section 28 explicitly retracts its earlier step-up-until-mean-luma-70
+procedure: image luma does not measure retinal exposure, and Windows'
+target-average statistic is not an eye-safety target. Do not run that sweep or
+use the Windows codes directly on Android.
 
 Implementation implication: investigate and reproduce the camera-controlled,
 time-bounded flash path and confirm that Windows LED ID 7 corresponds to the

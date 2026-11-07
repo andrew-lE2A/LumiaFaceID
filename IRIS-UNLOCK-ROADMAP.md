@@ -1,9 +1,12 @@
 # Lumia iris unlock development roadmap
 
-This roadmap is based on the local `main` state at commit `8d75c54` and the
+This roadmap is based on the local `main` state at commit `e1eae9f` and the
 phone/build records currently in the repository. It describes the work needed
 to reach Android screen unlock; it does not claim that enrollment, matching,
 or authentication already works.
+
+Last reviewed: 2026-11-07, local baseline `e1eae9f`; includes the upstream
+`lumia-iris-notes` correction at `bd2fcdd`.
 
 ## Ordered work
 
@@ -11,18 +14,19 @@ or authentication already works.
 
 | Order | What remains | How to do it | Evidence required to pass |
 | --- | --- | --- | --- |
-| 1 | Explain why valid RAW10 frames do not show useful structure | Capture a well-lit, textured, diffuse non-person scene with IR off; keep a flat-field capture as a reference. Run `tools/iris-capture/raw10_diagnostics.py` to inspect full 10-bit values, row/column variation and a coarse spatial grid before applying the Windows crop/split. Compare multiple frames and preserve pixels only in local temporary storage. | Repeatable scene structure above the black/noise floor, correct packing/geometry, and documented orientation and normalization. Current manual 300 ms / ISO 800 capture has full-RAW p95 559/1023 and maximum 871 with no clipping, yet shows only a broad gradient and fine grain. |
-| 2 | Recover Windows' frame and biometric input contract | Continue static FFU analysis of `CameraAuthentication.dll`, `DeltaIrisEngineAdapter.dll` and `iris_mobile_v2.WindowsPhone.dll`: trace the vendor BIR payload, pixel format, enrollment/identification calls, template format and quality/liveness results. | A field-by-field input format and lifecycle map supported by disassembly or runtime evidence; do not assume Camera2 YUV equals the Windows payload. |
-| 3 | Prove a feasible trusted Android biometric path | Treat this as a parallel feasibility gate before storing templates: inspect Keymaster module selection and verify security level/per-operation authentication. Cityman has no `keystore.*.so`; its class-specific selector is empty, `ro.hardware=cityman`, and `ro.board.platform=msm8992`. A candidate `keystore.msm8994.so` needs a class-specific override or matching filename, plus its compatible signed QSEE Keymaster app under `/vendor/firmware/keymaster`. Search for a lawful compatible module/app pair and validate TrustZone compatibility; otherwise determine whether a maintainable platform/TEE port is possible. | Hardware-backed, credential-bound storage and an authenticated, replay-resistant result. The current software-backed-key evidence does not pass. See the [`current trust-state snapshot`](android/keyinfo-probe/current-device-trust-readback-2026-11-07.json) and [`Keymaster module audit`](android/keyinfo-probe/keymaster-runtime-module-audit-2026-11-07.json). |
-| 4 | Recover the original synchronized IR path and its safety basis | Trace the Windows KMD flash request and CCI GPIO queue through to the board output; inspect Android camera/PMIC scheduling. Establish the emitter mapping and obtain independent optical/thermal measurement and qualified exposure limits before any eye-directed use. | Proven emitter route and frame timing, safe validated exposure, and verified off behavior on cancel/error/timeout. Until then, keep IR off for image work and do not enroll from eye-facing IR captures. |
-| 5 | Build usable eye localization and a validated matcher | Only after image geometry and safe capture are understood, implement quality rejection, segmentation, enrollment and matching. Evaluate consented representative samples with held-out false-accept/false-reject and spoof tests. | Repeatable results, calibrated thresholds, quality/liveness rejection and documented accuracy. The current Log-Gabor view is display-only. |
-| 6 | Implement the Android authenticator and connect Keyguard | Build the pinned LineageOS/device tree; implement a privileged service, camera ID 2 ownership/arbitration, per-user lifecycle, cancel/timeout, lockout and trusted success handling. Keep existing rear/front slots unchanged. | Installed service is discoverable by Android, returns correct fail-closed errors, and acquires/releases camera resources reliably. |
-| 7 | Run end-to-end unlock validation | Test enrollment/removal, match/non-match, poor quality/spoof, cancellation, timeout, front-camera conflict, lockout, user switch, fallback, reboot and cleanup. | Repeated unlock only on trusted matches; every failure stays locked; no camera or LED resource leaks. |
+| 1 (parallel feasibility gate) | Prove Android can protect templates and authenticate a match | Resolve the missing hardware Keymaster/KeyMint module and signed QSEE app, then verify that the pair runs with Cityman's TrustZone. Check credential-bound key security level and hardware-enforced authentication; separately prove how a match becomes an authenticated, replay-resistant result accepted by Android. If the platform cannot support this, stop before enrolling templates or connecting success to Keyguard. | A hardware-backed credential-bound key and a trusted, replay-resistant biometric success path verified on this ROM/device. Current evidence is software-backed only; this gate is open and blocks a secure unlock. See the [`trust-state snapshot`](android/keyinfo-probe/current-device-trust-readback-2026-11-07.json) and [`Keymaster module audit`](android/keyinfo-probe/keymaster-runtime-module-audit-2026-11-07.json). |
+| 2 | Explain why valid RAW10 frames show no useful scene detail | With IR off, capture repeated frames of a well-lit, textured diffuse non-person scene plus a flat-field reference. Run `tools/iris-capture/raw10_diagnostics.py` before Windows crop/split; compare black offset, row/column noise, packing, stride and scene response. Keep pixels in local temporary storage. | Repeatable scene structure above the noise floor, with RAW packing, geometry, orientation and normalization explained. The existing 300 ms / ISO 800 capture has p95 559/1023 and maximum 871 without clipping, but shows only a broad gradient and fine grain. |
+| 3 | Recover Windows' frame and biometric input contract | Continue static FFU analysis of `CameraAuthentication.dll`, `DeltaIrisEngineAdapter.dll` and `iris_mobile_v2.WindowsPhone.dll`. First resolve the revalidated `irm2_init_identification` stack-argument discrepancy and verify the actual paired engine/adapter version. Then trace BIR payload layout, pixel format, enrollment/identification calls, template format, quality/liveness outputs, errors and result handling. | A field-by-field input format and call/lifecycle map grounded in disassembly or runtime evidence, with the actual initialization ABI established. Do not assume Camera2 YUV equals the Windows payload. |
+| 4 | Recover the synchronized IR path and establish its safety basis | Trace the Windows KMD flash request and CCI GPIO queue to the physical board output; trace Android camera/PMIC scheduling. Identify route and timing without guessed writes. Obtain calibrated optical/thermal measurements and qualified exposure limits before eye-facing operation. | Proven emitter route and frame timing, independently validated exposure limits, and verified off behavior on cancel/error/timeout. Until then, keep IR off for image work and do not enroll from eye-facing IR captures. |
+| 5 | Build eye localization and a validated matcher | Only after geometry and permitted capture conditions are understood, implement quality rejection, segmentation, enrollment and matching. Evaluate consented representative samples with held-out false-accept/false-reject and presentation-attack tests. | Repeatable matching, calibrated thresholds, quality/liveness rejection and documented accuracy. The current Log-Gabor view is display-only. |
+| 6 | Implement the Android authenticator and connect Keyguard | Build the pinned LineageOS/device tree; implement a privileged authenticator with exclusive camera ID 2 ownership, front-camera arbitration, per-user lifecycle, cancellation, timeout, lockout and trusted success handling. Preserve existing rear/front slots. | The installed service is discoverable by Android, fails closed correctly, owns/releases camera resources reliably, and accepts only the trusted match result. |
+| 7 | Validate end-to-end lock-screen behavior | After the image, illumination, matcher, security and framework gates pass, test enrollment/removal, match/non-match, poor quality/spoof, cancel, timeout, camera conflict, lockout, user switch, credential fallback, reboot and cleanup. | Repeated unlock only on trusted matches; every failure stays locked; no camera or LED resource leaks. |
 
-The security feasibility check in row 3 should run in parallel with row 1, not
-after matcher development. If the device cannot provide a trusted biometric
-result and protected template path, the current Android 16 build cannot safely
-offer production iris unlock even if the camera and matcher work.
+The security feasibility gate (item 1) must run in parallel with image and
+Windows-contract work, and must pass before templates or a Keyguard success
+path are enabled. If the device cannot provide a trusted biometric result and
+protected template path, the current Android 16 build cannot safely offer
+production iris unlock even if the camera and matcher work.
 
 ### 1. Build and correct the current one-frame camera probe
 
@@ -197,14 +201,15 @@ prior gates pass, keep the feature unavailable to the lock screen.
 
 ## Immediate next action
 
-Use the app-private RAW10 path to obtain repeated frames of a well-lit,
-textured diffuse non-person scene with IR off, alongside a flat-field
-reference. Validate packed 10-bit unpacking, black offset, stride and
-noise before trusting the Windows crop/split. In parallel, finish the Windows
-pixel/BIR contract and check whether a hardware-backed Android biometric path
-is feasible. The latest frame has higher code values but still no useful scene
-detail. Do not use IR for eye capture until its route, optical timing and
-safety are independently established.
+Continue offline with the exact Lumia FFU adapter/engine pair: establish why
+`irm2_init_identification` consumes an entry `SP+8` settings pointer while its
+callsite leaves a diagnostic format-string pointer there, and verify which
+engine binary Windows actually loads. This unresolved initialization ABI can
+invalidate rotation and the recovered algorithm path. In parallel, test the
+trusted Android biometric feasibility gate. The next camera capture remains a
+well-lit textured diffuse non-person scene plus a flat-field reference, IR off;
+the latest RAW frame has no useful scene detail. Do not use IR for eye capture
+until route, optical timing and exposure safety are independently established.
 
 ## Current constraints
 
